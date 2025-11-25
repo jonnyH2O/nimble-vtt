@@ -4,7 +4,8 @@ A web-based combat tracker (or VTT) for tabletop RPG "Nimble" built with React. 
 
 ## Features
 
-- 🎲 Action tracking with turn order
+- 🛡️ Action tracking with turn order
+- 🎲 Dice menu for quick rolls
 - 💚 Health and temporary HP management
 - 🎨 Drawing tools for tactical maps
 - 🖼️ Custom background and token images
@@ -15,7 +16,18 @@ A web-based combat tracker (or VTT) for tabletop RPG "Nimble" built with React. 
 
 ## Live Demo
 
-Visit: https://[your-username].github.io/nimble-combat-tracker/
+Visit: https://jonnyh2o.github.io/nimble-vtt/
+
+## How to Use
+
+1. **Add Tokens**: Click "Add Token" to create heroes, companions, or monsters
+2. **Upload Background**: Use the upload button to add a battle map
+3. **Drag Tokens**: Click and drag tokens to position them on the map
+4. **Track Initiative**: Use the sidebar to manage turn order
+5. **Conditions**: Click token info button to adjust TEMP HP and add conditions
+6. **Drawing Tools**: Use the drawing tools to mark areas and ranges
+7. **Settings**: Use settings to adjust token sizes, grid, and if it's dark
+8. **Save/Load**: Export your game state and load it later
 
 ## Getting Started Locally
 
@@ -26,8 +38,8 @@ Visit: https://[your-username].github.io/nimble-combat-tracker/
 
 1. Clone this repository:
 ```bash
-git clone https://github.com/[your-username]/nimble-combat-tracker.git
-cd nimble-combat-tracker
+git clone https://github.com/jonnyh2o/nimble-vtt.git
+cd nimble-vtt
 ```
 
 2. Install dependencies:
@@ -40,40 +52,7 @@ npm install
 npm run dev
 ```
 
-4. Open your browser to `http://localhost:5173`
-
-## Building for Production
-
-```bash
-npm run build
-```
-
-The built files will be in the `dist` folder.
-
-## Deployment to GitHub Pages
-
-This project is configured to deploy to GitHub Pages. The deployment happens automatically via GitHub Actions when you push to the main branch.
-
-### Manual Deployment Steps:
-
-1. Make sure your changes are committed
-2. Push to GitHub:
-```bash
-git push origin main
-```
-
-3. GitHub Actions will automatically build and deploy your site
-4. Your site will be live at: `https://[your-username].github.io/nimble-combat-tracker/`
-
-## How to Use
-
-1. **Add Tokens**: Click "Add Token" to create heroes, companions, or monsters
-2. **Upload Background**: Use the upload button to add a battle map
-3. **Drag Tokens**: Click and drag tokens to position them on the map
-4. **Track Initiative**: Use the sidebar to manage turn order
-5. **Health Management**: Click tokens to adjust HP and add conditions
-6. **Drawing Tools**: Use the drawing tools to mark areas and ranges
-7. **Save/Load**: Export your game state and load it later
+4. Open your browser to localhost
 
 ## Technologies Used
 
