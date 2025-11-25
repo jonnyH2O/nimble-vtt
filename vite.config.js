@@ -3,5 +3,5 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/nimble-combat-tracker/'
+  base: '/nimble-vtt/'
 })
