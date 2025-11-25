@@ -1717,7 +1717,7 @@ export default function NimbleCombatTracker() {
                       }}
                       className={`bg-gray-700 p-3 rounded ${
                         deleteMode && !isLegendaryEcho ? 'cursor-pointer hover:bg-red-900' : 
-                        !isLegendaryEcho ? 'cursor-move hover:bg-gray-600' : ''
+                        !isLegendaryEcho ? 'cursor-move' : ''
                       } ${selectedToken === item.id && !isLegendaryEcho ? 'ring-2 ring-orange-500' : ''} ${
                         isLegendaryEcho ? 'opacity-75 ml-4' : ''
                       } ${isMainLegendary ? 'border-2 border-purple-500' : ''}`}
