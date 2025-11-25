@@ -20,6 +20,8 @@ Visit: https://jonnyh2o.github.io/nimble-vtt/
 
 ## How to Use
 
+Start by downloading "ExampleBattle.json", then open up the live demo and import the json. From here you can test out the VTT's current features. 
+
 1. **Add Tokens**: Click "Add Token" to create heroes, companions, or monsters
 2. **Upload Background**: Use the upload button to add a battle map
 3. **Drag Tokens**: Click and drag tokens to position them on the map
