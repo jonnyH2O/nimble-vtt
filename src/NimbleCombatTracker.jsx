@@ -131,16 +131,67 @@ export default function NimbleCombatTracker() {
   };
 
   const updateHealth = (tokenId, newHealth) => {
-    setTokens(tokens.map(t => 
-      t.id === tokenId ? { ...t, health: Math.max(0, Math.min(t.maxHealth, newHealth)) } : t
-    ));
+    setTokens(tokens.map(t => {
+      if (t.id === tokenId) {
+        const clampedHealth = Math.max(0, Math.min(t.maxHealth, newHealth));
+        const conditions = t.conditions || [];
+        let newConditions = [...conditions];
+
+        // Auto-manage Dying condition (at 0 HP)
+        if (clampedHealth === 0) {
+          if (!newConditions.includes('Dying')) {
+            newConditions.push('Dying');
+          }
+          // Remove Bloodied when Dying
+          newConditions = newConditions.filter(c => c !== 'Bloodied');
+        } else {
+          // Remove Dying if HP > 0
+          newConditions = newConditions.filter(c => c !== 'Dying');
+
+          // Auto-manage Bloodied condition (at or below half HP)
+          const isBloodied = clampedHealth <= t.maxHealth / 2;
+          if (isBloodied && !newConditions.includes('Bloodied')) {
+            newConditions.push('Bloodied');
+          } else if (!isBloodied && newConditions.includes('Bloodied')) {
+            newConditions = newConditions.filter(c => c !== 'Bloodied');
+          }
+        }
+
+        return { ...t, health: clampedHealth, conditions: newConditions };
+      }
+      return t;
+    }));
   };
 
   const updateMaxHealth = (tokenId, newMaxHealth) => {
     setTokens(tokens.map(t => {
       if (t.id === tokenId) {
         const maxHP = Math.max(1, newMaxHealth);
-        return { ...t, maxHealth: maxHP, health: Math.min(t.health, maxHP) };
+        const clampedHealth = Math.min(t.health, maxHP);
+        const conditions = t.conditions || [];
+        let newConditions = [...conditions];
+
+        // Auto-manage Dying condition (at 0 HP)
+        if (clampedHealth === 0) {
+          if (!newConditions.includes('Dying')) {
+            newConditions.push('Dying');
+          }
+          // Remove Bloodied when Dying
+          newConditions = newConditions.filter(c => c !== 'Bloodied');
+        } else {
+          // Remove Dying if HP > 0
+          newConditions = newConditions.filter(c => c !== 'Dying');
+
+          // Auto-manage Bloodied condition (at or below half HP)
+          const isBloodied = clampedHealth <= maxHP / 2;
+          if (isBloodied && !newConditions.includes('Bloodied')) {
+            newConditions.push('Bloodied');
+          } else if (!isBloodied && newConditions.includes('Bloodied')) {
+            newConditions = newConditions.filter(c => c !== 'Bloodied');
+          }
+        }
+
+        return { ...t, maxHealth: maxHP, health: clampedHealth, conditions: newConditions };
       }
       return t;
     }));
@@ -1487,20 +1538,37 @@ export default function NimbleCombatTracker() {
                   <div className="relative">
                     {token.image ? (
                       <div className="relative">
-                        <img
-                          src={token.image}
-                          alt={token.name}
-                          className={`rounded-full object-cover border-4 ${getTokenBorderColor(token.type)}`}
+                        <div
+                          className={`rounded-full border-4 ${getTokenBorderColor(token.type)} relative`}
                           style={{
                             width: `${currentTokenSize}px`,
                             height: `${currentTokenSize}px`,
-                            opacity: !shouldShowToken ? 0 : (token.conditions && token.conditions.includes('Invisible') ? 0.3 : 1),
+                            opacity: !shouldShowToken ? 0 : 1,
                             ...(selectedToken === token.id ? {
                               boxShadow: '0 0 0 2px rgba(249, 115, 22, 0.7)'
                             } : {})
                           }}
-                        />
-                        {token.conditions && token.conditions.length > 0 && shouldShowToken && (
+                        >
+                          <img
+                            src={token.image}
+                            alt={token.name}
+                            className="rounded-full object-cover w-full h-full"
+                            style={{
+                              opacity: token.conditions && token.conditions.includes('Invisible') ? 0.3 : 1,
+                              filter: token.conditions && token.conditions.includes('Dying') ? 'saturate(0.2)' : 'none',
+                            }}
+                          />
+                          {/* Red vignette for Bloodied */}
+                          {token.conditions && token.conditions.includes('Bloodied') && shouldShowToken && (
+                            <div
+                              className="absolute inset-0 rounded-full pointer-events-none"
+                              style={{
+                                boxShadow: 'inset 0 0 30px 10px rgba(220, 38, 38, 0.42)',
+                              }}
+                            />
+                          )}
+                        </div>
+                        {token.conditions && token.conditions.filter(c => c !== 'Bloodied' && c !== 'Dying').length > 0 && shouldShowToken && (
                           <div
                             className="absolute top-0 left-0 right-0 rounded-t-full border-t-4 border-l-4 border-r-4 border-yellow-400"
                             style={{
@@ -1514,20 +1582,37 @@ export default function NimbleCombatTracker() {
                       </div>
                     ) : (
                       <div className="relative">
-                        <div 
-                          className={`rounded-full border-4 flex items-center justify-center ${getTokenBorderColor(token.type)} ${getTokenBgColor(token.type)}`}
+                        <div
+                          className={`rounded-full border-4 ${getTokenBorderColor(token.type)} relative`}
                           style={{
                             width: `${currentTokenSize}px`,
                             height: `${currentTokenSize}px`,
-                            opacity: !shouldShowToken ? 0 : (token.conditions && token.conditions.includes('Invisible') ? 0.3 : 1),
+                            opacity: !shouldShowToken ? 0 : 1,
                             ...(selectedToken === token.id ? {
                               boxShadow: '0 0 0 2px rgba(249, 115, 22, 0.7)'
                             } : {})
                           }}
                         >
-                          {getTokenIcon(token.type)}
+                          <div
+                            className={`rounded-full flex items-center justify-center w-full h-full ${getTokenBgColor(token.type)}`}
+                            style={{
+                              opacity: token.conditions && token.conditions.includes('Invisible') ? 0.3 : 1,
+                              filter: token.conditions && token.conditions.includes('Dying') ? 'saturate(0.2)' : 'none',
+                            }}
+                          >
+                            {getTokenIcon(token.type)}
+                          </div>
+                          {/* Red vignette for Bloodied */}
+                          {token.conditions && token.conditions.includes('Bloodied') && shouldShowToken && (
+                            <div
+                              className="absolute inset-0 rounded-full pointer-events-none"
+                              style={{
+                                boxShadow: 'inset 0 0 30px 10px rgba(220, 38, 38, 0.42)',
+                              }}
+                            />
+                          )}
                         </div>
-                        {token.conditions && token.conditions.length > 0 && shouldShowToken && (
+                        {token.conditions && token.conditions.filter(c => c !== 'Bloodied' && c !== 'Dying').length > 0 && shouldShowToken && (
                           <div
                             className="absolute top-0 left-0 right-0 rounded-t-full border-t-4 border-l-4 border-r-4 border-yellow-400"
                             style={{
@@ -1704,7 +1789,7 @@ export default function NimbleCombatTracker() {
                       </div>
                     )}
                     <div
-                      draggable={!deleteMode && !isLegendaryEcho}
+                      draggable={!deleteMode && !isLegendaryEcho && !expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`]}
                       onDragStart={() => !isLegendaryEcho && handleTurnDragStart(actualIndex)}
                       onDragOver={(e) => !isLegendaryEcho && handleTurnDragOver(e, actualIndex)}
                       onDragEnd={handleTurnDragEnd}
@@ -1716,8 +1801,8 @@ export default function NimbleCombatTracker() {
                         }
                       }}
                       className={`bg-gray-700 p-3 rounded ${
-                        deleteMode && !isLegendaryEcho ? 'cursor-pointer hover:bg-red-900' : 
-                        !isLegendaryEcho ? 'cursor-move' : ''
+                        deleteMode && !isLegendaryEcho ? 'cursor-pointer hover:bg-red-900' :
+                        !isLegendaryEcho && !expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`] ? 'cursor-move' : ''
                       } ${selectedToken === item.id && !isLegendaryEcho ? 'ring-2 ring-orange-500' : ''} ${
                         isLegendaryEcho ? 'opacity-75 ml-4' : ''
                       } ${isMainLegendary ? 'border-2 border-purple-500' : ''}`}
@@ -1734,14 +1819,48 @@ export default function NimbleCombatTracker() {
                           <div className="text-sm font-bold text-purple-400 w-6">→</div>
                         )}
                         {token.image ? (
-                          <img
-                            src={token.image}
-                            alt={token.name}
-                            className={`w-10 h-10 rounded-full border-2 ${getTokenBorderColor(token.type)}`}
-                          />
+                          <div className="relative w-10 h-10">
+                            <div className={`w-10 h-10 rounded-full border-2 ${getTokenBorderColor(token.type)} relative`}>
+                              <img
+                                src={token.image}
+                                alt={token.name}
+                                className="w-full h-full rounded-full object-cover"
+                                style={{
+                                  filter: token.conditions && token.conditions.includes('Dying') ? 'saturate(0.2)' : 'none'
+                                }}
+                              />
+                              {/* Red vignette for Bloodied */}
+                              {token.conditions && token.conditions.includes('Bloodied') && (
+                                <div
+                                  className="absolute inset-0 rounded-full pointer-events-none"
+                                  style={{
+                                    boxShadow: 'inset 0 0 15px 5px rgba(220, 38, 38, 0.42)',
+                                  }}
+                                />
+                              )}
+                            </div>
+                          </div>
                         ) : (
-                          <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center ${getTokenBorderColor(token.type)} ${getTokenBgColor(token.type)}`}>
-                            {getTokenIcon(token.type)}
+                          <div className="relative w-10 h-10">
+                            <div className={`w-10 h-10 rounded-full border-2 ${getTokenBorderColor(token.type)} relative`}>
+                              <div
+                                className={`w-full h-full rounded-full flex items-center justify-center ${getTokenBgColor(token.type)}`}
+                                style={{
+                                  filter: token.conditions && token.conditions.includes('Dying') ? 'saturate(0.2)' : 'none'
+                                }}
+                              >
+                                {getTokenIcon(token.type)}
+                              </div>
+                              {/* Red vignette for Bloodied */}
+                              {token.conditions && token.conditions.includes('Bloodied') && (
+                                <div
+                                  className="absolute inset-0 rounded-full pointer-events-none"
+                                  style={{
+                                    boxShadow: 'inset 0 0 15px 5px rgba(220, 38, 38, 0.42)',
+                                  }}
+                                />
+                              )}
+                            </div>
                           </div>
                         )}
                         <div className="flex-1">
@@ -1994,7 +2113,137 @@ export default function NimbleCombatTracker() {
             <div className="text-xs text-gray-400 mb-4 italic">
               Reference for rules and conditions during gameplay.
             </div>
-            
+
+            {/* VTT Features Section */}
+            <div className="mb-4">
+              <button
+                onClick={() => setExpandedNotes(prev => ({ ...prev, 'vttFeatures': !prev['vttFeatures'] }))}
+                className="w-full bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded flex items-center justify-between text-left"
+              >
+                <span className="font-bold">VTT Features</span>
+                <span className="text-gray-400">{expandedNotes['vttFeatures'] ? '−' : '+'}</span>
+              </button>
+
+              {expandedNotes['vttFeatures'] && (
+                <div className="bg-gray-700 p-3 rounded-b mt-1">
+                  <div className="text-xs text-gray-300 mb-4">
+                    Complete guide to all features available in Nimble VTT for managing combat encounters.
+                  </div>
+
+                  {/* Combat Management */}
+                  <div className="mb-4">
+                    <h3 className="text-sm font-bold text-blue-400 mb-2">Combat Management</h3>
+                    <div className="space-y-2">
+                      <div>
+                        <div className="text-xs font-bold text-blue-300">Turn & Action Tracking</div>
+                        <div className="text-xs text-gray-300">Track turn order, and actions for heros, companions, enemies, and legendary monsters. Reset non-hero actions using the reset button in the top right of the turn order.</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-blue-300">Quick Combat Controls</div>
+                        <div className="text-xs text-gray-300">Start combat, track turns, and track health & conditions quickly using the info button on each token in the turn order. </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Token Management */}
+                  <div className="mb-4">
+                    <h3 className="text-sm font-bold text-green-400 mb-2">Token Management</h3>
+                    <div className="space-y-2">
+                      <div>
+                        <div className="text-xs font-bold text-green-300">Add Combatants</div>
+                        <div className="text-xs text-gray-300">Create heroes, companions, enemies, or legendary creatures with a custom name and picture. Set their HP in the turn order.</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-green-300">HP Management</div>
+                        <div className="text-xs text-gray-300">Apply damage or healing with quick buttons. Visual HP bars show current health status. [COMING SOON]Automatically tracks bloodied (half HP) states.</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-green-300">Wounds & Death</div>
+                        <div className="text-xs text-gray-300">[COMING SOON]Track wound counters for heroes. Automatically marks tokens as dying at 0 HP. Visual indicators for wounded and dying states.</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-green-300">Token Types</div>
+                        <div className="text-xs text-gray-300">Color-coded token types: Heroes (blue), Companions (green), Enemies (red), Legendary (purple) for easy identification.</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-green-300">Delete & Remove</div>
+                        <div className="text-xs text-gray-300">Remove individual tokens from combat with the trash icon.</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Notes & Tracking */}
+                  <div className="mb-4">
+                    <h3 className="text-sm font-bold text-purple-400 mb-2">Notes & Tracking</h3>
+                    <div className="space-y-2">
+                      <div>
+                        <div className="text-xs font-bold text-purple-300">Per-Token Notes</div>
+                        <div className="text-xs text-gray-300">Click any token to access its notes panel. Track exttra resources, special abilities, or any other important information.</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-purple-300">Condition Reference</div>
+                        <div className="text-xs text-gray-300">Quick access to all Nimble RPG conditions within the info section of a token. Organized by severity: Doomed, Major, and Minor conditions.</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-purple-300">Persistent Storage</div>
+                        <div className="text-xs text-gray-300">[COMING SOON] All combat data automatically saves to your browser. Your encounter persists between sessions until you reset it.</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* File Management */}
+                  <div className="mb-4">
+                    <h3 className="text-sm font-bold text-yellow-400 mb-2">File Management</h3>
+                    <div className="space-y-2">
+                      <div>
+                        <div className="text-xs font-bold text-yellow-300">Save Battles</div>
+                        <div className="text-xs text-gray-300">Export your current encounter as a JSON file. Saves all tokens, HP, actions, notes, and combat state.</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-yellow-300">Load Battles</div>
+                        <div className="text-xs text-gray-300">Import previously saved encounters. Perfect for recurring enemies, pre-planned battles, or portable games.</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-yellow-300">Battle Templates</div>
+                        <div className="text-xs text-gray-300">[COMING SOON] Create reusable encounter templates with pre-configured enemies, HP, and initiatives for quick combat setup.</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Interface Features */}
+                  <div className="mb-2">
+                    <h3 className="text-sm font-bold text-cyan-400 mb-2">Interface Features</h3>
+                    <div className="space-y-2">
+                      <div>
+                        <div className="text-xs font-bold text-cyan-300">Sidebar Toggle</div>
+                        <div className="text-xs text-gray-300">Switch between Turn Order and Dictionary views using the tabs at the top of the sidebar.</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-cyan-300">Visual Indicators</div>
+                        <div className="text-xs text-gray-300">Condition indicators and token highlighting for quick status recognition.</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-cyan-300">Add Background</div>
+                        <div className="text-xs text-gray-300">Quickly upload and use different battlemaps for your games.</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-cyan-300">Responsive Design</div>
+                        <div className="text-xs text-gray-300">Clean, dark-themed interface optimized for readability during game sessions.</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-cyan-300">Drawing</div>
+                        <div className="text-xs text-gray-300">Simple drawing and erasing mechanics to add to levels or point things out.</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-cyan-300">Keyboard Shortcuts</div>
+                        <div className="text-xs text-gray-300"> SHIFT on a token to quickly read conditions and notes. CTRL + Z and CTRL + SHIFT + Z to undo and redo drawings.</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Conditions Section */}
             <div className="mb-4">
               <button
@@ -2118,6 +2367,7 @@ export default function NimbleCombatTracker() {
                 </div>
               )}
             </div>
+
           </>
         )}
           </div>
