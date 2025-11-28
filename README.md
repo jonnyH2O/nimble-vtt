@@ -65,4 +65,6 @@ npm run dev
 
 ## License
 
-MIT License - feel free to use and modify for your games!
+This project is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License - see the LICENSE file for details.
+
+In short: Feel free to use and modify for your games, but please credit the original author and don't use it commercially. Any modifications must be shared under the same license.
