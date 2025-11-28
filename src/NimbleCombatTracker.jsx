@@ -708,8 +708,11 @@ export default function NimbleCombatTracker() {
         if (battleState.background) setBackground(battleState.background);
         if (battleState.backgroundSize) setBackgroundSize(battleState.backgroundSize);
         if (battleState.tokenSize) setTokenSize(battleState.tokenSize);
-        if (battleState.zoomLevel) setZoomLevel(battleState.zoomLevel);
-        if (battleState.viewOffset) setViewOffset(battleState.viewOffset);
+
+        // Reset view to default to ensure consistent positioning across machines
+        setZoomLevel(1);
+        setViewOffset({ x: 0, y: 0 });
+
         if (battleState.gridSize !== undefined) setGridSize(battleState.gridSize);
         if (battleState.showGrid !== undefined) setShowGrid(battleState.showGrid);
         if (battleState.darknessMode !== undefined) setDarknessMode(battleState.darknessMode);
