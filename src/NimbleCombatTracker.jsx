@@ -77,7 +77,7 @@ export default function NimbleCombatTracker() {
         image: newToken.image,
         x: 100,
         y: 100,
-        actions: newToken.type === 'hero' ? [false, false, false] : 
+        actions: newToken.type === 'hero' ? [false, false, false] :
                  newToken.type === 'legendary' ? [false, false, false, false, false, false] : // 6 actions for legendary (max hero count)
                  [false],
         isActiveTurn: false,
@@ -87,6 +87,7 @@ export default function NimbleCombatTracker() {
         showTempHP: false,
         notes: '',
         conditions: [],
+        wounds: 0,
         customSize: tokenSize // Start with the default token size
       };
       setTokens([...tokens, token]);
@@ -134,12 +135,18 @@ export default function NimbleCombatTracker() {
   const updateHealth = (tokenId, newHealth) => {
     setTokens(tokens.map(t => {
       if (t.id === tokenId) {
+        const wasAlive = t.health > 0;
         const clampedHealth = Math.max(0, Math.min(t.maxHealth, newHealth));
         const conditions = t.conditions || [];
         let newConditions = [...conditions];
+        let wounds = t.wounds || 0;
 
         // Auto-manage Dying condition (at 0 HP)
         if (clampedHealth === 0) {
+          // Gain a wound when reduced to 0 HP (only if coming from above 0)
+          if (wasAlive) {
+            wounds = wounds + 1;
+          }
           if (!newConditions.includes('Dying')) {
             newConditions.push('Dying');
           }
@@ -158,7 +165,14 @@ export default function NimbleCombatTracker() {
           }
         }
 
-        return { ...t, health: clampedHealth, conditions: newConditions };
+        // Auto-manage Wounded condition based on wounds
+        if (wounds > 0 && !newConditions.includes('Wounded')) {
+          newConditions.push('Wounded');
+        } else if (wounds === 0) {
+          newConditions = newConditions.filter(c => c !== 'Wounded');
+        }
+
+        return { ...t, health: clampedHealth, conditions: newConditions, wounds };
       }
       return t;
     }));
@@ -252,8 +266,28 @@ export default function NimbleCombatTracker() {
     }));
   };
 
+  const updateWounds = (tokenId, newWounds) => {
+    setTokens(tokens.map(t => {
+      if (t.id === tokenId) {
+        const wounds = Math.max(0, newWounds);
+        const conditions = t.conditions || [];
+        let newConditions = [...conditions];
+
+        // Auto-manage Wounded condition
+        if (wounds > 0 && !newConditions.includes('Wounded')) {
+          newConditions.push('Wounded');
+        } else if (wounds === 0) {
+          newConditions = newConditions.filter(c => c !== 'Wounded');
+        }
+
+        return { ...t, wounds, conditions: newConditions };
+      }
+      return t;
+    }));
+  };
+
   const doomedConditions = ['Bloodied', 'Dying', 'Wounded'];
-  
+
   const majorConditions = [
     'Blinded', 'Invisible', 'Dazed',
     'Charmed', 'Taunted', 'Frightened',
@@ -261,8 +295,20 @@ export default function NimbleCombatTracker() {
     'Restrained', 'Incapacitated', 'Poisoned',
     'Slowed', 'Prone', 'Hampered'
   ];
-  
+
   const minorConditions = ['Smoldering', 'Charged', 'Distracted'];
+
+  const clearConditions = (tokenId) => {
+    setTokens(prevTokens => prevTokens.map(t => {
+      if (t.id === tokenId) {
+        const conditions = t.conditions || [];
+        // Remove all major and minor conditions, keep doomed conditions
+        const newConditions = conditions.filter(c => doomedConditions.includes(c));
+        return { ...t, conditions: newConditions };
+      }
+      return t;
+    }));
+  };
 
   const conditionEmojis = {
     'Bloodied': '🩸',
@@ -743,34 +789,41 @@ export default function NimbleCombatTracker() {
       if (e.key === 'Shift') {
         setShiftHeld(true);
       }
-      
+
+      // Clear conditions: Shift+C when a token is selected
+      if (e.shiftKey && (e.key === 'c' || e.key === 'C') && selectedToken) {
+        e.preventDefault();
+        clearConditions(selectedToken);
+        return;
+      }
+
       // Redo: Ctrl+Shift+Z (or Cmd+Shift+Z on Mac) - check this first
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
         e.preventDefault();
         redo();
         return;
       }
-      
+
       // Undo: Ctrl+Z (or Cmd+Z on Mac)
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
         e.preventDefault();
         undo();
       }
     };
-    
+
     const handleKeyUp = (e) => {
       if (e.key === 'Shift') {
         setShiftHeld(false);
       }
     };
-    
+
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [historyStep, drawingHistory]);
+  }, [historyStep, drawingHistory, selectedToken]);
 
   const getTokenBorderColor = (type) => {
     switch(type) {
@@ -1642,9 +1695,10 @@ export default function NimbleCombatTracker() {
                         )}
                       </div>
                     )}
-                    <div 
+
+                    <div
                       className="absolute left-1/2 transform -translate-x-1/2 bg-black bg-opacity-80 px-1.5 py-0.5 rounded whitespace-nowrap pointer-events-none"
-                      style={{ 
+                      style={{
                         top: `-${currentTokenSize * 0.12}px`,
                         fontSize: `${Math.max(10, currentTokenSize * 0.18)}px`,
                         opacity: shouldShowToken ? 1 : 0
@@ -1942,13 +1996,91 @@ export default function NimbleCombatTracker() {
                         )}
                       </div>
                     </div>
+
+                    {/* Wounds - only show when at 0 HP and for heroes/companions */}
+                    {token.health === 0 && (token.type === 'hero' || token.type === 'companion') && (
+                      <div className="mt-2 mb-2 flex items-center justify-center gap-1 px-2">
+                        <span className="text-xs text-gray-400 mr-1">Wounds:</span>
+                        {[1, 2, 3, 4, 5, 6].map(woundNum => (
+                          <button
+                            key={woundNum}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateWounds(item.id, token.wounds === woundNum ? woundNum - 1 : woundNum);
+                            }}
+                            className={`w-5 h-5 rounded-full border transition-all flex items-center justify-center ${
+                              (token.wounds || 0) >= woundNum
+                                ? 'bg-red-600 border-red-400'
+                                : 'bg-gray-700 border-gray-500 hover:border-gray-400'
+                            }`}
+                            title={`${woundNum} wound${woundNum > 1 ? 's' : ''}`}
+                          >
+                            {(token.wounds || 0) >= woundNum && (
+                              <span className="text-white text-xs leading-none">✕</span>
+                            )}
+                          </button>
+                        ))}
+                        {(token.wounds || 0) > 6 && (
+                          <span className="text-xs text-red-400 font-bold ml-1">+{(token.wounds || 0) - 6}</span>
+                        )}
+                      </div>
+                    )}
                     
                     {expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`] && (
                       <div className="mb-2" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-2">
-                          <label className="text-xs text-gray-400">Conditions</label>
-                          {/* Temp HP Toggle */}
-                          {token.type !== 'legendary' && (
+                        {/* Wounds - only for heroes and companions */}
+                        {(token.type === 'hero' || token.type === 'companion') && (
+                          <div className="mb-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <label className="text-xs text-gray-400">Wounds</label>
+                              <button
+                                onClick={() => toggleTempHP(item.id)}
+                                className={`py-1 px-2 rounded text-xs flex items-center gap-1 ${
+                                  token.showTempHP
+                                    ? 'bg-cyan-600 hover:bg-cyan-700'
+                                    : 'bg-gray-600 hover:bg-gray-500'
+                                }`}
+                              >
+                                Temp HP 🛡️
+                              </button>
+                            </div>
+                            <div className="flex gap-1.5 justify-center items-center">
+                              {[1, 2, 3, 4, 5, 6].map(woundNum => (
+                                <button
+                                  key={woundNum}
+                                  onClick={() => updateWounds(item.id, token.wounds === woundNum ? woundNum - 1 : woundNum)}
+                                  className={`w-6 h-6 rounded-full border transition-all flex items-center justify-center ${
+                                    (token.wounds || 0) >= woundNum
+                                      ? 'bg-red-600 border-red-400'
+                                      : 'bg-gray-700 border-gray-500 hover:border-gray-400'
+                                  }`}
+                                  title={`${woundNum} wound${woundNum > 1 ? 's' : ''}`}
+                                >
+                                  {(token.wounds || 0) >= woundNum && (
+                                    <span className="text-white text-xs leading-none">✕</span>
+                                  )}
+                                </button>
+                              ))}
+                              <span className="text-xs text-gray-400 mx-1">+</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={Math.max(0, (token.wounds || 0) - 6)}
+                                onChange={(e) => {
+                                  const extraWounds = parseInt(e.target.value) || 0;
+                                  updateWounds(item.id, 6 + Math.max(0, extraWounds));
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-12 bg-gray-600 text-center rounded px-1 py-0.5 text-xs"
+                                title="Additional wounds beyond 6"
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Temp HP toggle for non-hero/companion tokens */}
+                        {token.type !== 'legendary' && token.type !== 'hero' && token.type !== 'companion' && (
+                          <div className="flex items-center justify-end mb-2">
                             <button
                               onClick={() => toggleTempHP(item.id)}
                               className={`py-1 px-2 rounded text-xs flex items-center gap-1 ${
@@ -1959,9 +2091,13 @@ export default function NimbleCombatTracker() {
                             >
                               Temp HP 🛡️
                             </button>
-                          )}
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-xs text-gray-400">Conditions</label>
                         </div>
-                        
+
                         {/* Doomed Conditions */}
                         <div className="mb-3">
                           <div className="text-xs font-bold text-red-400 mb-1">Doomed</div>
