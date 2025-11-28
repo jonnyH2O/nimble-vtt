@@ -6,6 +6,7 @@ export default function NimbleCombatTracker() {
   const [tokens, setTokens] = useState([]);
   const [turnOrder, setTurnOrder] = useState([]);
   const [dragging, setDragging] = useState(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [drawing, setDrawing] = useState(false);
   const [drawMode, setDrawMode] = useState('select');
   const [drawColor, setDrawColor] = useState('#ff0000');
@@ -330,13 +331,25 @@ export default function NimbleCombatTracker() {
     if (drawMode !== 'select') return;
     e.preventDefault();
     e.stopPropagation();
-    
+
     // If shift is held, just select for viewing conditions/notes
     if (e.shiftKey) {
       setSelectedToken(tokenId);
       return;
     }
-    
+
+    // Calculate the offset from cursor to token's top-left corner
+    const token = tokens.find(t => t.id === tokenId);
+    if (token) {
+      const rect = boardRef.current.getBoundingClientRect();
+      const cursorX = (e.clientX - rect.left - viewOffset.x) / zoomLevel;
+      const cursorY = (e.clientY - rect.top - viewOffset.y) / zoomLevel;
+      setDragOffset({
+        x: cursorX - token.x,
+        y: cursorY - token.y
+      });
+    }
+
     setDragging(tokenId);
     setSelectedToken(tokenId);
   };
@@ -391,9 +404,11 @@ export default function NimbleCombatTracker() {
 
     if (dragging) {
       const rect = boardRef.current.getBoundingClientRect();
-      const x = (e.clientX - rect.left - viewOffset.x) / zoomLevel - tokenSize / 2;
-      const y = (e.clientY - rect.top - viewOffset.y) / zoomLevel - tokenSize / 2;
-      setTokens(tokens.map(t => 
+      const cursorX = (e.clientX - rect.left - viewOffset.x) / zoomLevel;
+      const cursorY = (e.clientY - rect.top - viewOffset.y) / zoomLevel;
+      const x = cursorX - dragOffset.x;
+      const y = cursorY - dragOffset.y;
+      setTokens(tokens.map(t =>
         t.id === dragging ? { ...t, x, y } : t
       ));
     }
@@ -436,6 +451,7 @@ export default function NimbleCombatTracker() {
       saveToHistory();
     }
     setDragging(null);
+    setDragOffset({ x: 0, y: 0 });
     setDrawing(false);
     setPanningView(false);
     drawingRef.current = [];
@@ -443,6 +459,7 @@ export default function NimbleCombatTracker() {
 
   const handleMouseLeave = () => {
     setDragging(null);
+    setDragOffset({ x: 0, y: 0 });
     setDrawing(false);
     setPanningView(false);
     drawingRef.current = [];
