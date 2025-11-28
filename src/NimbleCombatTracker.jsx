@@ -88,6 +88,7 @@ export default function NimbleCombatTracker() {
         notes: '',
         conditions: [],
         wounds: 0,
+        maxWounds: 6,
         customSize: tokenSize // Start with the default token size
       };
       setTokens([...tokens, token]);
@@ -143,8 +144,8 @@ export default function NimbleCombatTracker() {
 
         // Auto-manage Dying condition (at 0 HP)
         if (clampedHealth === 0) {
-          // Gain a wound when reduced to 0 HP (only if coming from above 0)
-          if (wasAlive) {
+          // Gain a wound when reduced to 0 HP (only for heroes/companions and if coming from above 0)
+          if (wasAlive && (t.type === 'hero' || t.type === 'companion')) {
             wounds = wounds + 1;
           }
           if (!newConditions.includes('Dying')) {
@@ -165,11 +166,13 @@ export default function NimbleCombatTracker() {
           }
         }
 
-        // Auto-manage Wounded condition based on wounds
-        if (wounds > 0 && !newConditions.includes('Wounded')) {
-          newConditions.push('Wounded');
-        } else if (wounds === 0) {
-          newConditions = newConditions.filter(c => c !== 'Wounded');
+        // Auto-manage Wounded condition based on wounds (only for heroes/companions)
+        if (t.type === 'hero' || t.type === 'companion') {
+          if (wounds > 0 && !newConditions.includes('Wounded')) {
+            newConditions.push('Wounded');
+          } else if (wounds === 0) {
+            newConditions = newConditions.filter(c => c !== 'Wounded');
+          }
         }
 
         return { ...t, health: clampedHealth, conditions: newConditions, wounds };
@@ -1609,10 +1612,12 @@ export default function NimbleCombatTracker() {
                     {token.image ? (
                       <div className="relative">
                         <div
-                          className={`rounded-full border-4 ${getTokenBorderColor(token.type)} relative`}
+                          className={`rounded-full ${getTokenBorderColor(token.type)} relative`}
                           style={{
                             width: `${currentTokenSize}px`,
                             height: `${currentTokenSize}px`,
+                            borderWidth: `${Math.max(2, Math.round(currentTokenSize / 16))}px`,
+                            borderStyle: 'solid',
                             opacity: !shouldShowToken ? 0 : 1,
                             ...(selectedToken === token.id ? {
                               boxShadow: '0 0 0 2px rgba(249, 115, 22, 0.7)'
@@ -1653,10 +1658,12 @@ export default function NimbleCombatTracker() {
                     ) : (
                       <div className="relative">
                         <div
-                          className={`rounded-full border-4 ${getTokenBorderColor(token.type)} relative`}
+                          className={`rounded-full ${getTokenBorderColor(token.type)} relative`}
                           style={{
                             width: `${currentTokenSize}px`,
                             height: `${currentTokenSize}px`,
+                            borderWidth: `${Math.max(2, Math.round(currentTokenSize / 16))}px`,
+                            borderStyle: 'solid',
                             opacity: !shouldShowToken ? 0 : 1,
                             ...(selectedToken === token.id ? {
                               boxShadow: '0 0 0 2px rgba(249, 115, 22, 0.7)'
@@ -1999,30 +2006,36 @@ export default function NimbleCombatTracker() {
 
                     {/* Wounds - only show when at 0 HP and for heroes/companions */}
                     {token.health === 0 && (token.type === 'hero' || token.type === 'companion') && (
-                      <div className="mt-2 mb-2 flex items-center justify-center gap-1 px-2">
+                      <div className="mt-2 mb-2 flex items-center justify-center gap-1 px-2 flex-wrap">
                         <span className="text-xs text-gray-400 mr-1">Wounds:</span>
-                        {[1, 2, 3, 4, 5, 6].map(woundNum => (
-                          <button
-                            key={woundNum}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateWounds(item.id, token.wounds === woundNum ? woundNum - 1 : woundNum);
-                            }}
-                            className={`w-5 h-5 rounded-full border transition-all flex items-center justify-center ${
-                              (token.wounds || 0) >= woundNum
-                                ? 'bg-red-600 border-red-400'
-                                : 'bg-gray-700 border-gray-500 hover:border-gray-400'
-                            }`}
-                            title={`${woundNum} wound${woundNum > 1 ? 's' : ''}`}
-                          >
-                            {(token.wounds || 0) >= woundNum && (
-                              <span className="text-white text-xs leading-none">✕</span>
-                            )}
-                          </button>
-                        ))}
-                        {(token.wounds || 0) > 6 && (
-                          <span className="text-xs text-red-400 font-bold ml-1">+{(token.wounds || 0) - 6}</span>
-                        )}
+                        {Array.from({ length: token.maxWounds || 6 }, (_, i) => i + 1).map(woundNum => {
+                          const maxWounds = token.maxWounds || 6;
+                          const circleSize = maxWounds <= 6 ? 5 : Math.max(4, Math.floor(24 / maxWounds));
+                          return (
+                            <button
+                              key={woundNum}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateWounds(item.id, token.wounds === woundNum ? woundNum - 1 : woundNum);
+                              }}
+                              className={`rounded-full border transition-all flex items-center justify-center ${
+                                (token.wounds || 0) >= woundNum
+                                  ? 'bg-red-600 border-red-400'
+                                  : 'bg-gray-700 border-gray-500 hover:border-gray-400'
+                              }`}
+                              style={{
+                                width: `${circleSize * 4}px`,
+                                height: `${circleSize * 4}px`,
+                                fontSize: `${circleSize * 3}px`
+                              }}
+                              title={`${woundNum} wound${woundNum > 1 ? 's' : ''}`}
+                            >
+                              {(token.wounds || 0) >= woundNum && (
+                                <span className="text-white leading-none">✕</span>
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
                     )}
                     
@@ -2044,35 +2057,47 @@ export default function NimbleCombatTracker() {
                                 Temp HP 🛡️
                               </button>
                             </div>
-                            <div className="flex gap-1.5 justify-center items-center">
-                              {[1, 2, 3, 4, 5, 6].map(woundNum => (
-                                <button
-                                  key={woundNum}
-                                  onClick={() => updateWounds(item.id, token.wounds === woundNum ? woundNum - 1 : woundNum)}
-                                  className={`w-6 h-6 rounded-full border transition-all flex items-center justify-center ${
-                                    (token.wounds || 0) >= woundNum
-                                      ? 'bg-red-600 border-red-400'
-                                      : 'bg-gray-700 border-gray-500 hover:border-gray-400'
-                                  }`}
-                                  title={`${woundNum} wound${woundNum > 1 ? 's' : ''}`}
-                                >
-                                  {(token.wounds || 0) >= woundNum && (
-                                    <span className="text-white text-xs leading-none">✕</span>
-                                  )}
-                                </button>
-                              ))}
-                              <span className="text-xs text-gray-400 mx-1">+</span>
+                            <div className="flex gap-1 justify-center items-center flex-wrap">
+                              {Array.from({ length: token.maxWounds || 6 }, (_, i) => i + 1).map(woundNum => {
+                                const maxWounds = token.maxWounds || 6;
+                                const circleSize = maxWounds <= 6 ? 6 : Math.max(4, Math.floor(24 / maxWounds));
+                                return (
+                                  <button
+                                    key={woundNum}
+                                    onClick={() => updateWounds(item.id, token.wounds === woundNum ? woundNum - 1 : woundNum)}
+                                    className={`rounded-full border transition-all flex items-center justify-center ${
+                                      (token.wounds || 0) >= woundNum
+                                        ? 'bg-red-600 border-red-400'
+                                        : 'bg-gray-700 border-gray-500 hover:border-gray-400'
+                                    }`}
+                                    style={{
+                                      width: `${circleSize * 4}px`,
+                                      height: `${circleSize * 4}px`,
+                                      fontSize: `${circleSize * 3}px`
+                                    }}
+                                    title={`${woundNum} wound${woundNum > 1 ? 's' : ''}`}
+                                  >
+                                    {(token.wounds || 0) >= woundNum && (
+                                      <span className="text-white leading-none">✕</span>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                              <span className="text-xs text-gray-400 mx-1">=</span>
                               <input
                                 type="number"
-                                min="0"
-                                value={Math.max(0, (token.wounds || 0) - 6)}
+                                min="1"
+                                max="20"
+                                value={token.maxWounds || 6}
                                 onChange={(e) => {
-                                  const extraWounds = parseInt(e.target.value) || 0;
-                                  updateWounds(item.id, 6 + Math.max(0, extraWounds));
+                                  const newMax = Math.max(1, Math.min(20, parseInt(e.target.value) || 6));
+                                  setTokens(tokens.map(t =>
+                                    t.id === item.id ? { ...t, maxWounds: newMax, wounds: Math.min(t.wounds || 0, newMax) } : t
+                                  ));
                                 }}
                                 onClick={(e) => e.stopPropagation()}
                                 className="w-12 bg-gray-600 text-center rounded px-1 py-0.5 text-xs"
-                                title="Additional wounds beyond 6"
+                                title="Maximum wounds"
                               />
                             </div>
                           </div>
