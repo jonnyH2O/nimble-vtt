@@ -1,9 +1,183 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback, useReducer } from 'react';
 import { Upload, Trash2, Plus, Users, Swords, Heart, Eraser, Pencil, Info, MousePointer, Settings, Download, FileUp, Dices, AlertCircle, Book, List, Undo2, Redo2, Crown, RotateCcw } from 'lucide-react';
+
+// Token reducer for efficient state updates
+function tokensReducer(state, action) {
+  switch (action.type) {
+    case 'ADD_TOKEN':
+      return [...state, action.payload];
+
+    case 'REMOVE_TOKEN':
+      return state.filter(t => t.id !== action.payload);
+
+    case 'UPDATE_TOKEN':
+      // Surgical update - only the specified token is replaced
+      return state.map(t =>
+        t.id === action.payload.id ? { ...t, ...action.payload.updates } : t
+      );
+
+    case 'UPDATE_HEALTH': {
+      const { tokenId, newHealth } = action.payload;
+      return state.map(t => {
+        if (t.id !== tokenId) return t;
+
+        const wasAlive = t.health > 0;
+        const clampedHealth = Math.max(0, Math.min(t.maxHealth, newHealth));
+        const conditions = t.conditions || [];
+        let newConditions = [...conditions];
+        let wounds = t.wounds || 0;
+
+        // Auto-manage Dying condition (at 0 HP)
+        if (clampedHealth === 0) {
+          if (wasAlive && (t.type === 'hero' || t.type === 'companion')) {
+            wounds = wounds + 1;
+          }
+          if (!newConditions.includes('Dying')) {
+            newConditions.push('Dying');
+          }
+          newConditions = newConditions.filter(c => c !== 'Bloodied');
+        } else {
+          newConditions = newConditions.filter(c => c !== 'Dying');
+          const isBloodied = clampedHealth <= t.maxHealth / 2;
+          if (isBloodied && !newConditions.includes('Bloodied')) {
+            newConditions.push('Bloodied');
+          } else if (!isBloodied && newConditions.includes('Bloodied')) {
+            newConditions = newConditions.filter(c => c !== 'Bloodied');
+          }
+        }
+
+        // Auto-manage Wounded condition
+        if (t.type === 'hero' || t.type === 'companion') {
+          if (wounds > 0 && !newConditions.includes('Wounded')) {
+            newConditions.push('Wounded');
+          } else if (wounds === 0) {
+            newConditions = newConditions.filter(c => c !== 'Wounded');
+          }
+        }
+
+        return { ...t, health: clampedHealth, conditions: newConditions, wounds };
+      });
+    }
+
+    case 'UPDATE_MAX_HEALTH': {
+      const { tokenId, newMaxHealth } = action.payload;
+      return state.map(t => {
+        if (t.id !== tokenId) return t;
+
+        const maxHP = Math.max(1, newMaxHealth);
+        const clampedHealth = Math.min(t.health, maxHP);
+        const conditions = t.conditions || [];
+        let newConditions = [...conditions];
+
+        if (clampedHealth === 0) {
+          if (!newConditions.includes('Dying')) {
+            newConditions.push('Dying');
+          }
+          newConditions = newConditions.filter(c => c !== 'Bloodied');
+        } else {
+          newConditions = newConditions.filter(c => c !== 'Dying');
+          const isBloodied = clampedHealth <= maxHP / 2;
+          if (isBloodied && !newConditions.includes('Bloodied')) {
+            newConditions.push('Bloodied');
+          } else if (!isBloodied && newConditions.includes('Bloodied')) {
+            newConditions = newConditions.filter(c => c !== 'Bloodied');
+          }
+        }
+
+        return { ...t, maxHealth: maxHP, health: clampedHealth, conditions: newConditions };
+      });
+    }
+
+    case 'TOGGLE_CONDITION': {
+      const { tokenId, condition } = action.payload;
+      return state.map(t => {
+        if (t.id !== tokenId) return t;
+
+        const conditions = t.conditions || [];
+        const hasCondition = conditions.includes(condition);
+        return {
+          ...t,
+          conditions: hasCondition
+            ? conditions.filter(c => c !== condition)
+            : [...conditions, condition]
+        };
+      });
+    }
+
+    case 'UPDATE_WOUNDS': {
+      const { tokenId, newWounds } = action.payload;
+      return state.map(t => {
+        if (t.id !== tokenId) return t;
+
+        const wounds = Math.max(0, newWounds);
+        const conditions = t.conditions || [];
+        let newConditions = [...conditions];
+
+        if (wounds > 0 && !newConditions.includes('Wounded')) {
+          newConditions.push('Wounded');
+        } else if (wounds === 0) {
+          newConditions = newConditions.filter(c => c !== 'Wounded');
+        }
+
+        return { ...t, wounds, conditions: newConditions };
+      });
+    }
+
+    case 'TOGGLE_ACTION': {
+      const { tokenId, actionIndex } = action.payload;
+      return state.map(t => {
+        if (t.id !== tokenId) return t;
+
+        const newActions = [...t.actions];
+        newActions[actionIndex] = !newActions[actionIndex];
+        return { ...t, actions: newActions };
+      });
+    }
+
+    case 'START_TURN': {
+      const { tokenId } = action.payload;
+      return state.map(t => ({
+        ...t,
+        isActiveTurn: t.id === tokenId
+      }));
+    }
+
+    case 'END_TURN': {
+      const { tokenId } = action.payload;
+      return state.map(t =>
+        t.id === tokenId ? { ...t, isActiveTurn: false, actions: t.actions.map(() => false) } : t
+      );
+    }
+
+    case 'RESET_NON_HERO_ACTIONS':
+      return state.map(t =>
+        t.type !== 'hero' ? { ...t, actions: t.actions.map(() => false) } : t
+      );
+
+    case 'CLEAR_CONDITIONS': {
+      const { tokenId } = action.payload;
+      return state.map(t => {
+        if (t.id !== tokenId) return t;
+
+        const doomedConditions = ['Bloodied', 'Dying', 'Wounded'];
+        return {
+          ...t,
+          conditions: (t.conditions || []).filter(c => doomedConditions.includes(c))
+        };
+      });
+    }
+
+    case 'SET_ALL_TOKENS':
+      return action.payload;
+
+    default:
+      return state;
+  }
+}
 
 export default function NimbleCombatTracker() {
   const [background, setBackground] = useState(null);
-  const [tokens, setTokens] = useState([]);
+  const [tokens, dispatchTokens] = useReducer(tokensReducer, []);
   const [turnOrder, setTurnOrder] = useState([]);
   const [dragging, setDragging] = useState(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -89,14 +263,14 @@ export default function NimbleCombatTracker() {
         conditions: [],
         wounds: 0,
         maxWounds: 6,
-        customSize: tokenSize, // Start with the default token size
+        customSize: null, // Use global tokenSize by default
         hasResource: newToken.hasResource || false,
         resourceName: newToken.resourceName || '',
         resourceColor: newToken.resourceColor || '#3b82f6',
         currentResource: newToken.hasResource ? 5 : 0,
         maxResource: newToken.hasResource ? 5 : 0
       };
-      setTokens([...tokens, token]);
+      dispatchTokens({ type: 'ADD_TOKEN', payload: token });
       setTurnOrder([...turnOrder, token.id]);
       setNewToken({ name: '', type: 'hero', image: null, hasResource: false, resourceName: '', resourceColor: '#3b82f6', currentResource: 5, maxResource: 5 });
       setShowAddToken(false);
@@ -104,29 +278,30 @@ export default function NimbleCombatTracker() {
   };
 
   const removeToken = (id) => {
-    setTokens(tokens.filter(t => t.id !== id));
+    dispatchTokens({ type: 'REMOVE_TOKEN', payload: id });
     setTurnOrder(turnOrder.filter(tid => tid !== id));
     if (selectedToken === id) setSelectedToken(null);
   };
 
   // Generate display turn order with legendary tokens at top and after each hero
-  const getDisplayTurnOrder = () => {
+  // Memoized to prevent recalculation on every render
+  const displayTurnOrder = useMemo(() => {
     const displayOrder = [];
     const legendaryTokens = tokens.filter(t => t.type === 'legendary');
-    
+
     // Add legendary tokens at the very top (their main bodies)
     legendaryTokens.forEach(legendary => {
       displayOrder.push({ id: legendary.id, isLegendaryEcho: false, isMainLegendary: true });
     });
-    
+
     // Then add regular turn order with legendary echoes after heroes
     turnOrder.forEach((tokenId) => {
       const token = tokens.find(t => t.id === tokenId);
       if (!token || token.type === 'legendary') return; // Skip legendary tokens in normal order
-      
+
       // Add the regular token
       displayOrder.push({ id: tokenId, isLegendaryEcho: false, isMainLegendary: false });
-      
+
       // If it's a hero, add all legendary tokens after it
       if (token.type === 'hero') {
         legendaryTokens.forEach(legendary => {
@@ -134,115 +309,100 @@ export default function NimbleCombatTracker() {
         });
       }
     });
-    
+
     return displayOrder;
-  };
+  }, [tokens, turnOrder]);
 
-  const updateHealth = (tokenId, newHealth) => {
-    setTokens(tokens.map(t => {
-      if (t.id === tokenId) {
-        const wasAlive = t.health > 0;
-        const clampedHealth = Math.max(0, Math.min(t.maxHealth, newHealth));
-        const conditions = t.conditions || [];
-        let newConditions = [...conditions];
-        let wounds = t.wounds || 0;
+  // Memoize light sources to avoid repeated filtering
+  const lightSources = useMemo(() => {
+    return tokens.filter(t => t.type === 'hero' || t.type === 'companion');
+  }, [tokens]);
 
-        // Auto-manage Dying condition (at 0 HP)
-        if (clampedHealth === 0) {
-          // Gain a wound when reduced to 0 HP (only for heroes/companions and if coming from above 0)
-          if (wasAlive && (t.type === 'hero' || t.type === 'companion')) {
-            wounds = wounds + 1;
-          }
-          if (!newConditions.includes('Dying')) {
-            newConditions.push('Dying');
-          }
-          // Remove Bloodied when Dying
-          newConditions = newConditions.filter(c => c !== 'Bloodied');
-        } else {
-          // Remove Dying if HP > 0
-          newConditions = newConditions.filter(c => c !== 'Dying');
+  // Memoize light source data for darkness mode calculations
+  const lightSourceData = useMemo(() => {
+    if (!darknessMode) return [];
 
-          // Auto-manage Bloodied condition (at or below half HP)
-          const isBloodied = clampedHealth <= t.maxHealth / 2;
-          if (isBloodied && !newConditions.includes('Bloodied')) {
-            newConditions.push('Bloodied');
-          } else if (!isBloodied && newConditions.includes('Bloodied')) {
-            newConditions = newConditions.filter(c => c !== 'Bloodied');
-          }
-        }
+    return lightSources.map(source => {
+      const sourceSize = source.customSize || tokenSize;
+      const lightRadius = source.type === 'hero'
+        ? sourceSize * heroLightRadius
+        : sourceSize * companionLightRadius;
+      const centerX = source.x + sourceSize / 2;
+      const centerY = source.y + sourceSize / 2;
 
-        // Auto-manage Wounded condition based on wounds (only for heroes/companions)
-        if (t.type === 'hero' || t.type === 'companion') {
-          if (wounds > 0 && !newConditions.includes('Wounded')) {
-            newConditions.push('Wounded');
-          } else if (wounds === 0) {
-            newConditions = newConditions.filter(c => c !== 'Wounded');
-          }
-        }
+      return {
+        id: source.id,
+        type: source.type,
+        centerX,
+        centerY,
+        lightRadius,
+        sourceSize
+      };
+    });
+  }, [lightSources, darknessMode, tokenSize, heroLightRadius, companionLightRadius]);
 
-        return { ...t, health: clampedHealth, conditions: newConditions, wounds };
+  // Memoize token visibility calculations for darkness mode
+  const tokenVisibility = useMemo(() => {
+    if (!darknessMode) return {};
+
+    const visibility = {};
+    tokens.forEach(token => {
+      const isInDarkness = token.type === 'enemy' || token.type === 'legendary';
+      if (!isInDarkness) {
+        visibility[token.id] = true;
+        return;
       }
-      return t;
-    }));
-  };
 
-  const updateMaxHealth = (tokenId, newMaxHealth) => {
-    setTokens(tokens.map(t => {
-      if (t.id === tokenId) {
-        const maxHP = Math.max(1, newMaxHealth);
-        const clampedHealth = Math.min(t.health, maxHP);
-        const conditions = t.conditions || [];
-        let newConditions = [...conditions];
+      // Check if token is within light radius of any hero or companion
+      const currentTokenSize = token.customSize || tokenSize;
+      const tokenCenterX = token.x + currentTokenSize / 2;
+      const tokenCenterY = token.y + currentTokenSize / 2;
 
-        // Auto-manage Dying condition (at 0 HP)
-        if (clampedHealth === 0) {
-          if (!newConditions.includes('Dying')) {
-            newConditions.push('Dying');
-          }
-          // Remove Bloodied when Dying
-          newConditions = newConditions.filter(c => c !== 'Bloodied');
-        } else {
-          // Remove Dying if HP > 0
-          newConditions = newConditions.filter(c => c !== 'Dying');
+      let isLit = false;
+      for (const source of lightSourceData) {
+        const distance = Math.sqrt(
+          Math.pow(tokenCenterX - source.centerX, 2) +
+          Math.pow(tokenCenterY - source.centerY, 2)
+        );
 
-          // Auto-manage Bloodied condition (at or below half HP)
-          const isBloodied = clampedHealth <= maxHP / 2;
-          if (isBloodied && !newConditions.includes('Bloodied')) {
-            newConditions.push('Bloodied');
-          } else if (!isBloodied && newConditions.includes('Bloodied')) {
-            newConditions = newConditions.filter(c => c !== 'Bloodied');
-          }
+        if (distance <= source.lightRadius) {
+          isLit = true;
+          break;
         }
-
-        return { ...t, maxHealth: maxHP, health: clampedHealth, conditions: newConditions };
       }
-      return t;
-    }));
-  };
 
-  const updateNotes = (tokenId, notes) => {
-    setTokens(tokens.map(t => 
-      t.id === tokenId ? { ...t, notes } : t
-    ));
-  };
+      visibility[token.id] = isLit;
+    });
 
-  const updateTokenSize = (tokenId, size) => {
-    setTokens(tokens.map(t => 
-      t.id === tokenId ? { ...t, customSize: size } : t
-    ));
-  };
+    return visibility;
+  }, [tokens, darknessMode, lightSourceData, tokenSize]);
 
-  const updateTempHP = (tokenId, tempHP) => {
-    setTokens(tokens.map(t => 
-      t.id === tokenId ? { ...t, tempHP: Math.max(0, tempHP) } : t
-    ));
-  };
+  const updateHealth = useCallback((tokenId, newHealth) => {
+    dispatchTokens({ type: 'UPDATE_HEALTH', payload: { tokenId, newHealth } });
+  }, []);
 
-  const toggleTempHP = (tokenId) => {
-    setTokens(tokens.map(t => 
-      t.id === tokenId ? { ...t, showTempHP: !t.showTempHP } : t
-    ));
-  };
+  const updateMaxHealth = useCallback((tokenId, newMaxHealth) => {
+    dispatchTokens({ type: 'UPDATE_MAX_HEALTH', payload: { tokenId, newMaxHealth } });
+  }, []);
+
+  const updateNotes = useCallback((tokenId, notes) => {
+    dispatchTokens({ type: 'UPDATE_TOKEN', payload: { id: tokenId, updates: { notes } } });
+  }, []);
+
+  const updateTokenSize = useCallback((tokenId, size) => {
+    dispatchTokens({ type: 'UPDATE_TOKEN', payload: { id: tokenId, updates: { customSize: size } } });
+  }, []);
+
+  const updateTempHP = useCallback((tokenId, tempHP) => {
+    dispatchTokens({ type: 'UPDATE_TOKEN', payload: { id: tokenId, updates: { tempHP: Math.max(0, tempHP) } } });
+  }, []);
+
+  const toggleTempHP = useCallback((tokenId) => {
+    const token = tokens.find(t => t.id === tokenId);
+    if (token) {
+      dispatchTokens({ type: 'UPDATE_TOKEN', payload: { id: tokenId, updates: { showTempHP: !token.showTempHP } } });
+    }
+  }, [tokens]);
 
   const toggleNotes = (tokenId) => {
     setExpandedNotes(prev => ({
@@ -258,41 +418,13 @@ export default function NimbleCombatTracker() {
     }));
   };
 
-  const toggleCondition = (tokenId, condition) => {
-    setTokens(tokens.map(t => {
-      if (t.id === tokenId) {
-        const conditions = t.conditions || [];
-        const hasCondition = conditions.includes(condition);
-        return {
-          ...t,
-          conditions: hasCondition
-            ? conditions.filter(c => c !== condition)
-            : [...conditions, condition]
-        };
-      }
-      return t;
-    }));
-  };
+  const toggleCondition = useCallback((tokenId, condition) => {
+    dispatchTokens({ type: 'TOGGLE_CONDITION', payload: { tokenId, condition } });
+  }, []);
 
-  const updateWounds = (tokenId, newWounds) => {
-    setTokens(tokens.map(t => {
-      if (t.id === tokenId) {
-        const wounds = Math.max(0, newWounds);
-        const conditions = t.conditions || [];
-        let newConditions = [...conditions];
-
-        // Auto-manage Wounded condition
-        if (wounds > 0 && !newConditions.includes('Wounded')) {
-          newConditions.push('Wounded');
-        } else if (wounds === 0) {
-          newConditions = newConditions.filter(c => c !== 'Wounded');
-        }
-
-        return { ...t, wounds, conditions: newConditions };
-      }
-      return t;
-    }));
-  };
+  const updateWounds = useCallback((tokenId, newWounds) => {
+    dispatchTokens({ type: 'UPDATE_WOUNDS', payload: { tokenId, newWounds } });
+  }, []);
 
   const doomedConditions = ['Bloodied', 'Dying', 'Wounded'];
 
@@ -306,17 +438,9 @@ export default function NimbleCombatTracker() {
 
   const minorConditions = ['Smoldering', 'Charged', 'Distracted'];
 
-  const clearConditions = (tokenId) => {
-    setTokens(prevTokens => prevTokens.map(t => {
-      if (t.id === tokenId) {
-        const conditions = t.conditions || [];
-        // Remove all major and minor conditions, keep doomed conditions
-        const newConditions = conditions.filter(c => doomedConditions.includes(c));
-        return { ...t, conditions: newConditions };
-      }
-      return t;
-    }));
-  };
+  const clearConditions = useCallback((tokenId) => {
+    dispatchTokens({ type: 'CLEAR_CONDITIONS', payload: { tokenId } });
+  }, []);
 
   const conditionEmojis = {
     'Bloodied': '🩸',
@@ -342,46 +466,23 @@ export default function NimbleCombatTracker() {
     'Distracted': '🌀'
   };
 
-  const toggleAction = (tokenId, actionIndex) => {
-    setTokens(tokens.map(t => {
-      if (t.id === tokenId && t.actions) {
-        const newActions = [...t.actions];
-        newActions[actionIndex] = !newActions[actionIndex];
-        return { ...t, actions: newActions };
-      }
-      return t;
-    }));
-  };
+  const toggleAction = useCallback((tokenId, actionIndex) => {
+    dispatchTokens({ type: 'TOGGLE_ACTION', payload: { tokenId, actionIndex } });
+  }, []);
 
-  const startTurn = (tokenId) => {
-    setTokens(tokens.map(t => {
-      if (t.id === tokenId && t.type === 'hero') {
-        return { ...t, isActiveTurn: true };
-      }
-      return t;
-    }));
-  };
+  const startTurn = useCallback((tokenId) => {
+    dispatchTokens({ type: 'START_TURN', payload: { tokenId } });
+  }, []);
 
-  const endTurn = (tokenId) => {
-    setTokens(tokens.map(t => {
-      if (t.id === tokenId && t.type === 'hero') {
-        return { ...t, isActiveTurn: false, actions: [false, false, false] };
-      }
-      return t;
-    }));
-  };
+  const endTurn = useCallback((tokenId) => {
+    dispatchTokens({ type: 'END_TURN', payload: { tokenId } });
+  }, []);
 
-  const resetNonHeroActions = () => {
-    setTokens(tokens.map(t => {
-      if (t.type !== 'hero') {
-        // Reset all actions to false for non-hero tokens
-        return { ...t, actions: t.actions.map(() => false) };
-      }
-      return t;
-    }));
-  };
+  const resetNonHeroActions = useCallback(() => {
+    dispatchTokens({ type: 'RESET_NON_HERO_ACTIONS' });
+  }, []);
 
-  const handleMouseDown = (e, tokenId) => {
+  const handleMouseDown = useCallback((e, tokenId) => {
     if (drawMode !== 'select') return;
     e.preventDefault();
     e.stopPropagation();
@@ -406,27 +507,27 @@ export default function NimbleCombatTracker() {
 
     setDragging(tokenId);
     setSelectedToken(tokenId);
-  };
+  }, [drawMode, tokens, viewOffset, zoomLevel]);
 
-  const handleWheel = (e) => {
+  const handleWheel = useCallback((e) => {
     if (drawMode === 'select') {
       e.preventDefault();
       const delta = e.deltaY > 0 ? -0.1 : 0.1;
       const newZoom = Math.min(Math.max(0.5, zoomLevel + delta), 3);
-      
+
       const rect = boardRef.current.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
-      
+
       const scaleChange = newZoom / zoomLevel;
       setViewOffset({
         x: mouseX - (mouseX - viewOffset.x) * scaleChange,
         y: mouseY - (mouseY - viewOffset.y) * scaleChange
       });
-      
+
       setZoomLevel(newZoom);
     }
-  };
+  }, [drawMode, zoomLevel, viewOffset]);
 
   const handleBoardMouseDown = (e) => {
     if (drawMode === 'select') {
@@ -465,9 +566,7 @@ export default function NimbleCombatTracker() {
       const cursorY = (e.clientY - rect.top - viewOffset.y) / zoomLevel;
       const x = cursorX - dragOffset.x;
       const y = cursorY - dragOffset.y;
-      setTokens(tokens.map(t =>
-        t.id === dragging ? { ...t, x, y } : t
-      ));
+      dispatchTokens({ type: 'UPDATE_TOKEN', payload: { id: dragging, updates: { x, y } } });
     }
     
     if (drawing) {
@@ -711,7 +810,7 @@ export default function NimbleCombatTracker() {
         const battleState = JSON.parse(event.target.result);
         
         // Restore all state (conditions are included in tokens)
-        if (battleState.tokens) setTokens(battleState.tokens);
+        if (battleState.tokens) dispatchTokens({ type: 'SET_ALL_TOKENS', payload: battleState.tokens });
         if (battleState.turnOrder) setTurnOrder(battleState.turnOrder);
         if (battleState.background) setBackground(battleState.background);
         if (battleState.backgroundSize) setBackgroundSize(battleState.backgroundSize);
@@ -885,7 +984,7 @@ export default function NimbleCombatTracker() {
             </button>
             
             {showAddToken && (
-              <div className="absolute left-0 top-12 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-lg z-50 w-80">
+              <div className="absolute left-0 top-12 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-lg z-[100] w-80">
                 <h3 className="text-sm font-bold mb-3">Add New Token</h3>
                 
                 <div className="space-y-3">
@@ -1118,7 +1217,7 @@ export default function NimbleCombatTracker() {
           </button>
 
           {showDiceMenu && (
-            <div className="absolute right-80 top-12 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-lg z-50 w-64">
+            <div className="absolute right-80 top-12 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-lg z-[100] w-64">
               <h3 className="text-sm font-bold mb-3">Roll Dice</h3>
               
               <div className="mb-4">
@@ -1505,12 +1604,7 @@ export default function NimbleCombatTracker() {
                 <svg className="absolute inset-0 pointer-events-none" style={{ width: '100%', height: '100%', zIndex: 10 }}>
                   <defs>
                     {/* Create radial gradients for each light source */}
-                    {tokens.filter(t => t.type === 'hero' || t.type === 'companion').map((token) => {
-                      const currentTokenSize = token.customSize || tokenSize;
-                      const lightRadius = token.type === 'hero' 
-                        ? currentTokenSize * heroLightRadius 
-                        : currentTokenSize * companionLightRadius;
-                      
+                    {lightSources.map((token) => {
                       return (
                         <radialGradient key={`gradient-${token.id}`} id={`gradient-${token.id}`}>
                           <stop offset="0%" stopColor="black" stopOpacity="1" />
@@ -1519,38 +1613,31 @@ export default function NimbleCombatTracker() {
                         </radialGradient>
                       );
                     })}
-                    
+
                     {/* Mask: white = show darkness, black = hide darkness (light) */}
                     <mask id="darkness-mask">
                       {/* Start with white (show darkness everywhere) */}
                       <rect width="100%" height="100%" fill="white" />
-                      
+
                       {/* Add black circles for light areas - gradients blend smoothly */}
-                      {tokens.filter(t => t.type === 'hero' || t.type === 'companion').map((token) => {
-                        const currentTokenSize = token.customSize || tokenSize;
-                        const lightRadius = token.type === 'hero' 
-                          ? currentTokenSize * heroLightRadius 
-                          : currentTokenSize * companionLightRadius;
-                        const centerX = token.x + currentTokenSize / 2;
-                        const centerY = token.y + currentTokenSize / 2;
-                        
+                      {lightSourceData.map((source) => {
                         return (
                           <circle
-                            key={`light-${token.id}`}
-                            cx={centerX}
-                            cy={centerY}
-                            r={lightRadius}
-                            fill={`url(#gradient-${token.id})`}
+                            key={`light-${source.id}`}
+                            cx={source.centerX}
+                            cy={source.centerY}
+                            r={source.lightRadius}
+                            fill={`url(#gradient-${source.id})`}
                           />
                         );
                       })}
                     </mask>
                   </defs>
-                  
+
                   {/* Black overlay - visible where mask is white (dark areas) */}
-                  <rect 
-                    width="100%" 
-                    height="100%" 
+                  <rect
+                    width="100%"
+                    height="100%"
                     fill="black"
                     opacity={darknessIntensity}
                     mask="url(#darkness-mask)"
@@ -1566,31 +1653,9 @@ export default function NimbleCombatTracker() {
                     // Only show ring if token is enemy/legendary AND hidden in darkness
                     const isInDarkness = t.type === 'enemy' || t.type === 'legendary';
                     if (!isInDarkness) return false;
-                    
-                    // Check if token is lit (visible)
-                    const currentTokenSize = t.customSize || tokenSize;
-                    const lightSources = tokens.filter(lt => lt.type === 'hero' || lt.type === 'companion');
-                    for (const source of lightSources) {
-                      const sourceSize = source.customSize || tokenSize;
-                      const lightRadius = source.type === 'hero' 
-                        ? sourceSize * heroLightRadius 
-                        : sourceSize * companionLightRadius;
-                      
-                      const sourceCenterX = source.x + sourceSize / 2;
-                      const sourceCenterY = source.y + sourceSize / 2;
-                      const tokenCenterX = t.x + currentTokenSize / 2;
-                      const tokenCenterY = t.y + currentTokenSize / 2;
-                      
-                      const distance = Math.sqrt(
-                        Math.pow(tokenCenterX - sourceCenterX, 2) + 
-                        Math.pow(tokenCenterY - sourceCenterY, 2)
-                      );
-                      
-                      if (distance <= lightRadius) {
-                        return false; // Token is visible, don't show ring
-                      }
-                    }
-                    return true; // Token is hidden, show ring
+
+                    // Check if token is visible (use memoized visibility)
+                    return !tokenVisibility[t.id]; // Show ring only if NOT visible
                   }).map((token) => {
                     const currentTokenSize = token.customSize || tokenSize;
                     return (
@@ -1613,38 +1678,10 @@ export default function NimbleCombatTracker() {
               
               {tokens.map((token) => {
                 const currentTokenSize = token.customSize || tokenSize;
-                
-                // Check if token is in darkness (only for enemies and legendaries)
+
+                // Use memoized visibility calculation
                 const isInDarkness = darknessMode && (token.type === 'enemy' || token.type === 'legendary');
-                let tokenIsLit = false;
-                
-                if (isInDarkness) {
-                  // Check if this token is within light radius of any hero or companion
-                  const lightSources = tokens.filter(t => t.type === 'hero' || t.type === 'companion');
-                  for (const source of lightSources) {
-                    const sourceSize = source.customSize || tokenSize;
-                    const lightRadius = source.type === 'hero' 
-                      ? sourceSize * heroLightRadius 
-                      : sourceSize * companionLightRadius;
-                    
-                    const sourceCenterX = source.x + sourceSize / 2;
-                    const sourceCenterY = source.y + sourceSize / 2;
-                    const tokenCenterX = token.x + currentTokenSize / 2;
-                    const tokenCenterY = token.y + currentTokenSize / 2;
-                    
-                    const distance = Math.sqrt(
-                      Math.pow(tokenCenterX - sourceCenterX, 2) + 
-                      Math.pow(tokenCenterY - sourceCenterY, 2)
-                    );
-                    
-                    if (distance <= lightRadius) {
-                      tokenIsLit = true;
-                      break;
-                    }
-                  }
-                }
-                
-                const shouldShowToken = !isInDarkness || tokenIsLit;
+                const shouldShowToken = !isInDarkness || (tokenVisibility[token.id] ?? true);
                 
                 return (
                 <div
@@ -2047,7 +2084,7 @@ export default function NimbleCombatTracker() {
                 </div>
             
             <div className="space-y-2">
-              {getDisplayTurnOrder().map((item, index) => {
+              {displayTurnOrder.map((item, index) => {
                 const token = tokens.find(t => t.id === item.id);
                 if (!token) return null;
                 
@@ -2311,9 +2348,7 @@ export default function NimbleCombatTracker() {
                                 value={token.currentResource || 0}
                                 onChange={(e) => {
                                   const newCurrent = Math.max(0, Math.min(parseInt(e.target.value) || 0, token.maxResource || 0));
-                                  setTokens(tokens.map(t =>
-                                    t.id === item.id ? { ...t, currentResource: newCurrent } : t
-                                  ));
+                                  dispatchTokens({ type: 'UPDATE_TOKEN', payload: { id: item.id, updates: { currentResource: newCurrent } } });
                                 }}
                                 onClick={(e) => e.stopPropagation()}
                                 className="w-16 bg-gray-600 text-center rounded px-2 py-1 text-sm"
@@ -2326,9 +2361,17 @@ export default function NimbleCombatTracker() {
                                 value={token.maxResource || 0}
                                 onChange={(e) => {
                                   const newMax = Math.max(0, parseInt(e.target.value) || 0);
-                                  setTokens(tokens.map(t =>
-                                    t.id === item.id ? { ...t, maxResource: newMax, currentResource: Math.min(t.currentResource || 0, newMax) } : t
-                                  ));
+                                  const currentToken = tokens.find(t => t.id === item.id);
+                                  dispatchTokens({
+                                    type: 'UPDATE_TOKEN',
+                                    payload: {
+                                      id: item.id,
+                                      updates: {
+                                        maxResource: newMax,
+                                        currentResource: Math.min(currentToken?.currentResource || 0, newMax)
+                                      }
+                                    }
+                                  });
                                 }}
                                 onClick={(e) => e.stopPropagation()}
                                 className="w-16 bg-gray-600 text-center rounded px-2 py-1 text-sm"
@@ -2420,7 +2463,18 @@ export default function NimbleCombatTracker() {
                         
                         {/* Token Size Slider */}
                         <div className="border-t border-gray-600 pt-3">
-                          <label className="text-xs font-bold text-gray-300 block mb-2">Token Size</label>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="text-xs font-bold text-gray-300">Token Size</label>
+                            {token.customSize !== null && (
+                              <button
+                                onClick={() => updateTokenSize(item.id, null)}
+                                className="text-xs text-blue-400 hover:text-blue-300"
+                                title="Reset to global size"
+                              >
+                                Reset
+                              </button>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2">
                             <input
                               type="range"
@@ -2488,13 +2542,13 @@ export default function NimbleCombatTracker() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 // Use the index within the display order to track which legendary turn this is
-                                const legendaryTurnIndex = getDisplayTurnOrder()
+                                const legendaryTurnIndex = displayTurnOrder
                                   .slice(0, index)
                                   .filter(i => i.id === item.id && i.isLegendaryEcho).length;
                                 toggleAction(item.id, legendaryTurnIndex);
                               }}
                               className={`flex-1 h-8 rounded transition-colors ${
-                                token.actions[getDisplayTurnOrder()
+                                token.actions[displayTurnOrder
                                   .slice(0, index)
                                   .filter(i => i.id === item.id && i.isLegendaryEcho).length]
                                   ? 'bg-gray-500'
