@@ -14,7 +14,7 @@ export default function NimbleCombatTracker() {
   const [eraseSize, setEraseSize] = useState(10);
   const [cursorPos, setCursorPos] = useState(null);
   const [showAddToken, setShowAddToken] = useState(false);
-  const [newToken, setNewToken] = useState({ name: '', type: 'hero', image: null });
+  const [newToken, setNewToken] = useState({ name: '', type: 'hero', image: null, hasResource: false, resourceName: '', resourceColor: '#3b82f6', currentResource: 5, maxResource: 5 });
   const [draggedTurnIndex, setDraggedTurnIndex] = useState(null);
   const [selectedToken, setSelectedToken] = useState(null);
   const [deleteMode, setDeleteMode] = useState(false);
@@ -91,11 +91,16 @@ export default function NimbleCombatTracker() {
         conditions: [],
         wounds: 0,
         maxWounds: 6,
-        customSize: tokenSize // Start with the default token size
+        customSize: tokenSize, // Start with the default token size
+        hasResource: newToken.hasResource || false,
+        resourceName: newToken.resourceName || '',
+        resourceColor: newToken.resourceColor || '#3b82f6',
+        currentResource: newToken.hasResource ? 5 : 0,
+        maxResource: newToken.hasResource ? 5 : 0
       };
       setTokens([...tokens, token]);
       setTurnOrder([...turnOrder, token.id]);
-      setNewToken({ name: '', type: 'hero', image: null });
+      setNewToken({ name: '', type: 'hero', image: null, hasResource: false, resourceName: '', resourceColor: '#3b82f6', currentResource: 5, maxResource: 5 });
       setShowAddToken(false);
     }
   };
@@ -430,8 +435,11 @@ export default function NimbleCombatTracker() {
       e.preventDefault();
       setPanningView(true);
       setPanStart({ x: e.clientX - viewOffset.x, y: e.clientY - viewOffset.y });
-      
-      if (e.target === boardRef.current) {
+
+      // Only deselect token on right-click (button 2) when clicking on background
+      // Left-click (button 0) keeps the token selected while panning
+      const isTokenClick = e.target.closest('.absolute.cursor-move');
+      if (!isTokenClick && e.button === 2) {
         setSelectedToken(null);
       }
     }
@@ -846,20 +854,19 @@ export default function NimbleCombatTracker() {
     };
   }, [historyStep, drawingHistory, selectedToken]);
 
-  // Hero's View synchronization with throttling
+  // Hero's View synchronization with DOM updates (not full rewrites)
   useEffect(() => {
     if (!heroViewWindow || heroViewWindow.closed) {
       if (heroViewWindow) setHeroViewWindow(null);
       return;
     }
 
-    // Throttle updates using requestAnimationFrame
-    let animationFrameId = null;
-    const updateHeroView = () => {
+    const doc = heroViewWindow.document;
+
+    // Initialize the document structure once if needed
+    if (!doc.getElementById('battle-board')) {
       const boardRect = boardRef.current?.getBoundingClientRect();
       if (!boardRect) return;
-
-      const doc = heroViewWindow.document;
 
       // Build the Hero's View HTML
       const renderHeroView = () => {
@@ -943,6 +950,119 @@ export default function NimbleCombatTracker() {
                 border: 4px solid #facc15;
                 border-bottom: none;
               }
+              .token-hud {
+                position: absolute;
+                top: 16px;
+                left: 16px;
+                pointer-events: none;
+                z-index: 50;
+              }
+              .hud-container {
+                display: flex;
+                align-items: flex-start;
+                gap: 12px;
+              }
+              .hud-portrait {
+                width: 80px;
+                height: 80px;
+                border-radius: 50%;
+                border: 4px solid rgba(249, 115, 22, 1);
+                background: #1f2937;
+                overflow: hidden;
+                flex-shrink: 0;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+              }
+              .hud-portrait img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+              }
+              .hud-portrait-icon {
+                width: 100%;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              }
+              .hud-bars {
+                flex: 1;
+                padding-top: 2px;
+              }
+              .hud-name-row {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 4px;
+              }
+              .hud-name {
+                color: white;
+                font-weight: bold;
+                font-size: 16px;
+                filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
+              }
+              .hud-conditions {
+                display: flex;
+                gap: 4px;
+                font-size: 16px;
+              }
+              .hud-bar-wrapper {
+                position: relative;
+                margin-bottom: 4px;
+              }
+              .hud-bar {
+                position: relative;
+                border-radius: 20px;
+                overflow: hidden;
+                background: rgba(0,0,0,0.6);
+                border: 2px solid rgba(255,255,255,0.3);
+                box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+              }
+              .hud-bar-fill {
+                height: 100%;
+                transition: width 300ms ease-out;
+                box-shadow: inset 0 2px 4px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.3);
+              }
+              .hud-bar-text {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                color: white;
+                font-size: 12px;
+                font-weight: bold;
+                text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+                white-space: nowrap;
+                display: flex;
+                gap: 8px;
+              }
+              .hud-thp-bubble {
+                position: absolute;
+                border-radius: 20px;
+                border: 3px solid #06b6d4;
+                box-shadow: 0 0 12px rgba(6, 182, 212, 0.6), inset 0 0 8px rgba(6, 182, 212, 0.3);
+                pointer-events: none;
+                animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+              }
+              @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.5; }
+              }
+              .hud-wounds {
+                display: flex;
+                gap: 4px;
+                margin-top: 4px;
+              }
+              .hud-wound-circle {
+                width: 14px;
+                height: 14px;
+                border-radius: 50%;
+                border: 2px dotted rgba(255,255,255,0.5);
+                transition: all 200ms;
+              }
+              .hud-wound-filled {
+                background-color: #ef4444;
+                box-shadow: 0 0 4px rgba(239, 68, 68, 0.6), inset 0 1px 2px rgba(255,255,255,0.3);
+              }
             </style>
           </head>
           <body>
@@ -950,6 +1070,94 @@ export default function NimbleCombatTracker() {
               <div id="battle-content" style="transform: translate(${viewOffset.x}px, ${viewOffset.y}px) scale(${zoomLevel});">
                 ${renderBattleContent(true)}
               </div>
+              ${selectedToken ? (() => {
+                const token = tokens.find(t => t.id === selectedToken);
+                if (!token) return '';
+
+                const healthPercent = (token.health / token.maxHealth) * 100;
+                const resourcePercent = token.hasResource ? (token.currentResource / token.maxResource) * 100 : 0;
+
+                const getHealthColor = () => {
+                  if (healthPercent <= 10) return '#ef4444';
+                  if (healthPercent <= 30) return '#eab308';
+                  return '#22c55e';
+                };
+
+                const getIconSVG = (type) => {
+                  const icons = {
+                    'hero': '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+                    'companion': '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>',
+                    'enemy': '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" x2="19" y1="19" y2="13"/><line x1="16" x2="20" y1="16" y2="20"/><line x1="19" x2="21" y1="21" y2="19"/></svg>',
+                    'legendary': '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>'
+                  };
+                  return icons[type] || icons['hero'];
+                };
+
+                const getBgColor = (type) => {
+                  return type === 'hero' ? '#2563eb' : type === 'companion' ? '#16a34a' : type === 'enemy' ? '#dc2626' : '#9333ea';
+                };
+
+                const conditionsHTML = token.conditions && token.conditions.length > 0
+                  ? token.conditions.map(c => conditionEmojis[c] || '').join(' ')
+                  : '';
+
+                const woundsHTML = (token.type === 'hero' || token.type === 'companion')
+                  ? '<div class="hud-wounds">' + Array.from({ length: token.maxWounds || 6 }, (_, i) => {
+                      const hasWound = (token.wounds || 0) >= (i + 1);
+                      return '<div class="hud-wound-circle ' + (hasWound ? 'hud-wound-filled' : '') + '"></div>';
+                    }).join('') + '</div>'
+                  : '';
+
+                let hudHTML = '<div class="token-hud"><div class="hud-container">';
+
+                // Portrait
+                hudHTML += '<div class="hud-portrait">';
+                if (token.image) {
+                  hudHTML += '<img src="' + token.image + '" alt="' + token.name + '" />';
+                } else {
+                  hudHTML += '<div class="hud-portrait-icon" style="background-color: ' + getBgColor(token.type) + '">' + getIconSVG(token.type) + '</div>';
+                }
+                hudHTML += '</div>';
+
+                // Bars
+                hudHTML += '<div class="hud-bars">';
+                hudHTML += '<div class="hud-name-row"><div class="hud-name">' + token.name + '</div>';
+                if (conditionsHTML) {
+                  hudHTML += '<div class="hud-conditions">' + conditionsHTML + '</div>';
+                }
+                hudHTML += '</div>';
+
+                // Health bar
+                if (token.type !== 'legendary') {
+                  hudHTML += '<div class="hud-bar-wrapper">';
+                  if (token.tempHP > 0) {
+                    hudHTML += '<div class="hud-thp-bubble" style="top: -4px; left: -4px; width: 308px; height: 28px;"></div>';
+                  }
+                  hudHTML += '<div class="hud-bar" style="width: 300px; height: 20px;">';
+                  hudHTML += '<div class="hud-bar-fill" style="width: ' + healthPercent + '%; background-color: ' + getHealthColor() + ';"></div>';
+                  hudHTML += '<div class="hud-bar-text">';
+                  if (token.tempHP > 0) {
+                    hudHTML += '<span style="color: #22d3ee;">' + token.tempHP + ' THP</span>';
+                  }
+                  hudHTML += '<span>' + token.health + ' / ' + token.maxHealth + ' HP</span>';
+                  hudHTML += '</div></div></div>';
+                }
+
+                // Resource bar
+                if (token.hasResource) {
+                  hudHTML += '<div class="hud-bar-wrapper">';
+                  hudHTML += '<div class="hud-bar" style="width: 250px; height: 16px;">';
+                  hudHTML += '<div class="hud-bar-fill" style="width: ' + resourcePercent + '%; background-color: ' + (token.resourceColor || '#3b82f6') + ';"></div>';
+                  hudHTML += '<div class="hud-bar-text"><span>' + token.currentResource + ' / ' + token.maxResource + ' ' + token.resourceName + '</span></div>';
+                  hudHTML += '</div></div>';
+                }
+
+                // Wounds
+                hudHTML += woundsHTML;
+                hudHTML += '</div></div></div>';
+
+                return hudHTML;
+              })() : ''}
             </div>
           </body>
         </html>
@@ -959,19 +1167,173 @@ export default function NimbleCombatTracker() {
       doc.open();
       doc.write(renderHeroView());
       doc.close();
-    };
-
-    // Use requestAnimationFrame to throttle updates
-    if (animationFrameId) {
-      cancelAnimationFrame(animationFrameId);
     }
-    animationFrameId = requestAnimationFrame(updateHeroView);
 
-    return () => {
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
+    // Update battle content (tokens, background)
+    const battleContent = doc.getElementById('battle-content');
+    if (battleContent) {
+      battleContent.style.transform = `translate(${viewOffset.x}px, ${viewOffset.y}px) scale(${zoomLevel})`;
+      battleContent.innerHTML = renderBattleContent(true);
+    }
+
+    // Update or create HUD with DOM manipulation
+    let hudContainer = doc.getElementById('hud-container-root');
+
+    if (selectedToken) {
+      const token = tokens.find(t => t.id === selectedToken);
+
+      if (token) {
+        // Create HUD container if it doesn't exist
+        if (!hudContainer) {
+          hudContainer = doc.createElement('div');
+          hudContainer.id = 'hud-container-root';
+          hudContainer.className = 'token-hud';
+          doc.getElementById('battle-board').appendChild(hudContainer);
+        }
+
+        const healthPercent = (token.health / token.maxHealth) * 100;
+        const resourcePercent = token.hasResource ? (token.currentResource / token.maxResource) * 100 : 0;
+
+        const getHealthColor = () => {
+          if (healthPercent <= 10) return '#ef4444';
+          if (healthPercent <= 30) return '#eab308';
+          return '#22c55e';
+        };
+
+        // Check if we need to rebuild the HUD structure
+        // Only rebuild if structure actually needs to change (not just switching between same-type tokens)
+        const currentTokenType = hudContainer.getAttribute('data-token-type');
+        const currentHasResource = hudContainer.getAttribute('data-has-resource') === 'true';
+        const currentTokenImage = hudContainer.getAttribute('data-token-image');
+
+        const structureChanged = !hudContainer.querySelector('.hud-container') ||
+          currentTokenType !== token.type ||
+          currentHasResource !== (token.hasResource || false) ||
+          currentTokenImage !== (token.image || 'none');
+
+        // Update or create HUD structure only when structure actually changes
+        if (structureChanged) {
+          // Store the current token metadata to detect structural changes
+          hudContainer.setAttribute('data-token-id', token.id);
+          hudContainer.setAttribute('data-token-type', token.type);
+          hudContainer.setAttribute('data-has-resource', token.hasResource || false);
+          hudContainer.setAttribute('data-token-image', token.image || 'none');
+          // Initial creation with full structure
+          const getIconSVG = (type) => {
+            const icons = {
+              'hero': '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+              'companion': '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>',
+              'enemy': '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" x2="19" y1="19" y2="13"/><line x1="16" x2="20" y1="16" y2="20"/><line x1="19" x2="21" y1="21" y2="19"/></svg>',
+              'legendary': '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>'
+            };
+            return icons[type] || icons['hero'];
+          };
+
+          const getBgColor = (type) => {
+            return type === 'hero' ? '#2563eb' : type === 'companion' ? '#16a34a' : type === 'enemy' ? '#dc2626' : '#9333ea';
+          };
+
+          let hudHTML = '<div class="hud-container">';
+          hudHTML += '<div class="hud-portrait">';
+          if (token.image) {
+            hudHTML += '<img src="' + token.image + '" alt="' + token.name + '" />';
+          } else {
+            hudHTML += '<div class="hud-portrait-icon" style="background-color: ' + getBgColor(token.type) + '">' + getIconSVG(token.type) + '</div>';
+          }
+          hudHTML += '</div>';
+          hudHTML += '<div class="hud-bars">';
+          hudHTML += '<div class="hud-name-row"><div class="hud-name" data-hud="name"></div><div class="hud-conditions" data-hud="conditions"></div></div>';
+
+          if (token.type !== 'legendary') {
+            hudHTML += '<div class="hud-bar-wrapper" data-hud="health-wrapper">';
+            hudHTML += '<div class="hud-thp-bubble" data-hud="thp-bubble" style="display: none; top: -4px; left: -4px; width: 308px; height: 28px;"></div>';
+            hudHTML += '<div class="hud-bar" style="width: 300px; height: 20px;">';
+            hudHTML += '<div class="hud-bar-fill" data-hud="health-fill"></div>';
+            hudHTML += '<div class="hud-bar-text" data-hud="health-text"></div>';
+            hudHTML += '</div></div>';
+          }
+
+          if (token.hasResource) {
+            hudHTML += '<div class="hud-bar-wrapper" data-hud="resource-wrapper">';
+            hudHTML += '<div class="hud-bar" style="width: 250px; height: 16px;">';
+            hudHTML += '<div class="hud-bar-fill" data-hud="resource-fill"></div>';
+            hudHTML += '<div class="hud-bar-text" data-hud="resource-text"></div>';
+            hudHTML += '</div></div>';
+          }
+
+          if (token.type === 'hero' || token.type === 'companion') {
+            hudHTML += '<div class="hud-wounds" data-hud="wounds"></div>';
+          }
+
+          hudHTML += '</div></div>';
+          hudContainer.innerHTML = hudHTML;
+        } else {
+          // Structure hasn't changed, but update token ID for tracking
+          hudContainer.setAttribute('data-token-id', token.id);
+        }
+
+        // Update HUD values using DOM manipulation (always runs for smooth transitions)
+        const nameEl = hudContainer.querySelector('[data-hud="name"]');
+        if (nameEl) nameEl.textContent = token.name;
+
+        const conditionsEl = hudContainer.querySelector('[data-hud="conditions"]');
+        if (conditionsEl) {
+          const conditionsHTML = token.conditions && token.conditions.length > 0
+            ? token.conditions.map(c => conditionEmojis[c] || '').join(' ')
+            : '';
+          conditionsEl.innerHTML = conditionsHTML;
+        }
+
+        // Update health bar
+        const healthFill = hudContainer.querySelector('[data-hud="health-fill"]');
+        if (healthFill) {
+          healthFill.style.width = healthPercent + '%';
+          healthFill.style.backgroundColor = getHealthColor();
+        }
+
+        const healthText = hudContainer.querySelector('[data-hud="health-text"]');
+        if (healthText) {
+          let textHTML = '';
+          if (token.tempHP > 0) {
+            textHTML += '<span style="color: #22d3ee;">' + token.tempHP + ' THP</span>';
+          }
+          textHTML += '<span>' + token.health + ' / ' + token.maxHealth + ' HP</span>';
+          healthText.innerHTML = textHTML;
+        }
+
+        const thpBubble = hudContainer.querySelector('[data-hud="thp-bubble"]');
+        if (thpBubble) {
+          thpBubble.style.display = token.tempHP > 0 ? 'block' : 'none';
+        }
+
+        // Update resource bar
+        const resourceFill = hudContainer.querySelector('[data-hud="resource-fill"]');
+        if (resourceFill && token.hasResource) {
+          resourceFill.style.width = resourcePercent + '%';
+          resourceFill.style.backgroundColor = token.resourceColor || '#3b82f6';
+        }
+
+        const resourceText = hudContainer.querySelector('[data-hud="resource-text"]');
+        if (resourceText && token.hasResource) {
+          resourceText.innerHTML = '<span>' + token.currentResource + ' / ' + token.maxResource + ' ' + token.resourceName + '</span>';
+        }
+
+        // Update wounds
+        const woundsEl = hudContainer.querySelector('[data-hud="wounds"]');
+        if (woundsEl) {
+          const woundsHTML = Array.from({ length: token.maxWounds || 6 }, (_, i) => {
+            const hasWound = (token.wounds || 0) >= (i + 1);
+            return '<div class="hud-wound-circle ' + (hasWound ? 'hud-wound-filled' : '') + '"></div>';
+          }).join('');
+          woundsEl.innerHTML = woundsHTML;
+        }
       }
-    };
+    } else {
+      // Remove HUD if no token selected
+      if (hudContainer) {
+        hudContainer.remove();
+      }
+    }
   }, [heroViewWindow, tokens, background, backgroundSize, zoomLevel, viewOffset, tokenSize, selectedToken, showGrid, gridSize, darknessMode, heroLightRadius, companionLightRadius, darknessIntensity, canvasUpdateTrigger]);
 
   const renderBattleContent = (isHeroView = false) => {
@@ -1078,12 +1440,6 @@ export default function NimbleCombatTracker() {
             ${isBloodied ? '<div class="bloodied-vignette"></div>' : ''}
           </div>
           ${/* Yellow condition ring - hidden for now */ ''}
-          <div class="token-name" style="
-            top: -${currentTokenSize * 0.12}px;
-            font-size: ${Math.max(10, currentTokenSize * 0.18)}px;
-          ">
-            ${token.name}${token.conditions ? token.conditions.map(c => conditionEmojis[c] || '').join(' ') : ''}
-          </div>
         </div>
       `;
     });
@@ -1233,7 +1589,45 @@ export default function NimbleCombatTracker() {
                       </div>
                     )}
                   </div>
-                  
+
+                  <div>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newToken.hasResource}
+                        onChange={(e) => setNewToken({ ...newToken, hasResource: e.target.checked })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-xs font-bold">Has Resource?</span>
+                    </label>
+
+                    {newToken.hasResource && (
+                      <div className="mt-2 space-y-2 pl-6">
+                        <div className="flex gap-2 items-end">
+                          <div className="flex-1">
+                            <label className="block text-xs mb-1">Resource Name</label>
+                            <input
+                              type="text"
+                              value={newToken.resourceName}
+                              onChange={(e) => setNewToken({ ...newToken, resourceName: e.target.value })}
+                              className="w-full bg-gray-700 px-3 py-2 rounded text-sm"
+                              placeholder="e.g., Mana, Focus, Rage"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs mb-1">Color</label>
+                            <input
+                              type="color"
+                              value={newToken.resourceColor}
+                              onChange={(e) => setNewToken({ ...newToken, resourceColor: e.target.value })}
+                              className="w-12 h-10 bg-gray-700 rounded cursor-pointer"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex gap-2 pt-2">
                     <button
                       onClick={addToken}
@@ -1733,6 +2127,7 @@ export default function NimbleCombatTracker() {
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseLeave}
             onMouseDown={handleBoardMouseDown}
+            onContextMenu={(e) => e.preventDefault()}
             onWheel={handleWheel}
           >
             <div
@@ -2027,22 +2422,6 @@ export default function NimbleCombatTracker() {
                       </div>
                     )}
 
-                    <div
-                      className="absolute left-1/2 transform -translate-x-1/2 bg-black bg-opacity-80 px-1.5 py-0.5 rounded whitespace-nowrap pointer-events-none"
-                      style={{
-                        top: `-${currentTokenSize * 0.12}px`,
-                        fontSize: `${Math.max(10, currentTokenSize * 0.18)}px`,
-                        opacity: shouldShowToken ? 1 : 0
-                      }}
-                    >
-                      {token.name}
-                      {token.conditions && token.conditions.length > 0 && (
-                        <span className="ml-1">
-                          {token.conditions.map(condition => conditionEmojis[condition] || '').join(' ')}
-                        </span>
-                      )}
-                    </div>
-                    
                     {/* Shift-hover info popup */}
                     {shiftHeld && selectedToken === token.id && (token.notes || (token.conditions && token.conditions.length > 0)) && (
                       <div 
@@ -2119,6 +2498,183 @@ export default function NimbleCombatTracker() {
                 }}
               />
             )}
+
+            {/* HUD - Character Status Display */}
+            {selectedToken && (() => {
+              const token = tokens.find(t => t.id === selectedToken);
+              if (!token) return null;
+
+              const healthPercent = (token.health / token.maxHealth) * 100;
+              const resourcePercent = token.hasResource ? (token.currentResource / token.maxResource) * 100 : 0;
+
+              // Health bar color based on thresholds
+              const getHealthColor = () => {
+                if (healthPercent <= 10) return '#ef4444'; // red-500
+                if (healthPercent <= 30) return '#eab308'; // yellow-500
+                return '#22c55e'; // green-500
+              };
+
+              const portraitSize = 80;
+              const barHeight = 20;
+              const barWidth = 300;
+              const resourceBarWidth = token.hasResource ? 250 : 0;
+
+              return (
+                <div className="absolute top-4 left-4 pointer-events-none z-50" style={{ width: `${portraitSize + barWidth + 20}px` }}>
+                  <div className="relative flex items-start gap-3">
+                    {/* Circular Portrait Frame */}
+                    <div
+                      className="relative rounded-full border-4 border-orange-500 bg-gray-900 overflow-hidden flex-shrink-0"
+                      style={{
+                        width: `${portraitSize}px`,
+                        height: `${portraitSize}px`,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+                      }}
+                    >
+                      {token.image ? (
+                        <img src={token.image} alt={token.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className={`w-full h-full flex items-center justify-center ${
+                          token.type === 'hero' ? 'bg-blue-600' :
+                          token.type === 'companion' ? 'bg-green-600' :
+                          token.type === 'enemy' ? 'bg-red-600' : 'bg-purple-600'
+                        }`}>
+                          {token.type === 'hero' && <Users size={40} />}
+                          {token.type === 'companion' && <Heart size={40} />}
+                          {token.type === 'enemy' && <Swords size={40} />}
+                          {token.type === 'legendary' && <Crown size={40} />}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Bars and Info */}
+                    <div className="flex-1" style={{ paddingTop: '2px' }}>
+                      {/* Player Name and Conditions */}
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="text-white font-bold text-base drop-shadow-lg">{token.name}</div>
+                        {token.conditions && token.conditions.length > 0 && (
+                          <div className="flex gap-1">
+                            {token.conditions.map((condition, idx) => (
+                              <span key={idx} className="text-base drop-shadow-lg" title={condition}>
+                                {conditionEmojis[condition] || ''}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Health Bar */}
+                      {token.type !== 'legendary' && (
+                        <div className="mb-1 relative">
+                          {/* Temp HP "bubble" highlight */}
+                          {token.tempHP > 0 && (
+                            <div
+                              className="absolute rounded-full animate-pulse"
+                              style={{
+                                top: '-4px',
+                                left: '-4px',
+                                width: `${barWidth + 8}px`,
+                                height: `${barHeight + 8}px`,
+                                border: '3px solid #06b6d4',
+                                boxShadow: '0 0 12px rgba(6, 182, 212, 0.6), inset 0 0 8px rgba(6, 182, 212, 0.3)',
+                                pointerEvents: 'none',
+                                zIndex: 1
+                              }}
+                            />
+                          )}
+                          <div
+                            className="relative rounded-full overflow-hidden"
+                            style={{
+                              width: `${barWidth}px`,
+                              height: `${barHeight}px`,
+                              backgroundColor: 'rgba(0,0,0,0.6)',
+                              border: '2px solid rgba(255,255,255,0.3)',
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
+                              zIndex: 2
+                            }}
+                          >
+                            {/* Health fill with smooth transition */}
+                            <div
+                              className="absolute top-0 left-0 h-full transition-all duration-300 ease-out"
+                              style={{
+                                width: `${healthPercent}%`,
+                                backgroundColor: getHealthColor(),
+                                boxShadow: `inset 0 2px 4px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.3)`
+                              }}
+                            />
+                            {/* HP Text */}
+                            <div className="absolute inset-0 flex items-center justify-center gap-2">
+                              {token.tempHP > 0 && (
+                                <span className="text-cyan-400 text-xs font-bold drop-shadow-lg" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+                                  {token.tempHP} THP
+                                </span>
+                              )}
+                              <span className="text-white text-xs font-bold drop-shadow-lg" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+                                {token.health} / {token.maxHealth} HP
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Resource Bar */}
+                      {token.hasResource && (
+                        <div className="mb-1">
+                          <div
+                            className="relative rounded-full overflow-hidden"
+                            style={{
+                              width: `${resourceBarWidth}px`,
+                              height: `${barHeight - 4}px`,
+                              backgroundColor: 'rgba(0,0,0,0.6)',
+                              border: '2px solid rgba(255,255,255,0.3)',
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.4)'
+                            }}
+                          >
+                            {/* Resource fill with smooth transition */}
+                            <div
+                              className="absolute top-0 left-0 h-full transition-all duration-300 ease-out"
+                              style={{
+                                width: `${resourcePercent}%`,
+                                backgroundColor: token.resourceColor || '#3b82f6',
+                                boxShadow: `inset 0 2px 4px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.3)`
+                              }}
+                            />
+                            {/* Resource Text */}
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="text-white text-xs font-bold drop-shadow-lg" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+                                {token.currentResource} / {token.maxResource} {token.resourceName}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Wounds Display - only for heroes/companions at 0 HP or always show if has wounds */}
+                      {(token.type === 'hero' || token.type === 'companion') && (
+                        <div className="flex gap-1 mt-1">
+                          {Array.from({ length: token.maxWounds || 6 }, (_, i) => i + 1).map(woundNum => {
+                            const hasWound = (token.wounds || 0) >= woundNum;
+                            return (
+                              <div
+                                key={woundNum}
+                                className="relative rounded-full transition-all duration-200"
+                                style={{
+                                  width: '14px',
+                                  height: '14px',
+                                  border: '2px dotted rgba(255,255,255,0.5)',
+                                  backgroundColor: hasWound ? '#ef4444' : 'transparent',
+                                  boxShadow: hasWound ? '0 0 4px rgba(239, 68, 68, 0.6), inset 0 1px 2px rgba(255,255,255,0.3)' : 'none'
+                                }}
+                              />
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
 
@@ -2422,6 +2978,45 @@ export default function NimbleCombatTracker() {
                                 onClick={(e) => e.stopPropagation()}
                                 className="w-12 bg-gray-600 text-center rounded px-1 py-0.5 text-xs"
                                 title="Maximum wounds"
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Resource - for any token with resources */}
+                        {token.hasResource && (
+                          <div className="mb-3">
+                            <label className="text-xs text-gray-400 block mb-2">{token.resourceName || 'Resource'}</label>
+                            <div className="flex gap-2 justify-center items-center">
+                              <input
+                                type="number"
+                                min="0"
+                                max={token.maxResource || 0}
+                                value={token.currentResource || 0}
+                                onChange={(e) => {
+                                  const newCurrent = Math.max(0, Math.min(parseInt(e.target.value) || 0, token.maxResource || 0));
+                                  setTokens(tokens.map(t =>
+                                    t.id === item.id ? { ...t, currentResource: newCurrent } : t
+                                  ));
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-16 bg-gray-600 text-center rounded px-2 py-1 text-sm"
+                                style={{ borderColor: token.resourceColor, borderWidth: '2px' }}
+                              />
+                              <span className="text-xs text-gray-400">/</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={token.maxResource || 0}
+                                onChange={(e) => {
+                                  const newMax = Math.max(0, parseInt(e.target.value) || 0);
+                                  setTokens(tokens.map(t =>
+                                    t.id === item.id ? { ...t, maxResource: newMax, currentResource: Math.min(t.currentResource || 0, newMax) } : t
+                                  ));
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-16 bg-gray-600 text-center rounded px-2 py-1 text-sm"
+                                style={{ borderColor: token.resourceColor, borderWidth: '2px' }}
                               />
                             </div>
                           </div>
