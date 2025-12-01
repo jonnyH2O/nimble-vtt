@@ -41,7 +41,9 @@ export default function NimbleCombatTracker() {
   const [heroLightRadius, setHeroLightRadius] = useState(3); // Multiplier of token size
   const [companionLightRadius, setCompanionLightRadius] = useState(2); // Multiplier of token size
   const [darknessIntensity, setDarknessIntensity] = useState(0.95); // 0-1, how dark the shadows are
-  
+  const [heroViewWindow, setHeroViewWindow] = useState(null);
+  const [canvasUpdateTrigger, setCanvasUpdateTrigger] = useState(0);
+
   const drawCanvasRef = useRef(null);
   const boardRef = useRef(null);
   const drawingRef = useRef([]);
@@ -552,6 +554,9 @@ export default function NimbleCombatTracker() {
       setDrawingHistory(newHistory);
       setHistoryStep(newHistory.length - 1);
     }
+
+    // Trigger Hero's View update
+    setCanvasUpdateTrigger(prev => prev + 1);
   };
 
   const undo = () => {
@@ -572,16 +577,18 @@ export default function NimbleCombatTracker() {
 
   const restoreFromHistory = (step) => {
     if (!drawCanvasRef.current || step < 0 || step >= drawingHistory.length) return;
-    
+
     const canvas = drawCanvasRef.current;
     const ctx = canvas.getContext('2d');
     const img = new Image();
-    
+
     img.onload = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0);
+      // Trigger Hero's View update after canvas is restored
+      setCanvasUpdateTrigger(prev => prev + 1);
     };
-    
+
     img.src = drawingHistory[step];
   };
 
@@ -653,6 +660,23 @@ export default function NimbleCombatTracker() {
         }, 3000);
       }, 5000);
     }, 2500);
+  };
+
+  const openHeroView = () => {
+    // Close existing window if open
+    if (heroViewWindow && !heroViewWindow.closed) {
+      heroViewWindow.close();
+    }
+
+    // Open new window
+    const newWindow = window.open('', 'HeroView', 'width=1200,height=800');
+
+    if (newWindow) {
+      setHeroViewWindow(newWindow);
+
+      // We'll update the content via useEffect
+      newWindow.document.title = "Hero's View - Nimble VTT";
+    }
   };
 
   const exportBattle = () => {
@@ -747,18 +771,18 @@ export default function NimbleCombatTracker() {
 
   useEffect(() => {
     const updateCanvasSize = () => {
-      if (drawCanvasRef.current && boardRef.current) {
+      if (drawCanvasRef.current) {
         const canvas = drawCanvasRef.current;
         const ctx = canvas.getContext('2d');
-        const rect = boardRef.current.getBoundingClientRect();
-        
+
         // Save current canvas content before resizing
         const imageData = canvas.toDataURL();
-        
-        // Resize canvas
-        canvas.width = rect.width;
-        canvas.height = rect.height;
-        
+
+        // Use fixed virtual canvas size (2000x2000)
+        const VIRTUAL_CANVAS_SIZE = 2000;
+        canvas.width = VIRTUAL_CANVAS_SIZE;
+        canvas.height = VIRTUAL_CANVAS_SIZE;
+
         // Restore canvas content after resize
         if (imageData && imageData !== 'data:,') {
           const img = new Image();
@@ -770,15 +794,6 @@ export default function NimbleCombatTracker() {
       }
     };
     updateCanvasSize();
-    
-    const handleResize = () => {
-      updateCanvasSize();
-    };
-    
-    window.addEventListener('resize', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
   }, []);
 
   useEffect(() => {
@@ -830,6 +845,296 @@ export default function NimbleCombatTracker() {
       window.removeEventListener('keyup', handleKeyUp);
     };
   }, [historyStep, drawingHistory, selectedToken]);
+
+  // Hero's View synchronization with throttling
+  useEffect(() => {
+    if (!heroViewWindow || heroViewWindow.closed) {
+      if (heroViewWindow) setHeroViewWindow(null);
+      return;
+    }
+
+    // Throttle updates using requestAnimationFrame
+    let animationFrameId = null;
+    const updateHeroView = () => {
+      const boardRect = boardRef.current?.getBoundingClientRect();
+      if (!boardRect) return;
+
+      const doc = heroViewWindow.document;
+
+      // Build the Hero's View HTML
+      const renderHeroView = () => {
+        return `
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>Hero's View - Nimble VTT</title>
+              <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body {
+                background: #1a1a1a;
+                overflow: hidden;
+                font-family: system-ui, -apple-system, sans-serif;
+              }
+              #battle-board {
+                width: 100vw;
+                height: 100vh;
+                position: relative;
+                overflow: hidden;
+                background: #2a2a2a;
+              }
+              #battle-content {
+                position: absolute;
+                transform-origin: 0 0;
+                transition: transform 0.1s ease-out;
+                width: 2000px;
+                height: 2000px;
+              }
+              .token {
+                position: absolute;
+                cursor: default;
+              }
+              .token-border {
+                border-radius: 50%;
+                border-style: solid;
+                position: relative;
+              }
+              .token-image {
+                border-radius: 50%;
+                object-fit: cover;
+                width: 100%;
+                height: 100%;
+              }
+              .token-icon {
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+                height: 100%;
+              }
+              .token-name {
+                position: absolute;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(0,0,0,0.8);
+                padding: 2px 6px;
+                border-radius: 4px;
+                white-space: nowrap;
+                pointer-events: none;
+                color: white;
+              }
+              .selection-ring {
+                box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.7);
+              }
+              .bloodied-vignette {
+                position: absolute;
+                inset: 0;
+                border-radius: 50%;
+                pointer-events: none;
+                box-shadow: inset 0 0 30px 10px rgba(220, 38, 38, 0.42);
+              }
+              .condition-indicator {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                border-top-left-radius: 50%;
+                border-top-right-radius: 50%;
+                border: 4px solid #facc15;
+                border-bottom: none;
+              }
+            </style>
+          </head>
+          <body>
+            <div id="battle-board">
+              <div id="battle-content" style="transform: translate(${viewOffset.x}px, ${viewOffset.y}px) scale(${zoomLevel});">
+                ${renderBattleContent(true)}
+              </div>
+            </div>
+          </body>
+        </html>
+      `;
+      };
+
+      doc.open();
+      doc.write(renderHeroView());
+      doc.close();
+    };
+
+    // Use requestAnimationFrame to throttle updates
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId);
+    }
+    animationFrameId = requestAnimationFrame(updateHeroView);
+
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, [heroViewWindow, tokens, background, backgroundSize, zoomLevel, viewOffset, tokenSize, selectedToken, showGrid, gridSize, darknessMode, heroLightRadius, companionLightRadius, darknessIntensity, canvasUpdateTrigger]);
+
+  const renderBattleContent = (isHeroView = false) => {
+    const heroViewDarknessIntensity = isHeroView ? darknessIntensity : Math.max(0, darknessIntensity - 0.05);
+
+    let html = '';
+
+    // Background
+    if (background) {
+      html += `<img src="${background}" alt="Background" style="position: absolute; top: 0; left: 0; width: ${backgroundSize}%; height: ${backgroundSize}%; object-fit: contain; pointer-events: none; max-width: none;" />`;
+    }
+
+    // Grid (if enabled)
+    if (showGrid) {
+      html += `
+        <svg style="position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;">
+          <defs>
+            <pattern id="grid" width="${gridSize}" height="${gridSize}" patternUnits="userSpaceOnUse">
+              <path d="M ${gridSize} 0 L 0 0 0 ${gridSize}" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#grid)" />
+        </svg>
+      `;
+    }
+
+    // Drawing canvas
+    if (drawCanvasRef.current) {
+      const drawingData = drawCanvasRef.current.toDataURL();
+      html += `<img src="${drawingData}" style="position: absolute; top: 0; left: 0; width: 2000px; height: 2000px; pointer-events: none;" />`;
+    }
+
+    // Tokens
+    tokens.forEach(token => {
+      const currentTokenSize = token.customSize || tokenSize;
+      const borderWidth = Math.max(2, Math.round(currentTokenSize / 16));
+
+      // Check if token should be shown (darkness logic)
+      let shouldShowToken = true;
+      if (darknessMode && (token.type === 'enemy' || token.type === 'legendary')) {
+        const lightSources = tokens.filter(t => t.type === 'hero' || t.type === 'companion');
+        shouldShowToken = false;
+        for (const source of lightSources) {
+          const sourceSize = source.customSize || tokenSize;
+          const lightRadius = source.type === 'hero' ? sourceSize * heroLightRadius : sourceSize * companionLightRadius;
+          const sourceCenterX = source.x + sourceSize / 2;
+          const sourceCenterY = source.y + sourceSize / 2;
+          const tokenCenterX = token.x + currentTokenSize / 2;
+          const tokenCenterY = token.y + currentTokenSize / 2;
+          const distance = Math.sqrt(Math.pow(tokenCenterX - sourceCenterX, 2) + Math.pow(tokenCenterY - sourceCenterY, 2));
+          if (distance <= lightRadius) {
+            shouldShowToken = true;
+            break;
+          }
+        }
+      }
+
+      if (!shouldShowToken && isHeroView) return; // Don't show hidden tokens in Hero View
+
+      // Match Tailwind colors exactly
+      const borderColor = token.type === 'hero' ? '#3b82f6' :      // blue-500
+                          token.type === 'companion' ? '#22c55e' :  // green-500
+                          token.type === 'legendary' ? '#a855f7' :  // purple-500
+                          token.type === 'enemy' ? '#ef4444' :      // red-500
+                          '#6b7280';                                // gray-500
+
+      const bgColor = token.type === 'hero' ? '#2563eb' :          // blue-600
+                      token.type === 'companion' ? '#16a34a' :      // green-600
+                      token.type === 'legendary' ? '#9333ea' :      // purple-600
+                      token.type === 'enemy' ? '#dc2626' :          // red-600
+                      '#4b5563';                                    // gray-600
+
+      const isSelected = !isHeroView && selectedToken === token.id;
+      const isInvisible = token.conditions && token.conditions.includes('Invisible');
+      const isDying = token.conditions && token.conditions.includes('Dying');
+      const isBloodied = token.conditions && token.conditions.includes('Bloodied');
+
+      html += `
+        <div class="token" style="left: ${token.x}px; top: ${token.y}px; opacity: ${shouldShowToken ? 1 : 0};">
+          <div class="token-border ${isSelected ? 'selection-ring' : ''}" style="
+            width: ${currentTokenSize}px;
+            height: ${currentTokenSize}px;
+            border-width: ${borderWidth}px;
+            border-color: ${borderColor};
+          ">
+            ${token.image ? `
+              <img src="${token.image}" class="token-image" style="
+                opacity: ${isInvisible ? 0.3 : 1};
+                filter: ${isDying ? 'saturate(0.2)' : 'none'};
+              " />
+            ` : `
+              <div class="token-icon" style="
+                background-color: ${bgColor};
+                opacity: ${isInvisible ? 0.3 : 1};
+                filter: ${isDying ? 'saturate(0.2)' : 'none'};
+                color: white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              ">
+                <div style="width: 20px; height: 20px;">${getTokenIconSVG(token.type)}</div>
+              </div>
+            `}
+            ${isBloodied ? '<div class="bloodied-vignette"></div>' : ''}
+          </div>
+          ${/* Yellow condition ring - hidden for now */ ''}
+          <div class="token-name" style="
+            top: -${currentTokenSize * 0.12}px;
+            font-size: ${Math.max(10, currentTokenSize * 0.18)}px;
+          ">
+            ${token.name}${token.conditions ? token.conditions.map(c => conditionEmojis[c] || '').join(' ') : ''}
+          </div>
+        </div>
+      `;
+    });
+
+    // Darkness overlay
+    if (darknessMode) {
+      const lightCircles = tokens.filter(t => t.type === 'hero' || t.type === 'companion').map(token => {
+        const currentTokenSize = token.customSize || tokenSize;
+        const lightRadius = token.type === 'hero' ? currentTokenSize * heroLightRadius : currentTokenSize * companionLightRadius;
+        const centerX = token.x + currentTokenSize / 2;
+        const centerY = token.y + currentTokenSize / 2;
+        return `<circle cx="${centerX}" cy="${centerY}" r="${lightRadius}" fill="url(#gradient-${token.id})" />`;
+      }).join('');
+
+      const gradients = tokens.filter(t => t.type === 'hero' || t.type === 'companion').map(token => {
+        return `
+          <radialGradient id="gradient-${token.id}">
+            <stop offset="0%" style="stop-color:black;stop-opacity:0" />
+            <stop offset="70%" style="stop-color:black;stop-opacity:0" />
+            <stop offset="100%" style="stop-color:black;stop-opacity:${heroViewDarknessIntensity}" />
+          </radialGradient>
+        `;
+      }).join('');
+
+      html += `
+        <svg style="position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;">
+          <defs>${gradients}</defs>
+          <rect width="100%" height="100%" fill="rgba(0,0,0,${heroViewDarknessIntensity})" />
+          ${lightCircles}
+        </svg>
+      `;
+    }
+
+    return html;
+  };
+
+  const getTokenIconSVG = (type) => {
+    // Match the lucide-react icons used in DM view: Users, Swords, Heart, Crown
+    switch(type) {
+      case 'hero': // Users icon
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+      case 'enemy': // Swords icon
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" x2="19" y1="19" y2="13"/><line x1="16" x2="20" y1="16" y2="20"/><line x1="19" x2="21" y1="21" y2="19"/><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"/><line x1="5" x2="9" y1="14" y2="18"/><line x1="7" x2="4" y1="17" y2="20"/><line x1="3" x2="5" y1="19" y2="21"/></svg>';
+      case 'companion': // Heart icon
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>';
+      case 'legendary': // Crown icon
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>';
+      default:
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+    }
+  };
 
   const getTokenBorderColor = (type) => {
     switch(type) {
@@ -1276,6 +1581,17 @@ export default function NimbleCombatTracker() {
                     )}
                   </div>
 
+                  <div className="border-t border-gray-700 pt-4">
+                    <button
+                      onClick={openHeroView}
+                      className="w-full bg-indigo-600 hover:bg-indigo-700 px-3 py-2 rounded flex items-center justify-center gap-2 text-sm"
+                    >
+                      <Users size={16} />
+                      Open Hero's View
+                    </button>
+                    <p className="text-xs text-gray-400 mt-2">Opens a player-facing view in a new window</p>
+                  </div>
+
                   <div className="border-t border-gray-700 pt-4 space-y-2">
                     <h3 className="text-sm font-bold mb-2">Save/Load</h3>
                     <button
@@ -1419,9 +1735,11 @@ export default function NimbleCombatTracker() {
             onMouseDown={handleBoardMouseDown}
             onWheel={handleWheel}
           >
-            <div 
-              className="absolute inset-0"
+            <div
+              className="absolute"
               style={{
+                width: '2000px',
+                height: '2000px',
                 transform: `translate(${viewOffset.x}px, ${viewOffset.y}px) scale(${zoomLevel})`,
                 transformOrigin: '0 0',
                 transition: panningView ? 'none' : 'transform 0.1s'
@@ -1442,7 +1760,8 @@ export default function NimbleCombatTracker() {
               
               <canvas
                 ref={drawCanvasRef}
-                className={`absolute inset-0 ${drawMode === 'select' ? 'pointer-events-none' : 'cursor-crosshair'}`}
+                className={`absolute ${drawMode === 'select' ? 'pointer-events-none' : 'cursor-crosshair'}`}
+                style={{ width: '2000px', height: '2000px', top: 0, left: 0 }}
                 onMouseDown={handleDrawStart}
               />
 
@@ -1646,7 +1965,8 @@ export default function NimbleCombatTracker() {
                             />
                           )}
                         </div>
-                        {token.conditions && token.conditions.filter(c => c !== 'Bloodied' && c !== 'Dying').length > 0 && shouldShowToken && (
+                        {/* Yellow condition ring - hidden for now */}
+                        {/* {token.conditions && token.conditions.filter(c => c !== 'Bloodied' && c !== 'Dying').length > 0 && shouldShowToken && (
                           <div
                             className="absolute top-0 left-0 right-0 rounded-t-full border-t-4 border-l-4 border-r-4 border-yellow-400"
                             style={{
@@ -1656,7 +1976,7 @@ export default function NimbleCombatTracker() {
                               borderBottomRightRadius: 0
                             }}
                           />
-                        )}
+                        )} */}
                       </div>
                     ) : (
                       <div className="relative">
@@ -1692,7 +2012,8 @@ export default function NimbleCombatTracker() {
                             />
                           )}
                         </div>
-                        {token.conditions && token.conditions.filter(c => c !== 'Bloodied' && c !== 'Dying').length > 0 && shouldShowToken && (
+                        {/* Yellow condition ring - hidden for now */}
+                        {/* {token.conditions && token.conditions.filter(c => c !== 'Bloodied' && c !== 'Dying').length > 0 && shouldShowToken && (
                           <div
                             className="absolute top-0 left-0 right-0 rounded-t-full border-t-4 border-l-4 border-r-4 border-yellow-400"
                             style={{
@@ -1702,7 +2023,7 @@ export default function NimbleCombatTracker() {
                               borderBottomRightRadius: 0
                             }}
                           />
-                        )}
+                        )} */}
                       </div>
                     )}
 
