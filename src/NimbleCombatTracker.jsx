@@ -497,6 +497,30 @@ export default function NimbleCombatTracker() {
 
   return (
     <div className="h-screen bg-gray-900 text-white flex flex-col">
+      {/* CSS Keyframe Animations */}
+      <style>{`
+        @keyframes heartbeat {
+          0% {
+            opacity: 0.25;
+          }
+          10% {
+            opacity: 0.40;
+          }
+          20% {
+            opacity: 0.25;
+          }
+          30% {
+            opacity: 0.40;
+          }
+          40% {
+            opacity: 0.25;
+          }
+          100% {
+            opacity: 0.25;
+          }
+        }
+      `}</style>
+
       <div className="bg-gray-800 border-b border-gray-700 p-3">
         <div className="flex gap-3 items-center flex-wrap justify-between">
           <div className="flex gap-3 items-center flex-wrap">
@@ -853,7 +877,8 @@ export default function NimbleCombatTracker() {
                             <div
                               className="absolute inset-0 rounded-full pointer-events-none"
                               style={{
-                                boxShadow: 'inset 0 0 30px 10px rgba(220, 38, 38, 0.42)',
+                                boxShadow: 'inset 0 0 30px 10px rgba(220, 38, 38, 1)',
+                                animation: 'heartbeat 1.5s ease-in-out infinite',
                               }}
                             />
                           )}
@@ -888,7 +913,8 @@ export default function NimbleCombatTracker() {
                             <div
                               className="absolute inset-0 rounded-full pointer-events-none"
                               style={{
-                                boxShadow: 'inset 0 0 30px 10px rgba(220, 38, 38, 0.42)',
+                                boxShadow: 'inset 0 0 30px 10px rgba(220, 38, 38, 1)',
+                                animation: 'heartbeat 1.5s ease-in-out infinite',
                               }}
                             />
                           )}
