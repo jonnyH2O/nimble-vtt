@@ -37,7 +37,7 @@ export default function DiceRoller({
           }
         }
         .dice-spin {
-          animation: spinSlow 2.5s linear forwards;
+          animation: spinSlow 2.5s cubic-bezier(0.17, 0.67, 0.35, 0.98) forwards;
         }
         .dice-pop {
           animation: pop 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
@@ -145,7 +145,7 @@ export default function DiceRoller({
                   key={`rolling-${item.id}`}
                   className="bg-purple-600 text-white px-8 py-6 rounded-lg shadow-2xl border-4 border-purple-400 transition-all duration-300"
                 >
-                  <div className="text-center dice-spin">
+                  <div key={item.id} className="text-center dice-spin">
                     <div className="text-6xl">🎲</div>
                   </div>
                 </div>
