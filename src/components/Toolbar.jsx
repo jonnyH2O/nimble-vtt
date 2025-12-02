@@ -1,0 +1,182 @@
+import React from 'react';
+import { MousePointer, Pencil, Eraser, Undo2, Redo2, Trash2 } from 'lucide-react';
+
+/**
+ * Toolbar Component
+ *
+ * Provides drawing tools, mode selection, and zoom controls for the combat tracker.
+ *
+ * @param {Object} props
+ * @param {string} props.drawMode - Current drawing mode ('select', 'draw', 'erase')
+ * @param {Function} props.setDrawMode - Function to set drawing mode
+ * @param {string} props.drawColor - Current drawing color
+ * @param {Function} props.setDrawColor - Function to set drawing color
+ * @param {number} props.drawSize - Current drawing brush size
+ * @param {Function} props.setDrawSize - Function to set drawing brush size
+ * @param {number} props.eraseSize - Current eraser size
+ * @param {Function} props.setEraseSize - Function to set eraser size
+ * @param {number} props.historyStep - Current position in drawing history
+ * @param {Array} props.drawingHistory - Array of drawing history states
+ * @param {Function} props.undo - Function to undo last drawing action
+ * @param {Function} props.redo - Function to redo drawing action
+ * @param {Function} props.clearDrawings - Function to clear all drawings
+ * @param {number} props.zoomLevel - Current zoom level (for select mode)
+ * @param {Function} props.setZoomLevel - Function to set zoom level
+ * @param {Object} props.viewOffset - Current view offset {x, y}
+ * @param {Function} props.setViewOffset - Function to set view offset
+ */
+export default function Toolbar({
+  drawMode,
+  setDrawMode,
+  drawColor,
+  setDrawColor,
+  drawSize,
+  setDrawSize,
+  eraseSize,
+  setEraseSize,
+  historyStep,
+  drawingHistory,
+  undo,
+  redo,
+  clearDrawings,
+  zoomLevel,
+  setZoomLevel,
+  viewOffset,
+  setViewOffset
+}) {
+  return (
+    <div className="flex items-center gap-2 flex-1">
+      <div className="h-8 w-px bg-gray-600"></div>
+
+      {/* Mode Selection Buttons */}
+      <button
+        onClick={() => setDrawMode('select')}
+        className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${
+          drawMode === 'select' ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'
+        }`}
+      >
+        <MousePointer size={16} />
+        Select
+      </button>
+
+      <button
+        onClick={() => setDrawMode('draw')}
+        className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${
+          drawMode === 'draw' ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'
+        }`}
+      >
+        <Pencil size={16} />
+        Draw
+      </button>
+
+      <button
+        onClick={() => setDrawMode('erase')}
+        className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${
+          drawMode === 'erase' ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'
+        }`}
+      >
+        <Eraser size={16} />
+        Erase
+      </button>
+
+      {/* Separator for draw/erase controls */}
+      {drawMode !== 'select' && <div className="h-8 w-px bg-gray-600"></div>}
+
+      {/* Color Picker (draw mode only) */}
+      {drawMode === 'draw' && (
+        <input
+          type="color"
+          value={drawColor}
+          onChange={(e) => setDrawColor(e.target.value)}
+          className="w-8 h-8 rounded cursor-pointer"
+        />
+      )}
+
+      {/* Size Controls (draw/erase modes) */}
+      {(drawMode === 'draw' || drawMode === 'erase') && (
+        <>
+          <input
+            type="range"
+            min="1"
+            max="20"
+            value={drawMode === 'erase' ? eraseSize : drawSize}
+            onChange={(e) => drawMode === 'erase' ? setEraseSize(parseInt(e.target.value)) : setDrawSize(parseInt(e.target.value))}
+            className="w-24"
+          />
+          <span className="text-sm">{(drawMode === 'erase' ? eraseSize : drawSize) + 'px'}</span>
+
+          <div className="h-8 w-px bg-gray-600"></div>
+
+          {/* Undo Button */}
+          <button
+            onClick={undo}
+            disabled={historyStep <= 0}
+            className={`px-2 py-1.5 rounded flex items-center gap-1 text-sm ${
+              historyStep <= 0
+                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                : 'bg-gray-700 hover:bg-gray-600'
+            }`}
+            title="Undo (Ctrl+Z)"
+          >
+            <Undo2 size={16} />
+          </button>
+
+          {/* Redo Button */}
+          <button
+            onClick={redo}
+            disabled={historyStep >= drawingHistory.length - 1}
+            className={`px-2 py-1.5 rounded flex items-center gap-1 text-sm ${
+              historyStep >= drawingHistory.length - 1
+                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                : 'bg-gray-700 hover:bg-gray-600'
+            }`}
+            title="Redo (Ctrl+Shift+Z)"
+          >
+            <Redo2 size={16} />
+          </button>
+
+          {/* Clear All Button */}
+          <button
+            onClick={clearDrawings}
+            className="bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded flex items-center gap-2 text-sm"
+          >
+            <Trash2 size={16} />
+            Clear All
+          </button>
+        </>
+      )}
+
+      {/* Zoom Controls (select mode only) */}
+      {drawMode === 'select' && (
+        <>
+          <div className="h-8 w-px bg-gray-600"></div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm">Zoom:</span>
+            <button
+              onClick={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.1))}
+              className="bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded text-sm"
+            >
+              -
+            </button>
+            <span className="text-sm w-12 text-center">{Math.round(zoomLevel * 100)}%</span>
+            <button
+              onClick={() => setZoomLevel(Math.min(3, zoomLevel + 0.1))}
+              className="bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded text-sm"
+            >
+              +
+            </button>
+            <button
+              onClick={() => {
+                setZoomLevel(1);
+                setViewOffset({ x: 0, y: 0 });
+              }}
+              className="bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded text-sm"
+            >
+              Reset
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

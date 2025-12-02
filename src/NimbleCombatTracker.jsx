@@ -1,5 +1,9 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback, useReducer } from 'react';
-import { Upload, Trash2, Plus, Users, Swords, Heart, Eraser, Pencil, Info, MousePointer, Settings, Download, FileUp, Dices, AlertCircle, Book, List, Undo2, Redo2, Crown, RotateCcw } from 'lucide-react';
+import { Upload, Trash2, Plus, Users, Swords, Heart, Info, AlertCircle, Book, List, Crown, RotateCcw } from 'lucide-react';
+import DiceRoller from './components/DiceRoller';
+import { HUDDisplay, NotesPanel } from './components/HUD';
+import Toolbar from './components/Toolbar';
+import SettingsPanel from './components/SettingsPanel';
 
 // Token reducer for efficient state updates
 function tokensReducer(state, action) {
@@ -184,117 +188,343 @@ const DEFAULT_TOKEN_POSITION = { x: 100, y: 100 };
 const HUD_Z_INDEX = 50;
 const MODAL_Z_INDEX = 100;
 
-export default function NimbleCombatTracker() {
-  const [background, setBackground] = useState(null);
+// Custom Hook: Token Management
+function useTokens(tokenSize) {
   const [tokens, dispatchTokens] = useReducer(tokensReducer, []);
-  const [turnOrder, setTurnOrder] = useState([]);
-  const [dragging, setDragging] = useState(null);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [selectedToken, setSelectedToken] = useState(null);
+
+  const addToken = useCallback((tokenData) => {
+    const token = {
+      id: crypto.randomUUID(),
+      name: tokenData.name,
+      type: tokenData.type,
+      image: tokenData.image,
+      x: DEFAULT_TOKEN_POSITION.x,
+      y: DEFAULT_TOKEN_POSITION.y,
+      actions: tokenData.type === 'hero' ? [false, false, false] :
+               tokenData.type === 'legendary' ? [false, false, false, false, false, false] :
+               [false],
+      isActiveTurn: false,
+      health: 10,
+      maxHealth: 10,
+      tempHP: 0,
+      showTempHP: false,
+      notes: '',
+      conditions: [],
+      wounds: 0,
+      maxWounds: 6,
+      customSize: null,
+      hasResource: tokenData.hasResource || false,
+      resourceName: tokenData.resourceName || '',
+      resourceColor: tokenData.resourceColor || '#3b82f6',
+      currentResource: tokenData.currentResource || 0,
+      maxResource: tokenData.maxResource || 0
+    };
+    dispatchTokens({ type: 'ADD_TOKEN', payload: token });
+    return token.id;
+  }, []);
+
+  const removeToken = useCallback((id) => {
+    dispatchTokens({ type: 'REMOVE_TOKEN', payload: id });
+    if (selectedToken === id) setSelectedToken(null);
+  }, [selectedToken]);
+
+  const updateHealth = useCallback((tokenId, newHealth) => {
+    dispatchTokens({ type: 'UPDATE_HEALTH', payload: { tokenId, newHealth } });
+  }, []);
+
+  const updateMaxHealth = useCallback((tokenId, newMaxHealth) => {
+    dispatchTokens({ type: 'UPDATE_MAX_HEALTH', payload: { tokenId, newMaxHealth } });
+  }, []);
+
+  const updateNotes = useCallback((tokenId, notes) => {
+    dispatchTokens({ type: 'UPDATE_TOKEN', payload: { id: tokenId, updates: { notes } } });
+  }, []);
+
+  const updateTokenSize = useCallback((tokenId, size) => {
+    dispatchTokens({ type: 'UPDATE_TOKEN', payload: { id: tokenId, updates: { customSize: size } } });
+  }, []);
+
+  const updateTempHP = useCallback((tokenId, tempHP) => {
+    dispatchTokens({ type: 'UPDATE_TOKEN', payload: { id: tokenId, updates: { tempHP: Math.max(0, tempHP) } } });
+  }, []);
+
+  const toggleTempHP = useCallback((tokenId) => {
+    const token = tokens.find(t => t.id === tokenId);
+    if (token) {
+      dispatchTokens({ type: 'UPDATE_TOKEN', payload: { id: tokenId, updates: { showTempHP: !token.showTempHP } } });
+    }
+  }, [tokens]);
+
+  const toggleCondition = useCallback((tokenId, condition) => {
+    dispatchTokens({ type: 'TOGGLE_CONDITION', payload: { tokenId, condition } });
+  }, []);
+
+  const updateWounds = useCallback((tokenId, newWounds) => {
+    dispatchTokens({ type: 'UPDATE_WOUNDS', payload: { tokenId, newWounds } });
+  }, []);
+
+  const clearConditions = useCallback((tokenId) => {
+    dispatchTokens({ type: 'CLEAR_CONDITIONS', payload: { tokenId } });
+  }, []);
+
+  const toggleAction = useCallback((tokenId, actionIndex) => {
+    dispatchTokens({ type: 'TOGGLE_ACTION', payload: { tokenId, actionIndex } });
+  }, []);
+
+  const startTurn = useCallback((tokenId) => {
+    dispatchTokens({ type: 'START_TURN', payload: { tokenId } });
+  }, []);
+
+  const endTurn = useCallback((tokenId) => {
+    dispatchTokens({ type: 'END_TURN', payload: { tokenId } });
+  }, []);
+
+  const resetNonHeroActions = useCallback(() => {
+    dispatchTokens({ type: 'RESET_NON_HERO_ACTIONS' });
+  }, []);
+
+  const updateTokenPosition = useCallback((tokenId, x, y) => {
+    dispatchTokens({ type: 'UPDATE_TOKEN', payload: { id: tokenId, updates: { x, y } } });
+  }, []);
+
+  const updateTokenResource = useCallback((tokenId, updates) => {
+    dispatchTokens({ type: 'UPDATE_TOKEN', payload: { id: tokenId, updates } });
+  }, []);
+
+  const setAllTokens = useCallback((newTokens) => {
+    dispatchTokens({ type: 'SET_ALL_TOKENS', payload: newTokens });
+  }, []);
+
+  return {
+    tokens,
+    selectedToken,
+    setSelectedToken,
+    addToken,
+    removeToken,
+    updateHealth,
+    updateMaxHealth,
+    updateNotes,
+    updateTokenSize,
+    updateTempHP,
+    toggleTempHP,
+    toggleCondition,
+    updateWounds,
+    clearConditions,
+    toggleAction,
+    startTurn,
+    endTurn,
+    resetNonHeroActions,
+    updateTokenPosition,
+    updateTokenResource,
+    setAllTokens
+  };
+}
+
+// Custom hook for drawing canvas operations
+function useDrawing(boardRef, viewOffset, zoomLevel) {
   const [drawing, setDrawing] = useState(false);
   const [drawMode, setDrawMode] = useState('select');
   const [drawColor, setDrawColor] = useState('#ff0000');
   const [drawSize, setDrawSize] = useState(3);
   const [eraseSize, setEraseSize] = useState(10);
-  const [cursorPos, setCursorPos] = useState(null);
-  const [showAddToken, setShowAddToken] = useState(false);
-  const [newToken, setNewToken] = useState({ name: '', type: 'hero', image: null, hasResource: false, resourceName: '', resourceColor: '#3b82f6', currentResource: 5, maxResource: 5 });
-  const [draggedTurnIndex, setDraggedTurnIndex] = useState(null);
-  const [selectedToken, setSelectedToken] = useState(null);
-  const [deleteMode, setDeleteMode] = useState(false);
-  const [expandedNotes, setExpandedNotes] = useState({});
-  const [panningView, setPanningView] = useState(false);
-  const [viewOffset, setViewOffset] = useState({ x: 0, y: 0 });
-  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const [tokenSize, setTokenSize] = useState(64);
-  const [backgroundSize, setBackgroundSize] = useState(100);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showGrid, setShowGrid] = useState(false);
-  const [gridSize, setGridSize] = useState(50);
-  const [showDiceMenu, setShowDiceMenu] = useState(false);
-  const [diceCount, setDiceCount] = useState(1);
-  const [diceRolls, setDiceRolls] = useState([]);
-  const [rollingDice, setRollingDice] = useState([]);
-  const [expandedConditions, setExpandedConditions] = useState({});
-  const [shiftHeld, setShiftHeld] = useState(false);
-  const [sidebarView, setSidebarView] = useState('turnOrder'); // 'turnOrder' or 'dictionary'
   const [drawingHistory, setDrawingHistory] = useState([]);
   const [historyStep, setHistoryStep] = useState(-1);
-  const [darknessMode, setDarknessMode] = useState(false);
-  const [heroLightRadius, setHeroLightRadius] = useState(3); // Multiplier of token size
-  const [companionLightRadius, setCompanionLightRadius] = useState(2); // Multiplier of token size
-  const [darknessIntensity, setDarknessIntensity] = useState(0.95); // 0-1, how dark the shadows are
+  const [cursorPos, setCursorPos] = useState(null);
 
   const drawCanvasRef = useRef(null);
-  const boardRef = useRef(null);
   const drawingRef = useRef([]);
-  const diceTimeoutsRef = useRef([]);
 
-  const handleBackgroundUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setBackground(event.target.result);
-      };
-      reader.readAsDataURL(file);
+  // Initialize history with blank canvas
+  useEffect(() => {
+    if (drawCanvasRef.current && drawingHistory.length === 0) {
+      const blankCanvas = drawCanvasRef.current.toDataURL();
+      setDrawingHistory([blankCanvas]);
+      setHistoryStep(0);
     }
-  };
+  }, [drawingHistory.length]);
 
-  const handleTokenImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setNewToken({ ...newToken, image: event.target.result });
-      };
-      reader.readAsDataURL(file);
+  const saveToHistory = useCallback(() => {
+    if (!drawCanvasRef.current) return;
+
+    const canvas = drawCanvasRef.current;
+    const imageData = canvas.toDataURL();
+
+    // Remove any future history if we're not at the end
+    const newHistory = drawingHistory.slice(0, historyStep + 1);
+    newHistory.push(imageData);
+
+    // Limit history to reduce memory usage
+    if (newHistory.length > DRAWING_HISTORY_LIMIT) {
+      newHistory.shift();
+      setDrawingHistory(newHistory);
+      setHistoryStep(newHistory.length - 1);
+    } else {
+      setDrawingHistory(newHistory);
+      setHistoryStep(newHistory.length - 1);
     }
-  };
+  }, [drawingHistory, historyStep]);
 
-  const addToken = () => {
-    if (newToken.name) {
-      const token = {
-        id: crypto.randomUUID(),
-        name: newToken.name,
-        type: newToken.type,
-        image: newToken.image,
-        x: DEFAULT_TOKEN_POSITION.x,
-        y: DEFAULT_TOKEN_POSITION.y,
-        actions: newToken.type === 'hero' ? [false, false, false] :
-                 newToken.type === 'legendary' ? [false, false, false, false, false, false] : // 6 actions for legendary (max hero count)
-                 [false],
-        isActiveTurn: false,
-        health: 10,
-        maxHealth: 10,
-        tempHP: 0,
-        showTempHP: false,
-        notes: '',
-        conditions: [],
-        wounds: 0,
-        maxWounds: 6,
-        customSize: null, // Use global tokenSize by default
-        hasResource: newToken.hasResource || false,
-        resourceName: newToken.resourceName || '',
-        resourceColor: newToken.resourceColor || '#3b82f6',
-        currentResource: newToken.hasResource ? 5 : 0,
-        maxResource: newToken.hasResource ? 5 : 0
-      };
-      dispatchTokens({ type: 'ADD_TOKEN', payload: token });
-      setTurnOrder([...turnOrder, token.id]);
-      setNewToken({ name: '', type: 'hero', image: null, hasResource: false, resourceName: '', resourceColor: '#3b82f6', currentResource: 5, maxResource: 5 });
-      setShowAddToken(false);
+  const restoreFromHistory = useCallback((step) => {
+    if (!drawCanvasRef.current || step < 0 || step >= drawingHistory.length) return;
+
+    const canvas = drawCanvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+
+    img.onload = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+    };
+
+    img.src = drawingHistory[step];
+  }, [drawingHistory]);
+
+  const handleDrawStart = useCallback((e) => {
+    if (e.target === drawCanvasRef.current && drawMode !== 'select') {
+      setDrawing(true);
+      const rect = boardRef.current.getBoundingClientRect();
+      // Adjust for zoom and pan
+      const x = (e.clientX - rect.left - viewOffset.x) / zoomLevel;
+      const y = (e.clientY - rect.top - viewOffset.y) / zoomLevel;
+      drawingRef.current = [{ x, y }];
     }
-  };
+  }, [drawMode, boardRef, viewOffset, zoomLevel]);
 
-  const removeToken = (id) => {
-    dispatchTokens({ type: 'REMOVE_TOKEN', payload: id });
-    setTurnOrder(turnOrder.filter(tid => tid !== id));
-    if (selectedToken === id) setSelectedToken(null);
-  };
+  const handleDrawMove = useCallback((e) => {
+    if (drawing) {
+      const canvas = drawCanvasRef.current;
+      const ctx = canvas.getContext('2d');
+      const rect = boardRef.current.getBoundingClientRect();
 
-  // Generate display turn order with legendary tokens at top and after each hero
-  // Memoized to prevent recalculation on every render
+      // Calculate position relative to the transformed canvas
+      const x = (e.clientX - rect.left - viewOffset.x) / zoomLevel;
+      const y = (e.clientY - rect.top - viewOffset.y) / zoomLevel;
+
+      const currentSize = drawMode === 'erase' ? eraseSize : drawSize;
+
+      if (drawMode === 'erase') {
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.strokeStyle = 'rgba(0,0,0,1)';
+      } else {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = drawColor;
+      }
+
+      if (drawingRef.current.length > 0) {
+        const lastPoint = drawingRef.current[drawingRef.current.length - 1];
+        ctx.lineWidth = currentSize;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(lastPoint.x, lastPoint.y);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+      }
+
+      drawingRef.current.push({ x, y });
+    }
+  }, [drawing, drawMode, drawColor, drawSize, eraseSize, boardRef, viewOffset, zoomLevel]);
+
+  const handleDrawEnd = useCallback(() => {
+    if (drawing) {
+      saveToHistory();
+    }
+    setDrawing(false);
+    drawingRef.current = [];
+  }, [drawing, saveToHistory]);
+
+  const clearDrawings = useCallback(() => {
+    const canvas = drawCanvasRef.current;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    saveToHistory();
+  }, [saveToHistory]);
+
+  const undo = useCallback(() => {
+    if (historyStep > 0) {
+      const newStep = historyStep - 1;
+      setHistoryStep(newStep);
+      restoreFromHistory(newStep);
+    }
+  }, [historyStep, restoreFromHistory]);
+
+  const redo = useCallback(() => {
+    if (historyStep < drawingHistory.length - 1) {
+      const newStep = historyStep + 1;
+      setHistoryStep(newStep);
+      restoreFromHistory(newStep);
+    }
+  }, [historyStep, drawingHistory.length, restoreFromHistory]);
+
+  const updateCursorPos = useCallback((e) => {
+    if (boardRef.current) {
+      const rect = boardRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      setCursorPos({ x, y });
+    }
+  }, [boardRef]);
+
+  const clearCursorPos = useCallback(() => {
+    setCursorPos(null);
+  }, []);
+
+  const getDrawingData = useCallback(() => {
+    return drawCanvasRef.current ? drawCanvasRef.current.toDataURL() : null;
+  }, []);
+
+  const loadDrawing = useCallback((imageData) => {
+    if (!drawCanvasRef.current || !imageData) return;
+
+    const canvas = drawCanvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+
+    img.onload = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+      saveToHistory();
+    };
+
+    img.src = imageData;
+  }, [saveToHistory]);
+
+  return {
+    // State
+    drawing,
+    drawMode,
+    setDrawMode,
+    drawColor,
+    setDrawColor,
+    drawSize,
+    setDrawSize,
+    eraseSize,
+    setEraseSize,
+    cursorPos,
+    drawCanvasRef,
+    drawingHistory,
+    historyStep,
+
+    // Actions
+    handleDrawStart,
+    handleDrawMove,
+    handleDrawEnd,
+    clearDrawings,
+    undo,
+    redo,
+    updateCursorPos,
+    clearCursorPos,
+    getDrawingData,
+    loadDrawing
+  };
+}
+
+// Custom hook for turn order management
+function useTurnOrder(tokens) {
+  const [turnOrder, setTurnOrder] = useState([]);
+  const [draggedTurnIndex, setDraggedTurnIndex] = useState(null);
+
+  // Memoized display turn order with legendary token logic
   const displayTurnOrder = useMemo(() => {
     const displayOrder = [];
     const legendaryTokens = tokens.filter(t => t.type === 'legendary');
@@ -322,6 +552,251 @@ export default function NimbleCombatTracker() {
 
     return displayOrder;
   }, [tokens, turnOrder]);
+
+  const addToTurnOrder = useCallback((tokenId) => {
+    setTurnOrder(prev => [...prev, tokenId]);
+  }, []);
+
+  const removeFromTurnOrder = useCallback((tokenId) => {
+    setTurnOrder(prev => prev.filter(tid => tid !== tokenId));
+  }, []);
+
+  const handleTurnDragStart = useCallback((index) => {
+    setDraggedTurnIndex(index);
+  }, []);
+
+  const handleTurnDragOver = useCallback((e, index) => {
+    e.preventDefault();
+    if (draggedTurnIndex !== null && draggedTurnIndex !== index) {
+      const newOrder = [...turnOrder];
+      const draggedId = newOrder[draggedTurnIndex];
+      newOrder.splice(draggedTurnIndex, 1);
+      newOrder.splice(index, 0, draggedId);
+      setTurnOrder(newOrder);
+      setDraggedTurnIndex(index);
+    }
+  }, [draggedTurnIndex, turnOrder]);
+
+  const handleTurnDragEnd = useCallback(() => {
+    setDraggedTurnIndex(null);
+  }, []);
+
+  const setAllTurnOrder = useCallback((newTurnOrder) => {
+    setTurnOrder(newTurnOrder);
+  }, []);
+
+  return {
+    turnOrder,
+    displayTurnOrder,
+    draggedTurnIndex,
+    addToTurnOrder,
+    removeFromTurnOrder,
+    handleTurnDragStart,
+    handleTurnDragOver,
+    handleTurnDragEnd,
+    setAllTurnOrder
+  };
+}
+
+// Custom hook for dice rolling
+function useDiceRoller() {
+  const [showDiceMenu, setShowDiceMenu] = useState(false);
+  const [diceCount, setDiceCount] = useState(1);
+  const [diceRolls, setDiceRolls] = useState([]);
+  const [rollingDice, setRollingDice] = useState([]);
+  const diceTimeoutsRef = useRef([]);
+
+  const rollDice = useCallback((sides) => {
+    const rolls = [];
+    let total = 0;
+
+    for (let i = 0; i < diceCount; i++) {
+      const roll = Math.floor(Math.random() * sides) + 1;
+      rolls.push(roll);
+      total += roll;
+    }
+
+    const rollId = crypto.randomUUID();
+
+    // Show "rolling" animation first
+    const rollingRoll = {
+      id: rollId,
+      dice: `${diceCount}d${sides}`,
+      rolling: true
+    };
+
+    setRollingDice(prev => [rollingRoll, ...prev]);
+    setShowDiceMenu(false);
+
+    // After 2.5 seconds, show the actual result
+    const timeout1 = setTimeout(() => {
+      setRollingDice(prev => prev.filter(r => r.id !== rollId));
+
+      const newRoll = {
+        id: rollId,
+        dice: `${diceCount}d${sides}`,
+        rolls: rolls,
+        total: total,
+        fading: false
+      };
+
+      setDiceRolls(prev => [newRoll, ...prev]);
+
+      // Start fading after 5 seconds
+      const timeout2 = setTimeout(() => {
+        setDiceRolls(prev => prev.map(r =>
+          r.id === rollId ? { ...r, fading: true } : r
+        ));
+
+        // Remove completely after fade (3 more seconds)
+        const timeout3 = setTimeout(() => {
+          setDiceRolls(prev => prev.filter(r => r.id !== rollId));
+        }, 3000);
+
+        diceTimeoutsRef.current.push(timeout3);
+      }, 5000);
+
+      diceTimeoutsRef.current.push(timeout2);
+    }, 2500);
+
+    diceTimeoutsRef.current.push(timeout1);
+  }, [diceCount]);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      diceTimeoutsRef.current.forEach(timeoutId => clearTimeout(timeoutId));
+      diceTimeoutsRef.current = [];
+    };
+  }, []);
+
+  return {
+    showDiceMenu,
+    setShowDiceMenu,
+    diceCount,
+    setDiceCount,
+    diceRolls,
+    rollingDice,
+    rollDice
+  };
+}
+
+export default function NimbleCombatTracker() {
+  // UI State
+  const [background, setBackground] = useState(null);
+  const [backgroundSize, setBackgroundSize] = useState(100);
+  const [tokenSize, setTokenSize] = useState(64);
+
+  // Refs
+  const boardRef = useRef(null);
+
+  // View State (needed for drawing hook)
+  const [viewOffset, setViewOffset] = useState({ x: 0, y: 0 });
+  const [zoomLevel, setZoomLevel] = useState(1);
+
+  // Token Management (custom hook)
+  const tokenManager = useTokens(tokenSize);
+  const { tokens, selectedToken, setSelectedToken } = tokenManager;
+
+  // Drawing Management (custom hook)
+  const drawingManager = useDrawing(boardRef, viewOffset, zoomLevel);
+  const {
+    drawing,
+    drawMode,
+    setDrawMode,
+    drawColor,
+    setDrawColor,
+    drawSize,
+    setDrawSize,
+    eraseSize,
+    setEraseSize,
+    cursorPos,
+    drawCanvasRef,
+    drawingHistory,
+    historyStep
+  } = drawingManager;
+
+  // Turn Order Management (custom hook)
+  const turnOrderManager = useTurnOrder(tokens);
+  const {
+    turnOrder,
+    displayTurnOrder,
+    draggedTurnIndex
+  } = turnOrderManager;
+
+  // Dice Roller Management (custom hook)
+  const diceRollerManager = useDiceRoller();
+  const {
+    showDiceMenu,
+    setShowDiceMenu,
+    diceCount,
+    setDiceCount,
+    diceRolls,
+    rollingDice,
+    rollDice
+  } = diceRollerManager;
+
+  // Other State
+  const [deleteMode, setDeleteMode] = useState(false);
+
+  // Token Dragging State
+  const [dragging, setDragging] = useState(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+  // Add Token Dialog State
+  const [showAddToken, setShowAddToken] = useState(false);
+  const [newToken, setNewToken] = useState({ name: '', type: 'hero', image: null, hasResource: false, resourceName: '', resourceColor: '#3b82f6', currentResource: 5, maxResource: 5 });
+
+  // UI Panels
+  const [expandedNotes, setExpandedNotes] = useState({});
+  const [panningView, setPanningView] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [showSettings, setShowSettings] = useState(false);
+  const [showGrid, setShowGrid] = useState(false);
+  const [gridSize, setGridSize] = useState(50);
+  const [expandedConditions, setExpandedConditions] = useState({});
+  const [shiftHeld, setShiftHeld] = useState(false);
+  const [sidebarView, setSidebarView] = useState('turnOrder'); // 'turnOrder' or 'dictionary'
+  const [darknessMode, setDarknessMode] = useState(false);
+  const [heroLightRadius, setHeroLightRadius] = useState(3); // Multiplier of token size
+  const [companionLightRadius, setCompanionLightRadius] = useState(2); // Multiplier of token size
+  const [darknessIntensity, setDarknessIntensity] = useState(0.95); // 0-1, how dark the shadows are
+
+  const handleBackgroundUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setBackground(event.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleTokenImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setNewToken({ ...newToken, image: event.target.result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAddToken = () => {
+    if (newToken.name) {
+      const tokenId = tokenManager.addToken(newToken);
+      turnOrderManager.addToTurnOrder(tokenId);
+      setNewToken({ name: '', type: 'hero', image: null, hasResource: false, resourceName: '', resourceColor: '#3b82f6', currentResource: 5, maxResource: 5 });
+      setShowAddToken(false);
+    }
+  };
+
+  const handleRemoveToken = (id) => {
+    tokenManager.removeToken(id);
+    turnOrderManager.removeFromTurnOrder(id);
+  };
 
   // Memoize light sources to avoid repeated filtering
   const lightSources = useMemo(() => {
@@ -387,33 +862,6 @@ export default function NimbleCombatTracker() {
     return visibility;
   }, [tokens, darknessMode, lightSourceData, tokenSize]);
 
-  const updateHealth = useCallback((tokenId, newHealth) => {
-    dispatchTokens({ type: 'UPDATE_HEALTH', payload: { tokenId, newHealth } });
-  }, []);
-
-  const updateMaxHealth = useCallback((tokenId, newMaxHealth) => {
-    dispatchTokens({ type: 'UPDATE_MAX_HEALTH', payload: { tokenId, newMaxHealth } });
-  }, []);
-
-  const updateNotes = useCallback((tokenId, notes) => {
-    dispatchTokens({ type: 'UPDATE_TOKEN', payload: { id: tokenId, updates: { notes } } });
-  }, []);
-
-  const updateTokenSize = useCallback((tokenId, size) => {
-    dispatchTokens({ type: 'UPDATE_TOKEN', payload: { id: tokenId, updates: { customSize: size } } });
-  }, []);
-
-  const updateTempHP = useCallback((tokenId, tempHP) => {
-    dispatchTokens({ type: 'UPDATE_TOKEN', payload: { id: tokenId, updates: { tempHP: Math.max(0, tempHP) } } });
-  }, []);
-
-  const toggleTempHP = useCallback((tokenId) => {
-    const token = tokens.find(t => t.id === tokenId);
-    if (token) {
-      dispatchTokens({ type: 'UPDATE_TOKEN', payload: { id: tokenId, updates: { showTempHP: !token.showTempHP } } });
-    }
-  }, [tokens]);
-
   const toggleNotes = (tokenId) => {
     setExpandedNotes(prev => ({
       ...prev,
@@ -428,14 +876,6 @@ export default function NimbleCombatTracker() {
     }));
   };
 
-  const toggleCondition = useCallback((tokenId, condition) => {
-    dispatchTokens({ type: 'TOGGLE_CONDITION', payload: { tokenId, condition } });
-  }, []);
-
-  const updateWounds = useCallback((tokenId, newWounds) => {
-    dispatchTokens({ type: 'UPDATE_WOUNDS', payload: { tokenId, newWounds } });
-  }, []);
-
   const doomedConditions = ['Bloodied', 'Dying', 'Wounded'];
 
   const majorConditions = [
@@ -447,50 +887,6 @@ export default function NimbleCombatTracker() {
   ];
 
   const minorConditions = ['Smoldering', 'Charged', 'Distracted'];
-
-  const clearConditions = useCallback((tokenId) => {
-    dispatchTokens({ type: 'CLEAR_CONDITIONS', payload: { tokenId } });
-  }, []);
-
-  const conditionEmojis = {
-    'Bloodied': '🩸',
-    'Dying': '💀',
-    'Wounded': '🩹',
-    'Blinded': '🌫️',
-    'Invisible': '🫥',
-    'Dazed': '😵‍💫',
-    'Charmed': '💖',
-    'Taunted': '😜',
-    'Frightened': '👻',
-    'Grappled': '🤼',
-    'Riding': '🪑',
-    'Petrified': '🪨',
-    'Restrained': '⛓️',
-    'Incapacitated': '😵',
-    'Poisoned': '🧪',
-    'Slowed': '🐌',
-    'Prone': '🙇',
-    'Hampered': '🕸️',
-    'Smoldering': '🔥',
-    'Charged': '🌩️',
-    'Distracted': '🌀'
-  };
-
-  const toggleAction = useCallback((tokenId, actionIndex) => {
-    dispatchTokens({ type: 'TOGGLE_ACTION', payload: { tokenId, actionIndex } });
-  }, []);
-
-  const startTurn = useCallback((tokenId) => {
-    dispatchTokens({ type: 'START_TURN', payload: { tokenId } });
-  }, []);
-
-  const endTurn = useCallback((tokenId) => {
-    dispatchTokens({ type: 'END_TURN', payload: { tokenId } });
-  }, []);
-
-  const resetNonHeroActions = useCallback(() => {
-    dispatchTokens({ type: 'RESET_NON_HERO_ACTIONS' });
-  }, []);
 
   const handleMouseDown = useCallback((e, tokenId) => {
     if (drawMode !== 'select') return;
@@ -555,12 +951,8 @@ export default function NimbleCombatTracker() {
   };
 
   const handleMouseMove = (e) => {
-    if (boardRef.current) {
-      const rect = boardRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      setCursorPos({ x, y });
-    }
+    // Update cursor position
+    drawingManager.updateCursorPos(e);
 
     if (panningView) {
       setViewOffset({
@@ -576,211 +968,30 @@ export default function NimbleCombatTracker() {
       const cursorY = (e.clientY - rect.top - viewOffset.y) / zoomLevel;
       const x = cursorX - dragOffset.x;
       const y = cursorY - dragOffset.y;
-      dispatchTokens({ type: 'UPDATE_TOKEN', payload: { id: dragging, updates: { x, y } } });
+      tokenManager.updateTokenPosition(dragging, x, y);
     }
-    
-    if (drawing) {
-      const canvas = drawCanvasRef.current;
-      const ctx = canvas.getContext('2d');
-      const rect = boardRef.current.getBoundingClientRect();
-      
-      // Calculate position relative to the transformed canvas
-      const x = (e.clientX - rect.left - viewOffset.x) / zoomLevel;
-      const y = (e.clientY - rect.top - viewOffset.y) / zoomLevel;
-      
-      const currentSize = drawMode === 'erase' ? eraseSize : drawSize;
-      
-      if (drawMode === 'erase') {
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.strokeStyle = 'rgba(0,0,0,1)';
-      } else {
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.strokeStyle = drawColor;
-      }
-      
-      if (drawingRef.current.length > 0) {
-        const lastPoint = drawingRef.current[drawingRef.current.length - 1];
-        ctx.lineWidth = currentSize;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(lastPoint.x, lastPoint.y);
-        ctx.lineTo(x, y);
-        ctx.stroke();
-      }
-      
-      drawingRef.current.push({ x, y });
-    }
+
+    // Handle drawing
+    drawingManager.handleDrawMove(e);
   };
 
   const handleMouseUp = () => {
-    if (drawing) {
-      saveToHistory();
-    }
+    drawingManager.handleDrawEnd();
     setDragging(null);
     setDragOffset({ x: 0, y: 0 });
-    setDrawing(false);
     setPanningView(false);
-    drawingRef.current = [];
   };
 
   const handleMouseLeave = () => {
+    drawingManager.handleDrawEnd();
+    drawingManager.clearCursorPos();
     setDragging(null);
     setDragOffset({ x: 0, y: 0 });
-    setDrawing(false);
     setPanningView(false);
-    drawingRef.current = [];
-    setCursorPos(null);
-  };
-
-  const handleDrawStart = (e) => {
-    if (e.target === drawCanvasRef.current && drawMode !== 'select') {
-      setDrawing(true);
-      const rect = boardRef.current.getBoundingClientRect();
-      // Adjust for zoom and pan
-      const x = (e.clientX - rect.left - viewOffset.x) / zoomLevel;
-      const y = (e.clientY - rect.top - viewOffset.y) / zoomLevel;
-      drawingRef.current = [{ x, y }];
-    }
-  };
-
-  const clearDrawings = () => {
-    const canvas = drawCanvasRef.current;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    saveToHistory();
-  };
-
-  const saveToHistory = () => {
-    if (!drawCanvasRef.current) return;
-    
-    const canvas = drawCanvasRef.current;
-    const imageData = canvas.toDataURL();
-    
-    // Remove any future history if we're not at the end
-    const newHistory = drawingHistory.slice(0, historyStep + 1);
-    newHistory.push(imageData);
-
-    // Limit history to reduce memory usage
-    if (newHistory.length > DRAWING_HISTORY_LIMIT) {
-      newHistory.shift();
-      setDrawingHistory(newHistory);
-      setHistoryStep(newHistory.length - 1);
-    } else {
-      setDrawingHistory(newHistory);
-      setHistoryStep(newHistory.length - 1);
-    }
-  };
-
-  const undo = () => {
-    if (historyStep > 0) {
-      const newStep = historyStep - 1;
-      setHistoryStep(newStep);
-      restoreFromHistory(newStep);
-    }
-  };
-
-  const redo = () => {
-    if (historyStep < drawingHistory.length - 1) {
-      const newStep = historyStep + 1;
-      setHistoryStep(newStep);
-      restoreFromHistory(newStep);
-    }
-  };
-
-  const restoreFromHistory = (step) => {
-    if (!drawCanvasRef.current || step < 0 || step >= drawingHistory.length) return;
-
-    const canvas = drawCanvasRef.current;
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-
-    img.onload = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0);
-    };
-
-    img.src = drawingHistory[step];
-  };
-
-  const handleTurnDragStart = (index) => {
-    setDraggedTurnIndex(index);
-  };
-
-  const handleTurnDragOver = (e, index) => {
-    e.preventDefault();
-    if (draggedTurnIndex !== null && draggedTurnIndex !== index) {
-      const newOrder = [...turnOrder];
-      const draggedId = newOrder[draggedTurnIndex];
-      newOrder.splice(draggedTurnIndex, 1);
-      newOrder.splice(index, 0, draggedId);
-      setTurnOrder(newOrder);
-      setDraggedTurnIndex(index);
-    }
-  };
-
-  const handleTurnDragEnd = () => {
-    setDraggedTurnIndex(null);
-  };
-
-  const rollDice = (sides) => {
-    const rolls = [];
-    let total = 0;
-    
-    for (let i = 0; i < diceCount; i++) {
-      const roll = Math.floor(Math.random() * sides) + 1;
-      rolls.push(roll);
-      total += roll;
-    }
-
-    const rollId = crypto.randomUUID();
-    
-    // Show "rolling" animation first
-    const rollingRoll = {
-      id: rollId,
-      dice: `${diceCount}d${sides}`,
-      rolling: true
-    };
-    
-    setRollingDice(prev => [...prev, rollingRoll]);
-    setShowDiceMenu(false);
-
-    // After 2.5 seconds, show the actual result
-    const timeout1 = setTimeout(() => {
-      setRollingDice(prev => prev.filter(r => r.id !== rollId));
-
-      const newRoll = {
-        id: rollId,
-        dice: `${diceCount}d${sides}`,
-        rolls: rolls,
-        total: total,
-        fading: false
-      };
-
-      setDiceRolls(prev => [...prev, newRoll]);
-
-      // Start fading after 5 seconds
-      const timeout2 = setTimeout(() => {
-        setDiceRolls(prev => prev.map(r =>
-          r.id === rollId ? { ...r, fading: true } : r
-        ));
-
-        // Remove completely after fade (3 more seconds)
-        const timeout3 = setTimeout(() => {
-          setDiceRolls(prev => prev.filter(r => r.id !== rollId));
-        }, 3000);
-
-        diceTimeoutsRef.current.push(timeout3);
-      }, 5000);
-
-      diceTimeoutsRef.current.push(timeout2);
-    }, 2500);
-
-    diceTimeoutsRef.current.push(timeout1);
   };
 
   const exportBattle = () => {
-    const canvas = drawCanvasRef.current;
-    const drawingData = canvas ? canvas.toDataURL() : null;
+    const drawingData = drawingManager.getDrawingData();
     
     const battleState = {
       version: '1.2',
@@ -826,8 +1037,8 @@ export default function NimbleCombatTracker() {
         const battleState = JSON.parse(event.target.result);
         
         // Restore all state (conditions are included in tokens)
-        if (battleState.tokens) dispatchTokens({ type: 'SET_ALL_TOKENS', payload: battleState.tokens });
-        if (battleState.turnOrder) setTurnOrder(battleState.turnOrder);
+        if (battleState.tokens) tokenManager.setAllTokens(battleState.tokens);
+        if (battleState.turnOrder) turnOrderManager.setAllTurnOrder(battleState.turnOrder);
         if (battleState.background) setBackground(battleState.background);
         if (battleState.backgroundSize) setBackgroundSize(battleState.backgroundSize);
         if (battleState.tokenSize) setTokenSize(battleState.tokenSize);
@@ -844,19 +1055,8 @@ export default function NimbleCombatTracker() {
         if (battleState.darknessIntensity !== undefined) setDarknessIntensity(battleState.darknessIntensity);
         
         // Restore drawings
-        if (battleState.drawings && drawCanvasRef.current) {
-          const canvas = drawCanvasRef.current;
-          const ctx = canvas.getContext('2d');
-          const img = new Image();
-          img.onload = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(img, 0, 0);
-            // Reset history after import
-            const newHistory = [canvas.toDataURL()];
-            setDrawingHistory(newHistory);
-            setHistoryStep(0);
-          };
-          img.src = battleState.drawings;
+        if (battleState.drawings) {
+          drawingManager.loadDrawing(battleState.drawings);
         }
         
         setShowSettings(false);
@@ -895,15 +1095,6 @@ export default function NimbleCombatTracker() {
   }, []);
 
   useEffect(() => {
-    // Initialize history with blank canvas if empty
-    if (drawCanvasRef.current && drawingHistory.length === 0) {
-      const blankCanvas = drawCanvasRef.current.toDataURL();
-      setDrawingHistory([blankCanvas]);
-      setHistoryStep(0);
-    }
-  }, [drawCanvasRef.current]);
-
-  useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Shift') {
         setShiftHeld(true);
@@ -912,21 +1103,21 @@ export default function NimbleCombatTracker() {
       // Clear conditions: Shift+C when a token is selected
       if (e.shiftKey && (e.key === 'c' || e.key === 'C') && selectedToken) {
         e.preventDefault();
-        clearConditions(selectedToken);
+        tokenManager.clearConditions(selectedToken);
         return;
       }
 
       // Redo: Ctrl+Shift+Z (or Cmd+Shift+Z on Mac) - check this first
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
         e.preventDefault();
-        redo();
+        drawingManager.redo();
         return;
       }
 
       // Undo: Ctrl+Z (or Cmd+Z on Mac)
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
         e.preventDefault();
-        undo();
+        drawingManager.undo();
       }
     };
 
@@ -943,14 +1134,6 @@ export default function NimbleCombatTracker() {
       window.removeEventListener('keyup', handleKeyUp);
     };
   }, [historyStep, drawingHistory, selectedToken]);
-
-  // Cleanup dice roll timeouts on unmount
-  useEffect(() => {
-    return () => {
-      diceTimeoutsRef.current.forEach(timeoutId => clearTimeout(timeoutId));
-      diceTimeoutsRef.current = [];
-    };
-  }, []);
 
   const getTokenBorderColor = (type) => {
     switch(type) {
@@ -1090,7 +1273,7 @@ export default function NimbleCombatTracker() {
 
                   <div className="flex gap-2 pt-2">
                     <button
-                      onClick={addToken}
+                      onClick={handleAddToken}
                       className="flex-1 bg-green-600 hover:bg-green-700 px-3 py-2 rounded text-sm font-bold"
                     >
                       Add
@@ -1106,464 +1289,62 @@ export default function NimbleCombatTracker() {
               </div>
             )}
 
-            <div className="h-8 w-px bg-gray-600"></div>
-            
-            <button
-              onClick={() => setDrawMode('select')}
-              className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${
-                drawMode === 'select' ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'
-              }`}
-            >
-              <MousePointer size={16} />
-              Select
-            </button>
-            
-            <button
-              onClick={() => setDrawMode('draw')}
-              className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${
-                drawMode === 'draw' ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'
-              }`}
-            >
-              <Pencil size={16} />
-              Draw
-            </button>
-            
-            <button
-              onClick={() => setDrawMode('erase')}
-              className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${
-                drawMode === 'erase' ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'
-              }`}
-            >
-              <Eraser size={16} />
-              Erase
-            </button>
-            
-            {drawMode !== 'select' && <div className="h-8 w-px bg-gray-600"></div>}
-            
-            {drawMode === 'draw' && (
-              <input
-                type="color"
-                value={drawColor}
-                onChange={(e) => setDrawColor(e.target.value)}
-                className="w-8 h-8 rounded cursor-pointer"
-              />
-            )}
-            
-            {(drawMode === 'draw' || drawMode === 'erase') && (
-              <>
-                <input
-                  type="range"
-                  min="1"
-                  max="20"
-                  value={drawMode === 'erase' ? eraseSize : drawSize}
-                  onChange={(e) => drawMode === 'erase' ? setEraseSize(parseInt(e.target.value)) : setDrawSize(parseInt(e.target.value))}
-                  className="w-24"
-                />
-                <span className="text-sm">{(drawMode === 'erase' ? eraseSize : drawSize) + 'px'}</span>
-                
-                <div className="h-8 w-px bg-gray-600"></div>
-                
-                <button
-                  onClick={undo}
-                  disabled={historyStep <= 0}
-                  className={`px-2 py-1.5 rounded flex items-center gap-1 text-sm ${
-                    historyStep <= 0 
-                      ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
-                      : 'bg-gray-700 hover:bg-gray-600'
-                  }`}
-                  title="Undo (Ctrl+Z)"
-                >
-                  <Undo2 size={16} />
-                </button>
-                
-                <button
-                  onClick={redo}
-                  disabled={historyStep >= drawingHistory.length - 1}
-                  className={`px-2 py-1.5 rounded flex items-center gap-1 text-sm ${
-                    historyStep >= drawingHistory.length - 1
-                      ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
-                      : 'bg-gray-700 hover:bg-gray-600'
-                  }`}
-                  title="Redo (Ctrl+Shift+Z)"
-                >
-                  <Redo2 size={16} />
-                </button>
-                
-                <button
-                  onClick={clearDrawings}
-                  className="bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded flex items-center gap-2 text-sm"
-                >
-                  <Trash2 size={16} />
-                  Clear All
-                </button>
-              </>
-            )}
-            
-            {drawMode === 'select' && (
-              <>
-                <div className="h-8 w-px bg-gray-600"></div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">Zoom:</span>
-                  <button
-                    onClick={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.1))}
-                    className="bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded text-sm"
-                  >
-                    -
-                  </button>
-                  <span className="text-sm w-12 text-center">{Math.round(zoomLevel * 100)}%</span>
-                  <button
-                    onClick={() => setZoomLevel(Math.min(3, zoomLevel + 0.1))}
-                    className="bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded text-sm"
-                  >
-                    +
-                  </button>
-                  <button
-                    onClick={() => {
-                      setZoomLevel(1);
-                      setViewOffset({ x: 0, y: 0 });
-                    }}
-                    className="bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded text-sm"
-                  >
-                    Reset
-                  </button>
-                </div>
-              </>
-            )}
+            <Toolbar
+              drawMode={drawMode}
+              setDrawMode={setDrawMode}
+              drawColor={drawColor}
+              setDrawColor={setDrawColor}
+              drawSize={drawSize}
+              setDrawSize={setDrawSize}
+              eraseSize={eraseSize}
+              setEraseSize={setEraseSize}
+              historyStep={historyStep}
+              drawingHistory={drawingHistory}
+              undo={drawingManager.undo}
+              redo={drawingManager.redo}
+              clearDrawings={drawingManager.clearDrawings}
+              zoomLevel={zoomLevel}
+              setZoomLevel={setZoomLevel}
+              viewOffset={viewOffset}
+              setViewOffset={setViewOffset}
+            />
           </div>
 
-          <button
-            onClick={() => setShowDiceMenu(!showDiceMenu)}
-            className="bg-purple-600 hover:bg-purple-700 p-2 rounded flex items-center justify-center relative"
-          >
-            <Dices size={20} />
-          </button>
+          <DiceRoller
+            showDiceMenu={showDiceMenu}
+            setShowDiceMenu={setShowDiceMenu}
+            diceCount={diceCount}
+            setDiceCount={setDiceCount}
+            rollDice={rollDice}
+            rollingDice={rollingDice}
+            diceRolls={diceRolls}
+          />
 
-          {showDiceMenu && (
-            <div className="absolute right-80 top-12 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-lg z-[100] w-64">
-              <h3 className="text-sm font-bold mb-3">Roll Dice</h3>
-              
-              <div className="mb-4">
-                <label className="text-sm block mb-2">Number of Dice</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="20"
-                  value={diceCount}
-                  onChange={(e) => setDiceCount(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
-                  className="w-full bg-gray-700 px-3 py-2 rounded text-center"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => rollDice(4)}
-                  className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-bold"
-                >
-                  d4
-                </button>
-                <button
-                  onClick={() => rollDice(6)}
-                  className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-bold"
-                >
-                  d6
-                </button>
-                <button
-                  onClick={() => rollDice(8)}
-                  className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-bold"
-                >
-                  d8
-                </button>
-                <button
-                  onClick={() => rollDice(10)}
-                  className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-bold"
-                >
-                  d10
-                </button>
-                <button
-                  onClick={() => rollDice(12)}
-                  className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-bold"
-                >
-                  d12
-                </button>
-                <button
-                  onClick={() => rollDice(20)}
-                  className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-bold"
-                >
-                  d20
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="relative">
-            <button
-              onClick={() => setShowSettings(!showSettings)}
-              className="bg-gray-700 hover:bg-gray-600 p-2 rounded flex items-center justify-center"
-              title="Settings"
-            >
-              <Settings size={20} />
-            </button>
-            
-            {showSettings && (
-              <div className="absolute right-0 top-12 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-lg z-50 w-64">
-                <h3 className="text-sm font-bold mb-3">Display Settings</h3>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm block mb-2">Token Size</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="range"
-                        min="32"
-                        max="128"
-                        step="4"
-                        value={tokenSize}
-                        onChange={(e) => setTokenSize(parseInt(e.target.value))}
-                        className="flex-1"
-                      />
-                      <span className="text-sm w-12 text-right">{tokenSize}px</span>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm block mb-2">Background Size</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="range"
-                        min="50"
-                        max="200"
-                        step="5"
-                        value={backgroundSize}
-                        onChange={(e) => setBackgroundSize(parseInt(e.target.value))}
-                        className="flex-1"
-                      />
-                      <span className="text-sm w-12 text-right">{backgroundSize}%</span>
-                    </div>
-                  </div>
-
-                  <div className="border-t border-gray-700 pt-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-sm font-bold">Show Grid</label>
-                      <button
-                        onClick={() => setShowGrid(!showGrid)}
-                        className={`px-3 py-1 rounded text-sm ${
-                          showGrid ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 hover:bg-gray-500'
-                        }`}
-                      >
-                        {showGrid ? 'ON' : 'OFF'}
-                      </button>
-                    </div>
-                    {showGrid && (
-                      <div>
-                        <label className="text-sm block mb-2">Grid Size</label>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="range"
-                            min="20"
-                            max="150"
-                            step="5"
-                            value={gridSize}
-                            onChange={(e) => setGridSize(parseInt(e.target.value))}
-                            className="flex-1"
-                          />
-                          <span className="text-sm w-12 text-right">{gridSize}px</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="border-t border-gray-700 pt-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-sm font-bold">Darkness Mode</label>
-                      <button
-                        onClick={() => setDarknessMode(!darknessMode)}
-                        className={`px-3 py-1 rounded text-sm ${
-                          darknessMode ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-600 hover:bg-gray-500'
-                        }`}
-                      >
-                        {darknessMode ? 'ON' : 'OFF'}
-                      </button>
-                    </div>
-                    {darknessMode && (
-                      <div className="space-y-3">
-                        <div>
-                          <label className="text-sm block mb-2">Hero Light Radius</label>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="range"
-                              min="1"
-                              max="6"
-                              step="0.5"
-                              value={heroLightRadius}
-                              onChange={(e) => setHeroLightRadius(parseFloat(e.target.value))}
-                              className="flex-1"
-                            />
-                            <span className="text-sm w-12 text-right">{heroLightRadius}x</span>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-sm block mb-2">Companion Light Radius</label>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="range"
-                              min="1"
-                              max="6"
-                              step="0.5"
-                              value={companionLightRadius}
-                              onChange={(e) => setCompanionLightRadius(parseFloat(e.target.value))}
-                              className="flex-1"
-                            />
-                            <span className="text-sm w-12 text-right">{companionLightRadius}x</span>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-sm block mb-2">Darkness Intensity</label>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="range"
-                              min="0"
-                              max="1"
-                              step="0.05"
-                              value={darknessIntensity}
-                              onChange={(e) => setDarknessIntensity(parseFloat(e.target.value))}
-                              className="flex-1"
-                            />
-                            <span className="text-sm w-16 text-right">{Math.round(darknessIntensity * 100)}%</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="border-t border-gray-700 pt-4 space-y-2">
-                    <h3 className="text-sm font-bold mb-2">Save/Load</h3>
-                    <button
-                      onClick={exportBattle}
-                      className="w-full bg-green-600 hover:bg-green-700 px-3 py-2 rounded flex items-center justify-center gap-2 text-sm"
-                    >
-                      <Download size={16} />
-                      Export Battle
-                    </button>
-                    <label className="w-full bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded flex items-center justify-center gap-2 text-sm cursor-pointer">
-                      <FileUp size={16} />
-                      Import Battle
-                      <input type="file" accept=".json" onChange={importBattle} className="hidden" />
-                    </label>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <SettingsPanel
+            showSettings={showSettings}
+            setShowSettings={setShowSettings}
+            tokenSize={tokenSize}
+            setTokenSize={setTokenSize}
+            backgroundSize={backgroundSize}
+            setBackgroundSize={setBackgroundSize}
+            showGrid={showGrid}
+            setShowGrid={setShowGrid}
+            gridSize={gridSize}
+            setGridSize={setGridSize}
+            darknessMode={darknessMode}
+            setDarknessMode={setDarknessMode}
+            heroLightRadius={heroLightRadius}
+            setHeroLightRadius={setHeroLightRadius}
+            companionLightRadius={companionLightRadius}
+            setCompanionLightRadius={setCompanionLightRadius}
+            darknessIntensity={darknessIntensity}
+            setDarknessIntensity={setDarknessIntensity}
+            exportBattle={exportBattle}
+            importBattle={importBattle}
+          />
         </div>
       </div>
 
-      {/* Dice roll results overlay */}
-      <style>{`
-        @keyframes spinSlow {
-          0% {
-            transform: rotate(0deg);
-          }
-          10% {
-            transform: rotate(3600deg);
-          }
-          20% {
-            transform: rotate(6480deg);
-          }
-          30% {
-            transform: rotate(8640deg);
-          }
-          40% {
-            transform: rotate(10080deg);
-          }
-          50% {
-            transform: rotate(11160deg);
-          }
-          60% {
-            transform: rotate(11880deg);
-          }
-          70% {
-            transform: rotate(12420deg);
-          }
-          80% {
-            transform: rotate(12780deg);
-          }
-          90% {
-            transform: rotate(13050deg);
-          }
-          95% {
-            transform: rotate(13185deg);
-          }
-          100% {
-            transform: rotate(13320deg);
-          }
-        }
-        .dice-spin {
-          animation: spinSlow 2.5s linear forwards;
-        }
-        .dice-pop {
-          animation: pop 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        }
-        @keyframes pop {
-          0% {
-            transform: scale(0.5);
-            opacity: 0;
-          }
-          50% {
-            transform: scale(1.2);
-          }
-          100% {
-            transform: scale(1);
-            opacity: 1;
-          }
-        }
-        .dice-fade {
-          animation: fadeOut 3s ease-out forwards;
-        }
-        @keyframes fadeOut {
-          0% {
-            opacity: 1;
-          }
-          100% {
-            opacity: 0;
-          }
-        }
-      `}</style>
-
-      {(rollingDice.length > 0 || diceRolls.length > 0) && (
-        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2">
-          {[...rollingDice.map(r => ({ ...r, type: 'rolling' })), ...diceRolls.map(r => ({ ...r, type: 'result' }))]
-            .sort((a, b) => b.id - a.id)
-            .map((item) => 
-              item.type === 'rolling' ? (
-                <div
-                  key={`rolling-${item.id}`}
-                  className="bg-purple-600 text-white px-8 py-6 rounded-lg shadow-2xl border-4 border-purple-400 transition-all duration-300"
-                >
-                  <div className="text-center dice-spin">
-                    <div className="text-6xl">🎲</div>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  key={`result-${item.id}`}
-                  className={`bg-green-600 text-white px-6 py-4 rounded-lg shadow-2xl border-4 border-green-400 transition-all duration-300 ${
-                    item.fading ? 'dice-fade' : 'dice-pop'
-                  }`}
-                >
-                  <div className="text-center">
-                    <div className="text-sm font-bold mb-1">{item.dice}</div>
-                    <div className="text-3xl font-bold">{item.total}</div>
-                    {item.rolls.length > 1 && (
-                      <div className="text-xs mt-1 opacity-80">
-                        [{item.rolls.join(', ')}]
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )
-            )}
-        </div>
-      )}
 
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 p-4 overflow-hidden">
@@ -1606,7 +1387,7 @@ export default function NimbleCombatTracker() {
                 ref={drawCanvasRef}
                 className={`absolute ${drawMode === 'select' ? 'pointer-events-none' : 'cursor-crosshair'}`}
                 style={{ width: '2000px', height: '2000px', top: 0, left: 0 }}
-                onMouseDown={handleDrawStart}
+                onMouseDown={drawingManager.handleDrawStart}
               />
 
               {/* Grid overlay */}
@@ -1863,181 +1644,11 @@ export default function NimbleCombatTracker() {
             )}
 
             {/* HUD - Character Status Display */}
-            {selectedToken && (() => {
-              const token = tokens.find(t => t.id === selectedToken);
-              if (!token) return null;
-
-              const healthPercent = (token.health / token.maxHealth) * 100;
-              const resourcePercent = token.hasResource ? (token.currentResource / token.maxResource) * 100 : 0;
-
-              // Health bar color based on thresholds
-              const getHealthColor = () => {
-                if (healthPercent <= 10) return '#ef4444'; // red-500
-                if (healthPercent <= 30) return '#eab308'; // yellow-500
-                return '#22c55e'; // green-500
-              };
-
-              const portraitSize = 80;
-              const barHeight = 20;
-              const barWidth = 300;
-              const resourceBarWidth = token.hasResource ? 250 : 0;
-
-              return (
-                <div className="absolute top-4 left-4 pointer-events-none" style={{ width: `${portraitSize + barWidth + 20}px`, zIndex: HUD_Z_INDEX }}>
-                  <div className="relative flex items-start gap-3">
-                    {/* Circular Portrait Frame */}
-                    <div
-                      className="relative rounded-full border-4 border-orange-500 bg-gray-900 overflow-hidden flex-shrink-0"
-                      style={{
-                        width: `${portraitSize}px`,
-                        height: `${portraitSize}px`,
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
-                      }}
-                    >
-                      {token.image ? (
-                        <img src={token.image} alt={token.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className={`w-full h-full flex items-center justify-center ${
-                          token.type === 'hero' ? 'bg-blue-600' :
-                          token.type === 'companion' ? 'bg-green-600' :
-                          token.type === 'enemy' ? 'bg-red-600' : 'bg-purple-600'
-                        }`}>
-                          {token.type === 'hero' && <Users size={40} />}
-                          {token.type === 'companion' && <Heart size={40} />}
-                          {token.type === 'enemy' && <Swords size={40} />}
-                          {token.type === 'legendary' && <Crown size={40} />}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Bars and Info */}
-                    <div className="flex-1" style={{ paddingTop: '2px' }}>
-                      {/* Player Name and Conditions */}
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="text-white font-bold text-base drop-shadow-lg">{token.name}</div>
-                        {token.conditions && token.conditions.length > 0 && (
-                          <div className="flex gap-1">
-                            {token.conditions.map((condition, idx) => (
-                              <span key={idx} className="text-base drop-shadow-lg" title={condition}>
-                                {conditionEmojis[condition] || ''}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Health Bar */}
-                      {token.type !== 'legendary' && (
-                        <div className="mb-1 relative">
-                          {/* Temp HP "bubble" highlight */}
-                          {token.tempHP > 0 && (
-                            <div
-                              className="absolute rounded-full animate-pulse"
-                              style={{
-                                top: '-4px',
-                                left: '-4px',
-                                width: `${barWidth + 8}px`,
-                                height: `${barHeight + 8}px`,
-                                border: '3px solid #06b6d4',
-                                boxShadow: '0 0 12px rgba(6, 182, 212, 0.6), inset 0 0 8px rgba(6, 182, 212, 0.3)',
-                                pointerEvents: 'none',
-                                zIndex: 1
-                              }}
-                            />
-                          )}
-                          <div
-                            className="relative rounded-full overflow-hidden"
-                            style={{
-                              width: `${barWidth}px`,
-                              height: `${barHeight}px`,
-                              backgroundColor: 'rgba(0,0,0,0.6)',
-                              border: '2px solid rgba(255,255,255,0.3)',
-                              boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
-                              zIndex: 2
-                            }}
-                          >
-                            {/* Health fill with smooth transition */}
-                            <div
-                              className="absolute top-0 left-0 h-full transition-all duration-300 ease-out"
-                              style={{
-                                width: `${healthPercent}%`,
-                                backgroundColor: getHealthColor(),
-                                boxShadow: `inset 0 2px 4px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.3)`
-                              }}
-                            />
-                            {/* HP Text */}
-                            <div className="absolute inset-0 flex items-center justify-center gap-2">
-                              {token.tempHP > 0 && (
-                                <span className="text-cyan-400 text-xs font-bold drop-shadow-lg" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
-                                  {token.tempHP} THP
-                                </span>
-                              )}
-                              <span className="text-white text-xs font-bold drop-shadow-lg" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
-                                {token.health} / {token.maxHealth} HP
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Resource Bar */}
-                      {token.hasResource && (
-                        <div className="mb-1">
-                          <div
-                            className="relative rounded-full overflow-hidden"
-                            style={{
-                              width: `${resourceBarWidth}px`,
-                              height: `${barHeight - 4}px`,
-                              backgroundColor: 'rgba(0,0,0,0.6)',
-                              border: '2px solid rgba(255,255,255,0.3)',
-                              boxShadow: '0 2px 6px rgba(0,0,0,0.4)'
-                            }}
-                          >
-                            {/* Resource fill with smooth transition */}
-                            <div
-                              className="absolute top-0 left-0 h-full transition-all duration-300 ease-out"
-                              style={{
-                                width: `${resourcePercent}%`,
-                                backgroundColor: token.resourceColor || '#3b82f6',
-                                boxShadow: `inset 0 2px 4px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.3)`
-                              }}
-                            />
-                            {/* Resource Text */}
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <span className="text-white text-xs font-bold drop-shadow-lg" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
-                                {token.currentResource} / {token.maxResource} {token.resourceName}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Wounds Display - only for heroes/companions at 0 HP or always show if has wounds */}
-                      {(token.type === 'hero' || token.type === 'companion') && (
-                        <div className="flex gap-1 mt-1">
-                          {Array.from({ length: token.maxWounds || 6 }, (_, i) => i + 1).map(woundNum => {
-                            const hasWound = (token.wounds || 0) >= woundNum;
-                            return (
-                              <div
-                                key={woundNum}
-                                className="relative rounded-full transition-all duration-200"
-                                style={{
-                                  width: '14px',
-                                  height: '14px',
-                                  border: '2px dotted rgba(255,255,255,0.5)',
-                                  backgroundColor: hasWound ? '#ef4444' : 'transparent',
-                                  boxShadow: hasWound ? '0 0 4px rgba(239, 68, 68, 0.6), inset 0 1px 2px rgba(255,255,255,0.3)' : 'none'
-                                }}
-                              />
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
+            <HUDDisplay
+              selectedToken={selectedToken}
+              tokens={tokens}
+              HUD_Z_INDEX={HUD_Z_INDEX}
+            />
           </div>
         </div>
 
@@ -2082,7 +1693,7 @@ export default function NimbleCombatTracker() {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-bold">Turn Order</h2>
                   <button
-                    onClick={resetNonHeroActions}
+                    onClick={tokenManager.resetNonHeroActions}
                     className="bg-blue-600 hover:bg-blue-700 p-2 rounded flex items-center justify-center"
                     title="Reset all non-hero actions"
                   >
@@ -2111,12 +1722,12 @@ export default function NimbleCombatTracker() {
                     )}
                     <div
                       draggable={!deleteMode && !isLegendaryEcho && !expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`]}
-                      onDragStart={() => !isLegendaryEcho && handleTurnDragStart(actualIndex)}
-                      onDragOver={(e) => !isLegendaryEcho && handleTurnDragOver(e, actualIndex)}
-                      onDragEnd={handleTurnDragEnd}
+                      onDragStart={() => !isLegendaryEcho && turnOrderManager.handleTurnDragStart(actualIndex)}
+                      onDragOver={(e) => !isLegendaryEcho && turnOrderManager.handleTurnDragOver(e, actualIndex)}
+                      onDragEnd={turnOrderManager.handleTurnDragEnd}
                       onClick={() => {
                         if (deleteMode && !isLegendaryEcho) {
-                          removeToken(item.id);
+                          handleRemoveToken(item.id);
                         } else if (!isLegendaryEcho) {
                           setSelectedToken(item.id);
                         }
@@ -2198,7 +1809,7 @@ export default function NimbleCombatTracker() {
                                 <input
                                   type="number"
                                   value={token.tempHP || 0}
-                                  onChange={(e) => updateTempHP(item.id, parseInt(e.target.value) || 0)}
+                                  onChange={(e) => tokenManager.updateTempHP(item.id, parseInt(e.target.value) || 0)}
                                   onClick={(e) => e.stopPropagation()}
                                   className="w-12 bg-cyan-600 text-center rounded px-1 py-0.5 text-sm"
                                   style={{ backgroundColor: '#06b6d4' }}
@@ -2210,7 +1821,7 @@ export default function NimbleCombatTracker() {
                               <input
                                 type="number"
                                 value={token.health}
-                                onChange={(e) => updateHealth(item.id, parseInt(e.target.value) || 0)}
+                                onChange={(e) => tokenManager.updateHealth(item.id, parseInt(e.target.value) || 0)}
                                 onClick={(e) => e.stopPropagation()}
                                 className="w-12 bg-gray-600 text-center rounded px-1 py-0.5 text-sm"
                               />
@@ -2218,7 +1829,7 @@ export default function NimbleCombatTracker() {
                               <input
                                 type="number"
                                 value={token.maxHealth}
-                                onChange={(e) => updateMaxHealth(item.id, parseInt(e.target.value) || 1)}
+                                onChange={(e) => tokenManager.updateMaxHealth(item.id, parseInt(e.target.value) || 1)}
                                 onClick={(e) => e.stopPropagation()}
                                 className="w-12 bg-gray-600 text-center rounded px-1 py-0.5 text-sm"
                               />
@@ -2259,7 +1870,7 @@ export default function NimbleCombatTracker() {
                               key={woundNum}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                updateWounds(item.id, token.wounds === woundNum ? woundNum - 1 : woundNum);
+                                tokenManager.updateWounds(item.id, token.wounds === woundNum ? woundNum - 1 : woundNum);
                               }}
                               className={`rounded-full border transition-all flex items-center justify-center ${
                                 (token.wounds || 0) >= woundNum
@@ -2290,7 +1901,7 @@ export default function NimbleCombatTracker() {
                             <div className="flex items-center justify-between mb-2">
                               <label className="text-xs text-gray-400">Wounds</label>
                               <button
-                                onClick={() => toggleTempHP(item.id)}
+                                onClick={() => tokenManager.toggleTempHP(item.id)}
                                 className={`py-1 px-2 rounded text-xs flex items-center gap-1 ${
                                   token.showTempHP
                                     ? 'bg-cyan-600 hover:bg-cyan-700'
@@ -2334,9 +1945,11 @@ export default function NimbleCombatTracker() {
                                 value={token.maxWounds || 6}
                                 onChange={(e) => {
                                   const newMax = Math.max(1, Math.min(20, parseInt(e.target.value) || 6));
-                                  setTokens(tokens.map(t =>
-                                    t.id === item.id ? { ...t, maxWounds: newMax, wounds: Math.min(t.wounds || 0, newMax) } : t
-                                  ));
+                                  const currentToken = tokens.find(t => t.id === item.id);
+                                  tokenManager.updateTokenResource(item.id, {
+                                    maxWounds: newMax,
+                                    wounds: Math.min(currentToken?.wounds || 0, newMax)
+                                  });
                                 }}
                                 onClick={(e) => e.stopPropagation()}
                                 className="w-12 bg-gray-600 text-center rounded px-1 py-0.5 text-xs"
@@ -2358,7 +1971,7 @@ export default function NimbleCombatTracker() {
                                 value={token.currentResource || 0}
                                 onChange={(e) => {
                                   const newCurrent = Math.max(0, Math.min(parseInt(e.target.value) || 0, token.maxResource || 0));
-                                  dispatchTokens({ type: 'UPDATE_TOKEN', payload: { id: item.id, updates: { currentResource: newCurrent } } });
+                                  tokenManager.updateTokenResource(item.id, { currentResource: newCurrent });
                                 }}
                                 onClick={(e) => e.stopPropagation()}
                                 className="w-16 bg-gray-600 text-center rounded px-2 py-1 text-sm"
@@ -2372,15 +1985,9 @@ export default function NimbleCombatTracker() {
                                 onChange={(e) => {
                                   const newMax = Math.max(0, parseInt(e.target.value) || 0);
                                   const currentToken = tokens.find(t => t.id === item.id);
-                                  dispatchTokens({
-                                    type: 'UPDATE_TOKEN',
-                                    payload: {
-                                      id: item.id,
-                                      updates: {
-                                        maxResource: newMax,
-                                        currentResource: Math.min(currentToken?.currentResource || 0, newMax)
-                                      }
-                                    }
+                                  tokenManager.updateTokenResource(item.id, {
+                                    maxResource: newMax,
+                                    currentResource: Math.min(currentToken?.currentResource || 0, newMax)
                                   });
                                 }}
                                 onClick={(e) => e.stopPropagation()}
@@ -2418,7 +2025,7 @@ export default function NimbleCombatTracker() {
                             {doomedConditions.map(condition => (
                               <button
                                 key={condition}
-                                onClick={() => toggleCondition(item.id, condition)}
+                                onClick={() => tokenManager.toggleCondition(item.id, condition)}
                                 className={`text-xs px-2 py-1 rounded ${
                                   token.conditions && token.conditions.includes(condition)
                                     ? 'bg-red-600 hover:bg-red-700'
@@ -2438,7 +2045,7 @@ export default function NimbleCombatTracker() {
                             {majorConditions.map(condition => (
                               <button
                                 key={condition}
-                                onClick={() => toggleCondition(item.id, condition)}
+                                onClick={() => tokenManager.toggleCondition(item.id, condition)}
                                 className={`text-xs px-2 py-1 rounded ${
                                   token.conditions && token.conditions.includes(condition)
                                     ? 'bg-orange-600 hover:bg-orange-700'
@@ -2458,7 +2065,7 @@ export default function NimbleCombatTracker() {
                             {minorConditions.map(condition => (
                               <button
                                 key={condition}
-                                onClick={() => toggleCondition(item.id, condition)}
+                                onClick={() => tokenManager.toggleCondition(item.id, condition)}
                                 className={`text-xs px-2 py-1 rounded ${
                                   token.conditions && token.conditions.includes(condition)
                                     ? 'bg-yellow-600 hover:bg-yellow-700'
@@ -2477,7 +2084,7 @@ export default function NimbleCombatTracker() {
                             <label className="text-xs font-bold text-gray-300">Token Size</label>
                             {token.customSize !== null && (
                               <button
-                                onClick={() => updateTokenSize(item.id, null)}
+                                onClick={() => tokenManager.updateTokenSize(item.id, null)}
                                 className="text-xs text-blue-400 hover:text-blue-300"
                                 title="Reset to global size"
                               >
@@ -2492,7 +2099,7 @@ export default function NimbleCombatTracker() {
                               max="192"
                               step="4"
                               value={token.customSize || tokenSize}
-                              onChange={(e) => updateTokenSize(item.id, parseInt(e.target.value))}
+                              onChange={(e) => tokenManager.updateTokenSize(item.id, parseInt(e.target.value))}
                               className="flex-1"
                             />
                             <span className="text-xs w-12 text-right">
@@ -2510,7 +2117,7 @@ export default function NimbleCombatTracker() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                token.isActiveTurn ? endTurn(item.id) : startTurn(item.id);
+                                token.isActiveTurn ? tokenManager.endTurn(item.id) : tokenManager.startTurn(item.id);
                               }}
                               className={`w-full py-1.5 rounded text-xs font-bold transition-colors ${
                                 token.isActiveTurn 
@@ -2529,7 +2136,7 @@ export default function NimbleCombatTracker() {
                                 key={actionIndex}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  toggleAction(item.id, actionIndex);
+                                  tokenManager.toggleAction(item.id, actionIndex);
                                 }}
                                 className={`flex-1 h-8 rounded transition-colors ${
                                   used 
@@ -2555,7 +2162,7 @@ export default function NimbleCombatTracker() {
                                 const legendaryTurnIndex = displayTurnOrder
                                   .slice(0, index)
                                   .filter(i => i.id === item.id && i.isLegendaryEcho).length;
-                                toggleAction(item.id, legendaryTurnIndex);
+                                tokenManager.toggleAction(item.id, legendaryTurnIndex);
                               }}
                               className={`flex-1 h-8 rounded transition-colors ${
                                 token.actions[displayTurnOrder
@@ -2849,20 +2456,11 @@ export default function NimbleCombatTracker() {
         )}
           </div>
 
-          {selectedToken && tokens.find(t => t.id === selectedToken) && (
-            <div className="border-t border-gray-700 bg-gray-800 p-4">
-              <h3 className="text-sm font-bold mb-2">
-                {tokens.find(t => t.id === selectedToken).name} - Notes
-              </h3>
-              <textarea
-                value={tokens.find(t => t.id === selectedToken).notes}
-                onChange={(e) => updateNotes(selectedToken, e.target.value)}
-                placeholder="Track resources, conditions, etc..."
-                className="w-full bg-gray-700 rounded px-3 py-2 text-sm resize-none"
-                rows={4}
-              />
-            </div>
-          )}
+          <NotesPanel
+            selectedToken={selectedToken}
+            tokens={tokens}
+            updateNotes={tokenManager.updateNotes}
+          />
         </div>
       </div>
     </div>
