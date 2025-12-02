@@ -175,6 +175,15 @@ function tokensReducer(state, action) {
   }
 }
 
+// Constants
+const VIRTUAL_CANVAS_SIZE = 2000;
+const SIDEBAR_WIDTH = 352;
+const DRAWING_HISTORY_LIMIT = 10;
+const STROKE_HISTORY_LIMIT = 200;
+const DEFAULT_TOKEN_POSITION = { x: 100, y: 100 };
+const HUD_Z_INDEX = 50;
+const MODAL_Z_INDEX = 100;
+
 export default function NimbleCombatTracker() {
   const [background, setBackground] = useState(null);
   const [tokens, dispatchTokens] = useReducer(tokensReducer, []);
@@ -219,6 +228,7 @@ export default function NimbleCombatTracker() {
   const drawCanvasRef = useRef(null);
   const boardRef = useRef(null);
   const drawingRef = useRef([]);
+  const diceTimeoutsRef = useRef([]);
 
   const handleBackgroundUpload = (e) => {
     const file = e.target.files[0];
@@ -245,12 +255,12 @@ export default function NimbleCombatTracker() {
   const addToken = () => {
     if (newToken.name) {
       const token = {
-        id: Date.now(),
+        id: crypto.randomUUID(),
         name: newToken.name,
         type: newToken.type,
         image: newToken.image,
-        x: 100,
-        y: 100,
+        x: DEFAULT_TOKEN_POSITION.x,
+        y: DEFAULT_TOKEN_POSITION.y,
         actions: newToken.type === 'hero' ? [false, false, false] :
                  newToken.type === 'legendary' ? [false, false, false, false, false, false] : // 6 actions for legendary (max hero count)
                  [false],
@@ -649,9 +659,9 @@ export default function NimbleCombatTracker() {
     // Remove any future history if we're not at the end
     const newHistory = drawingHistory.slice(0, historyStep + 1);
     newHistory.push(imageData);
-    
-    // Limit history to last 50 steps to prevent memory issues
-    if (newHistory.length > 50) {
+
+    // Limit history to reduce memory usage
+    if (newHistory.length > DRAWING_HISTORY_LIMIT) {
       newHistory.shift();
       setDrawingHistory(newHistory);
       setHistoryStep(newHistory.length - 1);
@@ -721,8 +731,8 @@ export default function NimbleCombatTracker() {
       rolls.push(roll);
       total += roll;
     }
-    
-    const rollId = Date.now();
+
+    const rollId = crypto.randomUUID();
     
     // Show "rolling" animation first
     const rollingRoll = {
@@ -733,11 +743,11 @@ export default function NimbleCombatTracker() {
     
     setRollingDice(prev => [...prev, rollingRoll]);
     setShowDiceMenu(false);
-    
+
     // After 2.5 seconds, show the actual result
-    setTimeout(() => {
+    const timeout1 = setTimeout(() => {
       setRollingDice(prev => prev.filter(r => r.id !== rollId));
-      
+
       const newRoll = {
         id: rollId,
         dice: `${diceCount}d${sides}`,
@@ -745,21 +755,27 @@ export default function NimbleCombatTracker() {
         total: total,
         fading: false
       };
-      
+
       setDiceRolls(prev => [...prev, newRoll]);
-      
+
       // Start fading after 5 seconds
-      setTimeout(() => {
-        setDiceRolls(prev => prev.map(r => 
+      const timeout2 = setTimeout(() => {
+        setDiceRolls(prev => prev.map(r =>
           r.id === rollId ? { ...r, fading: true } : r
         ));
-        
+
         // Remove completely after fade (3 more seconds)
-        setTimeout(() => {
+        const timeout3 = setTimeout(() => {
           setDiceRolls(prev => prev.filter(r => r.id !== rollId));
         }, 3000);
+
+        diceTimeoutsRef.current.push(timeout3);
       }, 5000);
+
+      diceTimeoutsRef.current.push(timeout2);
     }, 2500);
+
+    diceTimeoutsRef.current.push(timeout1);
   };
 
   const exportBattle = () => {
@@ -861,8 +877,7 @@ export default function NimbleCombatTracker() {
         // Save current canvas content before resizing
         const imageData = canvas.toDataURL();
 
-        // Use fixed virtual canvas size (2000x2000)
-        const VIRTUAL_CANVAS_SIZE = 2000;
+        // Use fixed virtual canvas size
         canvas.width = VIRTUAL_CANVAS_SIZE;
         canvas.height = VIRTUAL_CANVAS_SIZE;
 
@@ -929,6 +944,13 @@ export default function NimbleCombatTracker() {
     };
   }, [historyStep, drawingHistory, selectedToken]);
 
+  // Cleanup dice roll timeouts on unmount
+  useEffect(() => {
+    return () => {
+      diceTimeoutsRef.current.forEach(timeoutId => clearTimeout(timeoutId));
+      diceTimeoutsRef.current = [];
+    };
+  }, []);
 
   const getTokenBorderColor = (type) => {
     switch(type) {
@@ -1760,18 +1782,6 @@ export default function NimbleCombatTracker() {
                             />
                           )}
                         </div>
-                        {/* Yellow condition ring - hidden for now */}
-                        {/* {token.conditions && token.conditions.filter(c => c !== 'Bloodied' && c !== 'Dying').length > 0 && shouldShowToken && (
-                          <div
-                            className="absolute top-0 left-0 right-0 rounded-t-full border-t-4 border-l-4 border-r-4 border-yellow-400"
-                            style={{
-                              width: `${currentTokenSize}px`,
-                              height: `${currentTokenSize / 2}px`,
-                              borderBottomLeftRadius: 0,
-                              borderBottomRightRadius: 0
-                            }}
-                          />
-                        )} */}
                       </div>
                     )}
 
@@ -1873,7 +1883,7 @@ export default function NimbleCombatTracker() {
               const resourceBarWidth = token.hasResource ? 250 : 0;
 
               return (
-                <div className="absolute top-4 left-4 pointer-events-none z-50" style={{ width: `${portraitSize + barWidth + 20}px` }}>
+                <div className="absolute top-4 left-4 pointer-events-none" style={{ width: `${portraitSize + barWidth + 20}px`, zIndex: HUD_Z_INDEX }}>
                   <div className="relative flex items-start gap-3">
                     {/* Circular Portrait Frame */}
                     <div
@@ -2031,7 +2041,7 @@ export default function NimbleCombatTracker() {
           </div>
         </div>
 
-        <div className="bg-gray-800 border-l border-gray-700 flex flex-col" style={{ width: '352px' }}>
+        <div className="bg-gray-800 border-l border-gray-700 flex flex-col" style={{ width: `${SIDEBAR_WIDTH}px` }}>
           <div className="bg-gray-700 border-b border-gray-600 p-3 flex items-center justify-between">
             <div className="flex gap-2">
               <button
@@ -2093,7 +2103,7 @@ export default function NimbleCombatTracker() {
                 const actualIndex = turnOrder.indexOf(item.id);
                 
                 return (
-                  <div key={`${item.id}-${index}`}>
+                  <div key={isLegendaryEcho ? `${item.id}-echo-${index}` : isMainLegendary ? `${item.id}-main` : item.id}>
                     {isLegendaryEcho && (
                       <div className="flex items-center gap-2 py-1 pl-8">
                         <div className="text-purple-400 text-xs">→ Legendary Turn</div>
