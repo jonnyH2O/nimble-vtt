@@ -11,6 +11,8 @@ import { useTokens } from './hooks/useTokens';
 import { useDrawing } from './hooks/useDrawing';
 import { useTurnOrder } from './hooks/useTurnOrder';
 import { useDiceRoller } from './hooks/useDiceRoller';
+import { useWindowSync } from './hooks/useWindowSync';
+import { MESSAGE_TYPES, createMessage } from './utils/windowMessages';
 import { VIRTUAL_CANVAS_SIZE, SIDEBAR_WIDTH, HUD_Z_INDEX, getTokenBorderColor, getTokenBgColor, getTokenIconName } from './constants';
 import { CONDITION_CATEGORIES } from './effects/conditionEffects';
 
@@ -95,6 +97,11 @@ export default function NimbleCombatTracker() {
   const [companionLightRadius, setCompanionLightRadius] = useState(2); // Multiplier of token size
   const [darknessIntensity, setDarknessIntensity] = useState(0.95); // 0-1, how dark the shadows are
   const [showPartyOverview, setShowPartyOverview] = useState(true);
+
+  // Pop-out window state
+  const [isPopoutMode, setIsPopoutMode] = useState(false);
+  const [popoutWindow, setPopoutWindow] = useState(null);
+  const windowSync = useWindowSync(true); // true = main window
 
   const handleBackgroundUpload = (e) => {
     const file = e.target.files[0];
@@ -260,6 +267,27 @@ export default function NimbleCombatTracker() {
       setZoomLevel(newZoom);
     }
   }, [drawMode, zoomLevel, viewOffset]);
+
+  const handlePopout = useCallback(() => {
+    // Prevent multiple pop-outs
+    if (isPopoutMode && popoutWindow && !popoutWindow.closed) {
+      popoutWindow.focus();
+      return;
+    }
+
+    const popout = window.open(
+      '/?popout=true',
+      'nimble-sidebar',
+      'width=400,height=800,left=100,top=100,resizable=yes,scrollbars=yes'
+    );
+
+    if (popout) {
+      setPopoutWindow(popout);
+      setIsPopoutMode(true);
+    } else {
+      alert('Please allow popups for this site to use the pop-out feature.');
+    }
+  }, [isPopoutMode, popoutWindow]);
 
   const handleBoardMouseDown = (e) => {
     if (drawMode === 'select') {
@@ -460,6 +488,138 @@ export default function NimbleCombatTracker() {
       window.removeEventListener('keyup', handleKeyUp);
     };
   }, [historyStep, drawingHistory, selectedToken]);
+
+  // Broadcast state to pop-out window
+  useEffect(() => {
+    if (isPopoutMode && windowSync.channel) {
+      console.log('[MainWindow] Broadcasting STATE_UPDATE, isPopoutMode:', isPopoutMode, 'hasChannel:', !!windowSync.channel);
+      windowSync.broadcast(createMessage(MESSAGE_TYPES.STATE_UPDATE, {
+        tokens,
+        turnOrder,
+        displayTurnOrder,
+        selectedToken,
+        expandedConditions,
+        expandedNotes,
+        sidebarView,
+        tokenSize,
+        deleteMode,
+        doomedConditions: CONDITION_CATEGORIES.DOOMED,
+        majorConditions: CONDITION_CATEGORIES.MAJOR,
+        minorConditions: CONDITION_CATEGORIES.MINOR
+      }));
+    } else {
+      console.log('[MainWindow] NOT broadcasting - isPopoutMode:', isPopoutMode, 'hasChannel:', !!windowSync.channel);
+    }
+  }, [
+    isPopoutMode,
+    tokens,
+    turnOrder,
+    displayTurnOrder,
+    selectedToken,
+    expandedConditions,
+    expandedNotes,
+    sidebarView,
+    deleteMode,
+    windowSync
+  ]);
+
+  // Listen for actions from pop-out window
+  useEffect(() => {
+    if (!windowSync.channel) return;
+
+    const handleMessage = (event) => {
+      const { type, payload } = event.data;
+
+      switch (type) {
+        case MESSAGE_TYPES.HEALTH_UPDATE:
+          tokenManager.updateHealth(payload.tokenId, payload.newHealth);
+          break;
+        case MESSAGE_TYPES.TOKEN_UPDATE:
+          tokenManager.updateMaxHealth(payload.tokenId, payload.newMaxHealth);
+          break;
+        case MESSAGE_TYPES.CONDITION_TOGGLE:
+          tokenManager.toggleCondition(payload.tokenId, payload.condition);
+          break;
+        case MESSAGE_TYPES.TURN_ORDER_UPDATE:
+          turnOrderManager.setAllTurnOrder(payload.turnOrder);
+          break;
+        case MESSAGE_TYPES.NOTES_UPDATE:
+          tokenManager.updateNotes(payload.tokenId, payload.notes);
+          break;
+        case MESSAGE_TYPES.ACTION_TOGGLE:
+          tokenManager.toggleAction(payload.tokenId, payload.actionIndex);
+          break;
+        case MESSAGE_TYPES.WOUNDS_UPDATE:
+          tokenManager.updateWounds(payload.tokenId, payload.newWounds);
+          break;
+        case MESSAGE_TYPES.TEMP_HP_UPDATE:
+          tokenManager.updateTempHP(payload.tokenId, payload.tempHP);
+          break;
+        case MESSAGE_TYPES.TEMP_HP_TOGGLE:
+          tokenManager.toggleTempHP(payload.tokenId);
+          break;
+        case MESSAGE_TYPES.TOKEN_SIZE_UPDATE:
+          tokenManager.updateTokenSize(payload.tokenId, payload.size);
+          break;
+        case MESSAGE_TYPES.TOKEN_RESOURCE_UPDATE:
+          tokenManager.updateTokenResource(payload.tokenId, payload.updates);
+          break;
+        case MESSAGE_TYPES.SIDEBAR_VIEW_UPDATE:
+          setSidebarView(payload.view);
+          break;
+        case MESSAGE_TYPES.DELETE_MODE_UPDATE:
+          setDeleteMode(payload.mode);
+          break;
+        case MESSAGE_TYPES.SELECT_TOKEN:
+          setSelectedToken(payload.tokenId);
+          break;
+        case MESSAGE_TYPES.EXPANDED_CONDITIONS_UPDATE:
+          setExpandedConditions(payload.expanded);
+          break;
+        case MESSAGE_TYPES.EXPANDED_NOTES_UPDATE:
+          setExpandedNotes(payload.expanded);
+          break;
+        case MESSAGE_TYPES.REMOVE_TOKEN:
+          handleRemoveToken(payload.tokenId);
+          break;
+        case MESSAGE_TYPES.START_TURN:
+          tokenManager.startTurn(payload.tokenId);
+          break;
+        case MESSAGE_TYPES.END_TURN:
+          tokenManager.endTurn(payload.tokenId);
+          break;
+        case MESSAGE_TYPES.RESET_NON_HERO_ACTIONS:
+          tokenManager.resetNonHeroActions();
+          break;
+        case MESSAGE_TYPES.WINDOW_CLOSING:
+          setIsPopoutMode(false);
+          setPopoutWindow(null);
+          break;
+      }
+    };
+
+    windowSync.channel.onmessage = handleMessage;
+
+    return () => {
+      if (windowSync.channel) {
+        windowSync.channel.onmessage = null;
+      }
+    };
+  }, [windowSync.channel, tokenManager, turnOrderManager]);
+
+  // Detect when pop-out window closes (polling fallback)
+  useEffect(() => {
+    if (!popoutWindow) return;
+
+    const checkClosed = setInterval(() => {
+      if (popoutWindow.closed) {
+        setIsPopoutMode(false);
+        setPopoutWindow(null);
+      }
+    }, 500);
+
+    return () => clearInterval(checkClosed);
+  }, [popoutWindow]);
 
   // Helper to get icon component from icon name
   const getTokenIcon = (type) => {
@@ -949,33 +1109,36 @@ export default function NimbleCombatTracker() {
           </div>
         </div>
 
-        <TurnOrderPanel
-          sidebarView={sidebarView}
-          setSidebarView={setSidebarView}
-          deleteMode={deleteMode}
-          setDeleteMode={setDeleteMode}
-          displayTurnOrder={displayTurnOrder}
-          tokens={tokens}
-          turnOrder={turnOrder}
-          selectedToken={selectedToken}
-          setSelectedToken={setSelectedToken}
-          expandedConditions={expandedConditions}
-          setExpandedConditions={setExpandedConditions}
-          expandedNotes={expandedNotes}
-          setExpandedNotes={setExpandedNotes}
-          tokenSize={tokenSize}
-          handleRemoveToken={handleRemoveToken}
-          getTokenBorderColor={getTokenBorderColor}
-          getTokenBgColor={getTokenBgColor}
-          getTokenIcon={getTokenIcon}
-          tokenManager={tokenManager}
-          turnOrderManager={turnOrderManager}
-          doomedConditions={doomedConditions}
-          majorConditions={majorConditions}
-          minorConditions={minorConditions}
-          SIDEBAR_WIDTH={SIDEBAR_WIDTH}
-          updateNotes={tokenManager.updateNotes}
-        />
+        {!isPopoutMode && (
+          <TurnOrderPanel
+            sidebarView={sidebarView}
+            setSidebarView={setSidebarView}
+            deleteMode={deleteMode}
+            setDeleteMode={setDeleteMode}
+            displayTurnOrder={displayTurnOrder}
+            tokens={tokens}
+            turnOrder={turnOrder}
+            selectedToken={selectedToken}
+            setSelectedToken={setSelectedToken}
+            expandedConditions={expandedConditions}
+            setExpandedConditions={setExpandedConditions}
+            expandedNotes={expandedNotes}
+            setExpandedNotes={setExpandedNotes}
+            tokenSize={tokenSize}
+            handleRemoveToken={handleRemoveToken}
+            getTokenBorderColor={getTokenBorderColor}
+            getTokenBgColor={getTokenBgColor}
+            getTokenIcon={getTokenIcon}
+            tokenManager={tokenManager}
+            turnOrderManager={turnOrderManager}
+            doomedConditions={doomedConditions}
+            majorConditions={majorConditions}
+            minorConditions={minorConditions}
+            SIDEBAR_WIDTH={SIDEBAR_WIDTH}
+            updateNotes={tokenManager.updateNotes}
+            onPopout={handlePopout}
+          />
+        )}
       </div>
     </div>
   );

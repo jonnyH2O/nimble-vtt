@@ -1,6 +1,7 @@
-import React from 'react';
-import { Trash2, List, Book, RotateCcw, AlertCircle, Users, Heart, Swords, Crown } from 'lucide-react';
+import React, { useCallback } from 'react';
+import { Trash2, List, Book, RotateCcw, AlertCircle, Users, Heart, Swords, Crown, ExternalLink } from 'lucide-react';
 import { NotesPanel } from './HUD';
+import { MESSAGE_TYPES, createMessage } from '../utils/windowMessages';
 
 /**
  * BloodiedVignette - Reusable component for bloodied condition visual effect
@@ -79,9 +80,36 @@ export default function TurnOrderPanel({
   majorConditions,
   minorConditions,
   SIDEBAR_WIDTH,
-  updateNotes
+  updateNotes,
+  onPopout = null,         // NEW: Callback to trigger pop-out
+  isPopoutWindow = false,  // NEW: Are we rendering in pop-out?
+  onAction = null,         // NEW: Send actions from pop-out to main
 }) {
-  const { updateWounds, toggleTempHP } = tokenManager;
+  const { updateWounds, toggleTempHP } = tokenManager || {};
+
+  // Helper function to handle actions - sends to main window if in pop-out, otherwise calls directly
+  const handleAction = useCallback((type, payload, directFn) => {
+    if (isPopoutWindow && onAction) {
+      // We're in pop-out: send action to main window
+      onAction(createMessage(type, payload));
+    } else if (directFn) {
+      // We're in main window: call function directly
+      directFn();
+    }
+  }, [isPopoutWindow, onAction]);
+
+  // Helper to toggle dictionary section expansion
+  const toggleDictionarySection = useCallback((sectionKey) => {
+    const newExpanded = {
+      ...expandedNotes,
+      [sectionKey]: !expandedNotes[sectionKey]
+    };
+    handleAction(
+      MESSAGE_TYPES.EXPANDED_NOTES_UPDATE,
+      { expanded: newExpanded },
+      () => setExpandedNotes(newExpanded)
+    );
+  }, [expandedNotes, handleAction, setExpandedNotes]);
 
   return (
     <div className="bg-gray-800 border-l border-gray-700 flex flex-col" style={{ width: `${SIDEBAR_WIDTH}px` }}>
@@ -107,17 +135,20 @@ export default function TurnOrderPanel({
             <Book size={20} />
           </button>
         </div>
-        {sidebarView === 'turnOrder' && (
-          <button
-            onClick={() => setDeleteMode(!deleteMode)}
-            className={`text-sm px-3 py-1.5 rounded flex items-center gap-1 ${
-              deleteMode ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-600 hover:bg-gray-500'
-            }`}
-          >
-            <Trash2 size={14} />
-            {deleteMode ? 'Done' : 'Delete'}
-          </button>
-        )}
+
+        {/* Action buttons */}
+        <div className="flex gap-2">
+          {/* Pop-out button - only in main window */}
+          {!isPopoutWindow && onPopout && (
+            <button
+              onClick={onPopout}
+              className="p-2 rounded bg-blue-600 hover:bg-blue-700"
+              title="Pop Out Sidebar"
+            >
+              <ExternalLink size={16} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Content Area */}
@@ -127,13 +158,30 @@ export default function TurnOrderPanel({
             {/* Turn Order Header */}
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold">Turn Order</h2>
-              <button
-                onClick={tokenManager.resetNonHeroActions}
-                className="bg-blue-600 hover:bg-blue-700 p-2 rounded flex items-center justify-center"
-                title="Reset all non-hero actions"
-              >
-                <RotateCcw size={16} />
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    handleAction(
+                      MESSAGE_TYPES.RESET_NON_HERO_ACTIONS,
+                      {},
+                      () => tokenManager.resetNonHeroActions()
+                    );
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 p-2 rounded flex items-center justify-center"
+                  title="Reset all non-hero actions"
+                >
+                  <RotateCcw size={16} />
+                </button>
+                <button
+                  onClick={() => setDeleteMode(!deleteMode)}
+                  className={`p-2 rounded flex items-center justify-center ${
+                    deleteMode ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-600 hover:bg-gray-500'
+                  }`}
+                  title={deleteMode ? 'Done deleting' : 'Delete mode'}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
             </div>
             <div className="text-xs text-gray-400 mb-3">
               {deleteMode ? 'Click tokens to remove them' : 'Drag to reorder'}
@@ -157,10 +205,10 @@ export default function TurnOrderPanel({
                       </div>
                     )}
                     <div
-                      draggable={!deleteMode && !isLegendaryEcho && !expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`]}
-                      onDragStart={() => !isLegendaryEcho && turnOrderManager.handleTurnDragStart(actualIndex)}
-                      onDragOver={(e) => !isLegendaryEcho && turnOrderManager.handleTurnDragOver(e, actualIndex)}
-                      onDragEnd={turnOrderManager.handleTurnDragEnd}
+                      draggable={!deleteMode && !isLegendaryEcho && !expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`] && turnOrderManager}
+                      onDragStart={turnOrderManager ? () => !isLegendaryEcho && turnOrderManager.handleTurnDragStart(actualIndex) : undefined}
+                      onDragOver={turnOrderManager ? (e) => !isLegendaryEcho && turnOrderManager.handleTurnDragOver(e, actualIndex) : undefined}
+                      onDragEnd={turnOrderManager ? turnOrderManager.handleTurnDragEnd : undefined}
                       onClick={() => {
                         if (deleteMode && !isLegendaryEcho) {
                           handleRemoveToken(item.id);
@@ -229,7 +277,14 @@ export default function TurnOrderPanel({
                                 <input
                                   type="number"
                                   value={token.tempHP || 0}
-                                  onChange={(e) => tokenManager.updateTempHP(item.id, parseInt(e.target.value) || 0)}
+                                  onChange={(e) => {
+                                    const tempHP = parseInt(e.target.value) || 0;
+                                    handleAction(
+                                      MESSAGE_TYPES.TEMP_HP_UPDATE,
+                                      { tokenId: item.id, tempHP },
+                                      () => tokenManager.updateTempHP(item.id, tempHP)
+                                    );
+                                  }}
                                   onClick={(e) => e.stopPropagation()}
                                   className="w-12 bg-cyan-600 text-center rounded px-1 py-0.5 text-sm"
                                   style={{ backgroundColor: '#06b6d4' }}
@@ -241,7 +296,14 @@ export default function TurnOrderPanel({
                               <input
                                 type="number"
                                 value={token.health}
-                                onChange={(e) => tokenManager.updateHealth(item.id, parseInt(e.target.value) || 0)}
+                                onChange={(e) => {
+                                  const newHealth = parseInt(e.target.value) || 0;
+                                  handleAction(
+                                    MESSAGE_TYPES.HEALTH_UPDATE,
+                                    { tokenId: item.id, newHealth },
+                                    () => tokenManager.updateHealth(item.id, newHealth)
+                                  );
+                                }}
                                 onClick={(e) => e.stopPropagation()}
                                 className="w-12 bg-gray-600 text-center rounded px-1 py-0.5 text-sm"
                               />
@@ -249,7 +311,14 @@ export default function TurnOrderPanel({
                               <input
                                 type="number"
                                 value={token.maxHealth}
-                                onChange={(e) => tokenManager.updateMaxHealth(item.id, parseInt(e.target.value) || 1)}
+                                onChange={(e) => {
+                                  const newMaxHealth = parseInt(e.target.value) || 1;
+                                  handleAction(
+                                    MESSAGE_TYPES.TOKEN_UPDATE,
+                                    { tokenId: item.id, newMaxHealth },
+                                    () => tokenManager.updateMaxHealth(item.id, newMaxHealth)
+                                  );
+                                }}
                                 onClick={(e) => e.stopPropagation()}
                                 className="w-12 bg-gray-600 text-center rounded px-1 py-0.5 text-sm"
                               />
@@ -261,10 +330,15 @@ export default function TurnOrderPanel({
                             onClick={(e) => {
                               e.stopPropagation();
                               const conditionKey = `${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`;
-                              setExpandedConditions(prev => ({
-                                ...prev,
-                                [conditionKey]: !prev[conditionKey]
-                              }));
+                              const newExpanded = {
+                                ...expandedConditions,
+                                [conditionKey]: !expandedConditions[conditionKey]
+                              };
+                              handleAction(
+                                MESSAGE_TYPES.EXPANDED_CONDITIONS_UPDATE,
+                                { expanded: newExpanded },
+                                () => setExpandedConditions(newExpanded)
+                              );
                             }}
                             className={`${
                               token.conditions && token.conditions.length > 0
@@ -290,7 +364,12 @@ export default function TurnOrderPanel({
                               key={woundNum}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                tokenManager.updateWounds(item.id, token.wounds === woundNum ? woundNum - 1 : woundNum);
+                                const newWounds = token.wounds === woundNum ? woundNum - 1 : woundNum;
+                                handleAction(
+                                  MESSAGE_TYPES.WOUNDS_UPDATE,
+                                  { tokenId: item.id, newWounds },
+                                  () => tokenManager.updateWounds(item.id, newWounds)
+                                );
                               }}
                               className={`rounded-full border transition-all flex items-center justify-center ${
                                 (token.wounds || 0) >= woundNum
@@ -321,7 +400,13 @@ export default function TurnOrderPanel({
                             <div className="flex items-center justify-between mb-2">
                               <label className="text-xs text-gray-400">Wounds</label>
                               <button
-                                onClick={() => tokenManager.toggleTempHP(item.id)}
+                                onClick={() => {
+                                  handleAction(
+                                    MESSAGE_TYPES.TEMP_HP_TOGGLE,
+                                    { tokenId: item.id },
+                                    () => tokenManager.toggleTempHP(item.id)
+                                  );
+                                }}
                                 className={`py-1 px-2 rounded text-xs flex items-center gap-1 ${
                                   token.showTempHP
                                     ? 'bg-cyan-600 hover:bg-cyan-700'
@@ -338,7 +423,14 @@ export default function TurnOrderPanel({
                                 return (
                                   <button
                                     key={woundNum}
-                                    onClick={() => updateWounds(item.id, token.wounds === woundNum ? woundNum - 1 : woundNum)}
+                                    onClick={() => {
+                                      const newWounds = token.wounds === woundNum ? woundNum - 1 : woundNum;
+                                      handleAction(
+                                        MESSAGE_TYPES.WOUNDS_UPDATE,
+                                        { tokenId: item.id, newWounds },
+                                        () => updateWounds(item.id, newWounds)
+                                      );
+                                    }}
                                     className={`rounded-full border transition-all flex items-center justify-center ${
                                       (token.wounds || 0) >= woundNum
                                         ? 'bg-red-600 border-red-400'
@@ -366,10 +458,15 @@ export default function TurnOrderPanel({
                                 onChange={(e) => {
                                   const newMax = Math.max(1, Math.min(20, parseInt(e.target.value) || 6));
                                   const currentToken = tokens.find(t => t.id === item.id);
-                                  tokenManager.updateTokenResource(item.id, {
+                                  const updates = {
                                     maxWounds: newMax,
                                     wounds: Math.min(currentToken?.wounds || 0, newMax)
-                                  });
+                                  };
+                                  handleAction(
+                                    MESSAGE_TYPES.TOKEN_RESOURCE_UPDATE,
+                                    { tokenId: item.id, updates },
+                                    () => tokenManager.updateTokenResource(item.id, updates)
+                                  );
                                 }}
                                 onClick={(e) => e.stopPropagation()}
                                 className="w-12 bg-gray-600 text-center rounded px-1 py-0.5 text-xs"
@@ -391,7 +488,12 @@ export default function TurnOrderPanel({
                                 value={token.currentResource || 0}
                                 onChange={(e) => {
                                   const newCurrent = Math.max(0, Math.min(parseInt(e.target.value) || 0, token.maxResource || 0));
-                                  tokenManager.updateTokenResource(item.id, { currentResource: newCurrent });
+                                  const updates = { currentResource: newCurrent };
+                                  handleAction(
+                                    MESSAGE_TYPES.TOKEN_RESOURCE_UPDATE,
+                                    { tokenId: item.id, updates },
+                                    () => tokenManager.updateTokenResource(item.id, updates)
+                                  );
                                 }}
                                 onClick={(e) => e.stopPropagation()}
                                 className="w-16 bg-gray-600 text-center rounded px-2 py-1 text-sm"
@@ -405,10 +507,15 @@ export default function TurnOrderPanel({
                                 onChange={(e) => {
                                   const newMax = Math.max(0, parseInt(e.target.value) || 0);
                                   const currentToken = tokens.find(t => t.id === item.id);
-                                  tokenManager.updateTokenResource(item.id, {
+                                  const updates = {
                                     maxResource: newMax,
                                     currentResource: Math.min(currentToken?.currentResource || 0, newMax)
-                                  });
+                                  };
+                                  handleAction(
+                                    MESSAGE_TYPES.TOKEN_RESOURCE_UPDATE,
+                                    { tokenId: item.id, updates },
+                                    () => tokenManager.updateTokenResource(item.id, updates)
+                                  );
                                 }}
                                 onClick={(e) => e.stopPropagation()}
                                 className="w-16 bg-gray-600 text-center rounded px-2 py-1 text-sm"
@@ -422,7 +529,13 @@ export default function TurnOrderPanel({
                         {token.type !== 'legendary' && token.type !== 'hero' && token.type !== 'companion' && (
                           <div className="flex items-center justify-end mb-2">
                             <button
-                              onClick={() => toggleTempHP(item.id)}
+                              onClick={() => {
+                                handleAction(
+                                  MESSAGE_TYPES.TEMP_HP_TOGGLE,
+                                  { tokenId: item.id },
+                                  () => toggleTempHP(item.id)
+                                );
+                              }}
                               className={`py-1 px-2 rounded text-xs flex items-center gap-1 ${
                                 token.showTempHP
                                   ? 'bg-cyan-600 hover:bg-cyan-700'
@@ -445,7 +558,13 @@ export default function TurnOrderPanel({
                             {doomedConditions.map(condition => (
                               <button
                                 key={condition}
-                                onClick={() => tokenManager.toggleCondition(item.id, condition)}
+                                onClick={() => {
+                                  handleAction(
+                                    MESSAGE_TYPES.CONDITION_TOGGLE,
+                                    { tokenId: item.id, condition },
+                                    () => tokenManager.toggleCondition(item.id, condition)
+                                  );
+                                }}
                                 className={`text-xs px-2 py-1 rounded ${
                                   token.conditions && token.conditions.includes(condition)
                                     ? 'bg-red-600 hover:bg-red-700'
@@ -465,7 +584,13 @@ export default function TurnOrderPanel({
                             {majorConditions.map(condition => (
                               <button
                                 key={condition}
-                                onClick={() => tokenManager.toggleCondition(item.id, condition)}
+                                onClick={() => {
+                                  handleAction(
+                                    MESSAGE_TYPES.CONDITION_TOGGLE,
+                                    { tokenId: item.id, condition },
+                                    () => tokenManager.toggleCondition(item.id, condition)
+                                  );
+                                }}
                                 className={`text-xs px-2 py-1 rounded ${
                                   token.conditions && token.conditions.includes(condition)
                                     ? 'bg-orange-600 hover:bg-orange-700'
@@ -485,7 +610,13 @@ export default function TurnOrderPanel({
                             {minorConditions.map(condition => (
                               <button
                                 key={condition}
-                                onClick={() => tokenManager.toggleCondition(item.id, condition)}
+                                onClick={() => {
+                                  handleAction(
+                                    MESSAGE_TYPES.CONDITION_TOGGLE,
+                                    { tokenId: item.id, condition },
+                                    () => tokenManager.toggleCondition(item.id, condition)
+                                  );
+                                }}
                                 className={`text-xs px-2 py-1 rounded ${
                                   token.conditions && token.conditions.includes(condition)
                                     ? 'bg-yellow-600 hover:bg-yellow-700'
@@ -504,7 +635,13 @@ export default function TurnOrderPanel({
                             <label className="text-xs font-bold text-gray-300">Token Size</label>
                             {token.customSize !== null && (
                               <button
-                                onClick={() => tokenManager.updateTokenSize(item.id, null)}
+                                onClick={() => {
+                                  handleAction(
+                                    MESSAGE_TYPES.TOKEN_SIZE_UPDATE,
+                                    { tokenId: item.id, size: null },
+                                    () => tokenManager.updateTokenSize(item.id, null)
+                                  );
+                                }}
                                 className="text-xs text-blue-400 hover:text-blue-300"
                                 title="Reset to global size"
                               >
@@ -519,7 +656,14 @@ export default function TurnOrderPanel({
                               max="192"
                               step="4"
                               value={token.customSize || tokenSize}
-                              onChange={(e) => tokenManager.updateTokenSize(item.id, parseInt(e.target.value))}
+                              onChange={(e) => {
+                                const size = parseInt(e.target.value);
+                                handleAction(
+                                  MESSAGE_TYPES.TOKEN_SIZE_UPDATE,
+                                  { tokenId: item.id, size },
+                                  () => tokenManager.updateTokenSize(item.id, size)
+                                );
+                              }}
                               className="flex-1"
                             />
                             <span className="text-xs w-12 text-right">
@@ -537,7 +681,19 @@ export default function TurnOrderPanel({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                token.isActiveTurn ? tokenManager.endTurn(item.id) : tokenManager.startTurn(item.id);
+                                if (token.isActiveTurn) {
+                                  handleAction(
+                                    MESSAGE_TYPES.END_TURN,
+                                    { tokenId: item.id },
+                                    () => tokenManager.endTurn(item.id)
+                                  );
+                                } else {
+                                  handleAction(
+                                    MESSAGE_TYPES.START_TURN,
+                                    { tokenId: item.id },
+                                    () => tokenManager.startTurn(item.id)
+                                  );
+                                }
                               }}
                               className={`w-full py-1.5 rounded text-xs font-bold transition-colors ${
                                 token.isActiveTurn
@@ -556,7 +712,11 @@ export default function TurnOrderPanel({
                                 key={actionIndex}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  tokenManager.toggleAction(item.id, actionIndex);
+                                  handleAction(
+                                    MESSAGE_TYPES.ACTION_TOGGLE,
+                                    { tokenId: item.id, actionIndex },
+                                    () => tokenManager.toggleAction(item.id, actionIndex)
+                                  );
                                 }}
                                 className={`flex-1 h-8 rounded transition-colors ${
                                   used
@@ -582,7 +742,11 @@ export default function TurnOrderPanel({
                                 const legendaryTurnIndex = displayTurnOrder
                                   .slice(0, index)
                                   .filter(i => i.id === item.id && i.isLegendaryEcho).length;
-                                tokenManager.toggleAction(item.id, legendaryTurnIndex);
+                                handleAction(
+                                  MESSAGE_TYPES.ACTION_TOGGLE,
+                                  { tokenId: item.id, actionIndex: legendaryTurnIndex },
+                                  () => tokenManager.toggleAction(item.id, legendaryTurnIndex)
+                                );
                               }}
                               className={`flex-1 h-8 rounded transition-colors ${
                                 token.actions[displayTurnOrder
@@ -627,7 +791,7 @@ export default function TurnOrderPanel({
             {/* VTT Features Section */}
             <div className="mb-4">
               <button
-                onClick={() => setExpandedNotes(prev => ({ ...prev, 'vttFeatures': !prev['vttFeatures'] }))}
+                onClick={() => toggleDictionarySection('vttFeatures')}
                 className="w-full bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded flex items-center justify-between text-left"
               >
                 <span className="font-bold">VTT Features</span>
@@ -757,7 +921,7 @@ export default function TurnOrderPanel({
             {/* Conditions Section */}
             <div className="mb-4">
               <button
-                onClick={() => setExpandedNotes(prev => ({ ...prev, 'conditions': !prev['conditions'] }))}
+                onClick={() => toggleDictionarySection('conditions')}
                 className="w-full bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded flex items-center justify-between text-left"
               >
                 <span className="font-bold">Conditions</span>
@@ -881,7 +1045,7 @@ export default function TurnOrderPanel({
             {/* VTT Features Section */}
             <div className="mb-4">
               <button
-                onClick={() => setExpandedNotes(prev => ({ ...prev, 'Skill Checks & Saves': !prev['Skill Checks & Saves'] }))}
+                onClick={() => toggleDictionarySection('Skill Checks & Saves')}
                 className="w-full bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded flex items-center justify-between text-left"
               >
                 <span className="font-bold">Skill Checks & Saves</span>
@@ -988,7 +1152,7 @@ export default function TurnOrderPanel({
             {/* Size Section */}
             <div className="mb-4">
               <button
-                onClick={() => setExpandedNotes(prev => ({ ...prev, 'Size': !prev['Size'] }))}
+                onClick={() => toggleDictionarySection('Size')}
                 className="w-full bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded flex items-center justify-between text-left"
               >
                 <span className="font-bold">Size</span>
@@ -1038,7 +1202,7 @@ export default function TurnOrderPanel({
             {/* Hit Points & Dying Section */}
             <div className="mb-4">
               <button
-                onClick={() => setExpandedNotes(prev => ({ ...prev, 'Hit Points & Dying': !prev['Hit Points & Dying'] }))}
+                onClick={() => toggleDictionarySection('Hit Points & Dying')}
                 className="w-full bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded flex items-center justify-between text-left"
               >
                 <span className="font-bold">Hit Points & Dying</span>
@@ -1124,7 +1288,7 @@ export default function TurnOrderPanel({
             {/* Speed & Range Section */}
             <div className="mb-4">
               <button
-                onClick={() => setExpandedNotes(prev => ({ ...prev, 'Speed & Range': !prev['Speed & Range'] }))}
+                onClick={() => toggleDictionarySection('Speed & Range')}
                 className="w-full bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded flex items-center justify-between text-left"
               >
                 <span className="font-bold">Speed & Range</span>
@@ -1211,7 +1375,7 @@ export default function TurnOrderPanel({
             {/* Concentration Section */}
             <div className="mb-4">
               <button
-                onClick={() => setExpandedNotes(prev => ({ ...prev, 'Concentration': !prev['Concentration'] }))}
+                onClick={() => toggleDictionarySection('Concentration')}
                 className="w-full bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded flex items-center justify-between text-left"
               >
                 <span className="font-bold">Concentration</span>
@@ -1245,7 +1409,7 @@ export default function TurnOrderPanel({
             {/* Cover & Hiding Section */}
             <div className="mb-4">
               <button
-                onClick={() => setExpandedNotes(prev => ({ ...prev, 'Cover & Hiding': !prev['Cover & Hiding'] }))}
+                onClick={() => toggleDictionarySection('Cover & Hiding')}
                 className="w-full bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded flex items-center justify-between text-left"
               >
                 <span className="font-bold">Cover & Hiding</span>
@@ -1298,7 +1462,7 @@ export default function TurnOrderPanel({
             {/* Grappling Section */}
             <div className="mb-4">
               <button
-                onClick={() => setExpandedNotes(prev => ({ ...prev, 'Grappling': !prev['Grappling'] }))}
+                onClick={() => toggleDictionarySection('Grappling')}
                 className="w-full bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded flex items-center justify-between text-left"
               >
                 <span className="font-bold">Grappling</span>
@@ -1355,7 +1519,7 @@ export default function TurnOrderPanel({
             {/* Resting & Downtime Section */}
             <div className="mb-4">
               <button
-                onClick={() => setExpandedNotes(prev => ({ ...prev, 'Resting & Downtime': !prev['Resting & Downtime'] }))}
+                onClick={() => toggleDictionarySection('Resting & Downtime')}
                 className="w-full bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded flex items-center justify-between text-left"
               >
                 <span className="font-bold">Resting & Downtime</span>
