@@ -28,8 +28,7 @@ export function TokenEffects({ token, children, context = 'token', className = '
     <div style={combinedStyles} className={className}>
       {children}
 
-
-      {/* Render all overlays */}
+      {/* Render all overlays on top but with pointer-events-none */}
       {effects.overlays.map((overlay, idx) => (
         <div
           key={idx}
@@ -38,6 +37,31 @@ export function TokenEffects({ token, children, context = 'token', className = '
         />
       ))}
     </div>
+  );
+}
+
+
+/**
+ * TokenEffectOverlay Component
+ *
+ * Renders condition effect overlays inside the token border
+ * This should be placed inside the border container, after the image/content
+ */
+export function TokenEffectOverlay({ token, context = 'token' }) {
+  const effects = getTokenEffects(token?.conditions, context);
+
+  if (effects.overlays.length === 0) return null;
+
+  return (
+    <>
+      {effects.overlays.map((overlay, idx) => (
+        <div
+          key={idx}
+          className="absolute inset-0 rounded-full pointer-events-none"
+          style={overlay.style}
+        />
+      ))}
+    </>
   );
 }
 

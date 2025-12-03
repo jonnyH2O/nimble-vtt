@@ -5,7 +5,7 @@ import { HUDDisplay } from './components/HUD';
 import Toolbar from './components/Toolbar';
 import SettingsPanel from './components/SettingsPanel';
 import TurnOrderPanel from './components/TurnOrderPanel';
-import { TokenEffects } from './components/TokenEffects';
+import { TokenEffects, TokenEffectOverlay } from './components/TokenEffects';
 import { PartyOverview } from './components/PartyOverview';
 import { useTokens } from './hooks/useTokens';
 import { useDrawing } from './hooks/useDrawing';
@@ -815,6 +815,7 @@ export default function NimbleCombatTracker() {
                               borderWidth: `${Math.max(2, Math.round(currentTokenSize / 16))}px`,
                               borderStyle: 'solid',
                               opacity: !shouldShowToken ? 0 : 1,
+                              zIndex: 1,
                               ...(selectedToken === token.id ? {
                                 boxShadow: '0 0 0 2px rgba(249, 115, 22, 0.7)'
                               } : {})
@@ -825,6 +826,7 @@ export default function NimbleCombatTracker() {
                               alt={token.name}
                               className="rounded-full object-cover w-full h-full"
                             />
+                            <TokenEffectOverlay token={token} context="token" />
                           </div>
                         </div>
                       ) : (
@@ -837,6 +839,7 @@ export default function NimbleCombatTracker() {
                               borderWidth: `${Math.max(2, Math.round(currentTokenSize / 16))}px`,
                               borderStyle: 'solid',
                               opacity: !shouldShowToken ? 0 : 1,
+                              zIndex: 1,
                               ...(selectedToken === token.id ? {
                                 boxShadow: '0 0 0 2px rgba(249, 115, 22, 0.7)'
                               } : {})
@@ -847,6 +850,7 @@ export default function NimbleCombatTracker() {
                             >
                               {getTokenIcon(token.type)}
                             </div>
+                            <TokenEffectOverlay token={token} context="token" />
                           </div>
                         </div>
                       )}
