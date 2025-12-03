@@ -1,30 +1,6 @@
 import React from 'react';
 import { Users, Heart, Swords, Crown } from 'lucide-react';
-
-// Condition emoji mapping
-const conditionEmojis = {
-  'Bloodied': '🩸',
-  'Dying': '💀',
-  'Wounded': '🩹',
-  'Blinded': '🌫️',
-  'Invisible': '🫥',
-  'Dazed': '😵‍💫',
-  'Charmed': '💖',
-  'Taunted': '😜',
-  'Frightened': '👻',
-  'Grappled': '🤼',
-  'Riding': '🪑',
-  'Petrified': '🪨',
-  'Restrained': '⛓️',
-  'Incapacitated': '😵',
-  'Poisoned': '🧪',
-  'Slowed': '🐌',
-  'Prone': '🙇',
-  'Hampered': '🕸️',
-  'Smoldering': '🔥',
-  'Charged': '🌩️',
-  'Distracted': '🌀'
-};
+import { CONDITION_EMOJIS } from '../effects/conditionEffects';
 
 /**
  * HUD Component - Heads-Up Display for selected token
@@ -94,7 +70,7 @@ export function HUDDisplay({ selectedToken, tokens, HUD_Z_INDEX }) {
               <div className="flex gap-1">
                 {token.conditions.map((condition, idx) => (
                   <span key={idx} className="text-base drop-shadow-lg" title={condition}>
-                    {conditionEmojis[condition] || ''}
+                    {CONDITION_EMOJIS[condition] || ''}
                   </span>
                 ))}
               </div>

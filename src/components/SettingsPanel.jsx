@@ -47,6 +47,8 @@ export default function SettingsPanel({
   setCompanionLightRadius,
   darknessIntensity,
   setDarknessIntensity,
+  showPartyOverview,
+  setShowPartyOverview,
   exportBattle,
   importBattle
 }) {
@@ -98,6 +100,21 @@ export default function SettingsPanel({
                   className="flex-1"
                 />
                 <span className="text-sm w-12 text-right">{backgroundSize}%</span>
+              </div>
+            </div>
+
+            {/* Party Overview Toggle */}
+            <div className="border-t border-gray-700 pt-4">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-bold">Show Party Overview</label>
+                <button
+                  onClick={() => setShowPartyOverview(!showPartyOverview)}
+                  className={`px-3 py-1 rounded text-sm ${
+                    showPartyOverview ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 hover:bg-gray-500'
+                  }`}
+                >
+                  {showPartyOverview ? 'ON' : 'OFF'}
+                </button>
               </div>
             </div>
 

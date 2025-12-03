@@ -5,11 +5,14 @@ import { HUDDisplay } from './components/HUD';
 import Toolbar from './components/Toolbar';
 import SettingsPanel from './components/SettingsPanel';
 import TurnOrderPanel from './components/TurnOrderPanel';
+import { TokenEffects } from './components/TokenEffects';
+import { PartyOverview } from './components/PartyOverview';
 import { useTokens } from './hooks/useTokens';
 import { useDrawing } from './hooks/useDrawing';
 import { useTurnOrder } from './hooks/useTurnOrder';
 import { useDiceRoller } from './hooks/useDiceRoller';
-import { VIRTUAL_CANVAS_SIZE, SIDEBAR_WIDTH, HUD_Z_INDEX } from './constants';
+import { VIRTUAL_CANVAS_SIZE, SIDEBAR_WIDTH, HUD_Z_INDEX, getTokenBorderColor, getTokenBgColor, getTokenIconName } from './constants';
+import { CONDITION_CATEGORIES } from './effects/conditionEffects';
 
 export default function NimbleCombatTracker() {
   // UI State
@@ -91,6 +94,7 @@ export default function NimbleCombatTracker() {
   const [heroLightRadius, setHeroLightRadius] = useState(3); // Multiplier of token size
   const [companionLightRadius, setCompanionLightRadius] = useState(2); // Multiplier of token size
   const [darknessIntensity, setDarknessIntensity] = useState(0.95); // 0-1, how dark the shadows are
+  const [showPartyOverview, setShowPartyOverview] = useState(true);
 
   const handleBackgroundUpload = (e) => {
     const file = e.target.files[0];
@@ -206,17 +210,9 @@ export default function NimbleCombatTracker() {
     }));
   };
 
-  const doomedConditions = ['Bloodied', 'Dying', 'Wounded'];
-
-  const majorConditions = [
-    'Blinded', 'Invisible', 'Dazed',
-    'Charmed', 'Taunted', 'Frightened',
-    'Grappled', 'Riding', 'Petrified',
-    'Restrained', 'Incapacitated', 'Poisoned',
-    'Slowed', 'Prone', 'Hampered'
-  ];
-
-  const minorConditions = ['Smoldering', 'Charged', 'Distracted'];
+  const doomedConditions = CONDITION_CATEGORIES.DOOMED;
+  const majorConditions = CONDITION_CATEGORIES.MAJOR;
+  const minorConditions = CONDITION_CATEGORIES.MINOR;
 
   const handleMouseDown = useCallback((e, tokenId) => {
     if (drawMode !== 'select') return;
@@ -465,62 +461,20 @@ export default function NimbleCombatTracker() {
     };
   }, [historyStep, drawingHistory, selectedToken]);
 
-  const getTokenBorderColor = (type) => {
-    switch(type) {
-      case 'hero': return 'border-blue-500';
-      case 'enemy': return 'border-red-500';
-      case 'companion': return 'border-green-500';
-      case 'legendary': return 'border-purple-500';
-      default: return 'border-gray-500';
-    }
-  };
-
-  const getTokenBgColor = (type) => {
-    switch(type) {
-      case 'hero': return 'bg-blue-600';
-      case 'enemy': return 'bg-red-600';
-      case 'companion': return 'bg-green-600';
-      case 'legendary': return 'bg-purple-600';
-      default: return 'bg-gray-600';
-    }
-  };
-
+  // Helper to get icon component from icon name
   const getTokenIcon = (type) => {
-    switch(type) {
-      case 'hero': return <Users size={20} />;
-      case 'enemy': return <Swords size={20} />;
-      case 'companion': return <Heart size={20} />;
-      case 'legendary': return <Crown size={20} />;
+    const iconName = getTokenIconName(type);
+    switch(iconName) {
+      case 'Users': return <Users size={20} />;
+      case 'Swords': return <Swords size={20} />;
+      case 'Heart': return <Heart size={20} />;
+      case 'Crown': return <Crown size={20} />;
       default: return <Users size={20} />;
     }
   };
 
   return (
     <div className="h-screen bg-gray-900 text-white flex flex-col">
-      {/* CSS Keyframe Animations */}
-      <style>{`
-        @keyframes heartbeat {
-          0% {
-            opacity: 0.25;
-          }
-          10% {
-            opacity: 0.40;
-          }
-          20% {
-            opacity: 0.25;
-          }
-          30% {
-            opacity: 0.40;
-          }
-          40% {
-            opacity: 0.25;
-          }
-          100% {
-            opacity: 0.25;
-          }
-        }
-      `}</style>
-
       <div className="bg-gray-800 border-b border-gray-700 p-3">
         <div className="flex gap-3 items-center flex-wrap justify-between">
           <div className="flex gap-3 items-center flex-wrap">
@@ -693,6 +647,8 @@ export default function NimbleCombatTracker() {
             setCompanionLightRadius={setCompanionLightRadius}
             darknessIntensity={darknessIntensity}
             setDarknessIntensity={setDarknessIntensity}
+            showPartyOverview={showPartyOverview}
+            setShowPartyOverview={setShowPartyOverview}
             exportBattle={exportBattle}
             importBattle={importBattle}
           />
@@ -839,7 +795,7 @@ export default function NimbleCombatTracker() {
                 // Use memoized visibility calculation
                 const isInDarkness = darknessMode && (token.type === 'enemy' || token.type === 'legendary');
                 const shouldShowToken = !isInDarkness || (tokenVisibility[token.id] ?? true);
-                
+
                 return (
                 <div
                   key={token.id}
@@ -847,139 +803,113 @@ export default function NimbleCombatTracker() {
                   style={{ left: token.x, top: token.y }}
                   onMouseDown={(e) => handleMouseDown(e, token.id)}
                 >
-                  <div className="relative">
-                    {token.image ? (
-                      <div className="relative">
-                        <div
-                          className={`rounded-full ${getTokenBorderColor(token.type)} relative`}
-                          style={{
-                            width: `${currentTokenSize}px`,
-                            height: `${currentTokenSize}px`,
-                            borderWidth: `${Math.max(2, Math.round(currentTokenSize / 16))}px`,
-                            borderStyle: 'solid',
-                            opacity: !shouldShowToken ? 0 : 1,
-                            ...(selectedToken === token.id ? {
-                              boxShadow: '0 0 0 2px rgba(249, 115, 22, 0.7)'
-                            } : {})
-                          }}
-                        >
-                          <img
-                            src={token.image}
-                            alt={token.name}
-                            className="rounded-full object-cover w-full h-full"
-                            style={{
-                              opacity: token.conditions && token.conditions.includes('Invisible') ? 0.3 : 1,
-                              filter: token.conditions && token.conditions.includes('Dying') ? 'saturate(0.2)' : 'none',
-                            }}
-                          />
-                          {/* Red vignette for Bloodied */}
-                          {token.conditions && token.conditions.includes('Bloodied') && shouldShowToken && (
-                            <div
-                              className="absolute inset-0 rounded-full pointer-events-none"
-                              style={{
-                                boxShadow: 'inset 0 0 30px 10px rgba(220, 38, 38, 1)',
-                                animation: 'heartbeat 1.5s ease-in-out infinite',
-                              }}
-                            />
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="relative">
-                        <div
-                          className={`rounded-full ${getTokenBorderColor(token.type)} relative`}
-                          style={{
-                            width: `${currentTokenSize}px`,
-                            height: `${currentTokenSize}px`,
-                            borderWidth: `${Math.max(2, Math.round(currentTokenSize / 16))}px`,
-                            borderStyle: 'solid',
-                            opacity: !shouldShowToken ? 0 : 1,
-                            ...(selectedToken === token.id ? {
-                              boxShadow: '0 0 0 2px rgba(249, 115, 22, 0.7)'
-                            } : {})
-                          }}
-                        >
+                  <TokenEffects token={token} context="token">
+                    <div className="relative">
+                      {token.image ? (
+                        <div className="relative">
                           <div
-                            className={`rounded-full flex items-center justify-center w-full h-full ${getTokenBgColor(token.type)}`}
+                            className={`rounded-full ${getTokenBorderColor(token.type)} relative`}
                             style={{
-                              opacity: token.conditions && token.conditions.includes('Invisible') ? 0.3 : 1,
-                              filter: token.conditions && token.conditions.includes('Dying') ? 'saturate(0.2)' : 'none',
+                              width: `${currentTokenSize}px`,
+                              height: `${currentTokenSize}px`,
+                              borderWidth: `${Math.max(2, Math.round(currentTokenSize / 16))}px`,
+                              borderStyle: 'solid',
+                              opacity: !shouldShowToken ? 0 : 1,
+                              ...(selectedToken === token.id ? {
+                                boxShadow: '0 0 0 2px rgba(249, 115, 22, 0.7)'
+                              } : {})
                             }}
                           >
-                            {getTokenIcon(token.type)}
-                          </div>
-                          {/* Red vignette for Bloodied */}
-                          {token.conditions && token.conditions.includes('Bloodied') && shouldShowToken && (
-                            <div
-                              className="absolute inset-0 rounded-full pointer-events-none"
-                              style={{
-                                boxShadow: 'inset 0 0 30px 10px rgba(220, 38, 38, 1)',
-                                animation: 'heartbeat 1.5s ease-in-out infinite',
-                              }}
+                            <img
+                              src={token.image}
+                              alt={token.name}
+                              className="rounded-full object-cover w-full h-full"
                             />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          <div
+                            className={`rounded-full ${getTokenBorderColor(token.type)} relative`}
+                            style={{
+                              width: `${currentTokenSize}px`,
+                              height: `${currentTokenSize}px`,
+                              borderWidth: `${Math.max(2, Math.round(currentTokenSize / 16))}px`,
+                              borderStyle: 'solid',
+                              opacity: !shouldShowToken ? 0 : 1,
+                              ...(selectedToken === token.id ? {
+                                boxShadow: '0 0 0 2px rgba(249, 115, 22, 0.7)'
+                              } : {})
+                            }}
+                          >
+                            <div
+                              className={`rounded-full flex items-center justify-center w-full h-full ${getTokenBgColor(token.type)}`}
+                            >
+                              {getTokenIcon(token.type)}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Shift-hover info popup */}
+                      {shiftHeld && selectedToken === token.id && (token.notes || (token.conditions && token.conditions.length > 0)) && (
+                        <div
+                          className="absolute left-1/2 transform -translate-x-1/2 bg-gray-900 border-2 border-gray-600 rounded-lg p-3 shadow-xl z-50 min-w-[200px] max-w-[300px]"
+                          style={{
+                            bottom: `${currentTokenSize + 10}px`
+                          }}
+                        >
+                          {token.conditions && token.conditions.length > 0 && (
+                            <div className="mb-2">
+                              <div className="text-xs font-bold text-gray-300 mb-2">Conditions:</div>
+
+                              {/* Doomed Conditions */}
+                              {token.conditions.some(c => doomedConditions.includes(c)) && (
+                                <div className="mb-2">
+                                  <div className="text-xs font-bold text-red-400 mb-1">Doomed</div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {token.conditions.filter(c => doomedConditions.includes(c)).map(c => (
+                                      <span key={c} className="text-xs bg-red-600 px-2 py-0.5 rounded">{c}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Major Conditions */}
+                              {token.conditions.some(c => majorConditions.includes(c)) && (
+                                <div className="mb-2">
+                                  <div className="text-xs font-bold text-orange-400 mb-1">Major</div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {token.conditions.filter(c => majorConditions.includes(c)).map(c => (
+                                      <span key={c} className="text-xs bg-orange-600 px-2 py-0.5 rounded">{c}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Minor Conditions */}
+                              {token.conditions.some(c => minorConditions.includes(c)) && (
+                                <div className="mb-2">
+                                  <div className="text-xs font-bold text-yellow-400 mb-1">Minor</div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {token.conditions.filter(c => minorConditions.includes(c)).map(c => (
+                                      <span key={c} className="text-xs bg-yellow-600 px-2 py-0.5 rounded">{c}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {token.notes && (
+                            <div>
+                              <div className="text-xs font-bold text-blue-400 mb-1">Notes:</div>
+                              <div className="text-xs text-gray-300">{token.notes}</div>
+                            </div>
                           )}
                         </div>
-                      </div>
-                    )}
-
-                    {/* Shift-hover info popup */}
-                    {shiftHeld && selectedToken === token.id && (token.notes || (token.conditions && token.conditions.length > 0)) && (
-                      <div 
-                        className="absolute left-1/2 transform -translate-x-1/2 bg-gray-900 border-2 border-gray-600 rounded-lg p-3 shadow-xl z-50 min-w-[200px] max-w-[300px]"
-                        style={{ 
-                          bottom: `${currentTokenSize + 10}px`
-                        }}
-                      >
-                        {token.conditions && token.conditions.length > 0 && (
-                          <div className="mb-2">
-                            <div className="text-xs font-bold text-gray-300 mb-2">Conditions:</div>
-                            
-                            {/* Doomed Conditions */}
-                            {token.conditions.some(c => doomedConditions.includes(c)) && (
-                              <div className="mb-2">
-                                <div className="text-xs font-bold text-red-400 mb-1">Doomed</div>
-                                <div className="flex flex-wrap gap-1">
-                                  {token.conditions.filter(c => doomedConditions.includes(c)).map(c => (
-                                    <span key={c} className="text-xs bg-red-600 px-2 py-0.5 rounded">{c}</span>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                            
-                            {/* Major Conditions */}
-                            {token.conditions.some(c => majorConditions.includes(c)) && (
-                              <div className="mb-2">
-                                <div className="text-xs font-bold text-orange-400 mb-1">Major</div>
-                                <div className="flex flex-wrap gap-1">
-                                  {token.conditions.filter(c => majorConditions.includes(c)).map(c => (
-                                    <span key={c} className="text-xs bg-orange-600 px-2 py-0.5 rounded">{c}</span>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                            
-                            {/* Minor Conditions */}
-                            {token.conditions.some(c => minorConditions.includes(c)) && (
-                              <div className="mb-2">
-                                <div className="text-xs font-bold text-yellow-400 mb-1">Minor</div>
-                                <div className="flex flex-wrap gap-1">
-                                  {token.conditions.filter(c => minorConditions.includes(c)).map(c => (
-                                    <span key={c} className="text-xs bg-yellow-600 px-2 py-0.5 rounded">{c}</span>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        {token.notes && (
-                          <div>
-                            <div className="text-xs font-bold text-blue-400 mb-1">Notes:</div>
-                            <div className="text-xs text-gray-300">{token.notes}</div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  </TokenEffects>
                 </div>
               );
               })}
@@ -1005,6 +935,13 @@ export default function NimbleCombatTracker() {
               tokens={tokens}
               HUD_Z_INDEX={HUD_Z_INDEX}
             />
+
+            {/* Party Overview - Show when no token selected and feature is enabled */}
+            {showPartyOverview && !selectedToken && (
+              <PartyOverview
+                tokens={tokens.filter(t => t.type === 'hero' || t.type === 'companion')}
+              />
+            )}
           </div>
         </div>
 

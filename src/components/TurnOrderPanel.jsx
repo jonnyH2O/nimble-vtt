@@ -3,6 +3,21 @@ import { Trash2, List, Book, RotateCcw, AlertCircle, Users, Heart, Swords, Crown
 import { NotesPanel } from './HUD';
 
 /**
+ * BloodiedVignette - Reusable component for bloodied condition visual effect
+ */
+const BloodiedVignette = ({ hasCondition }) => {
+  if (!hasCondition) return null;
+  return (
+    <div
+      className="absolute inset-0 rounded-full pointer-events-none"
+      style={{
+        boxShadow: 'inset 0 0 15px 5px rgba(220, 38, 38, 0.42)',
+      }}
+    />
+  );
+};
+
+/**
  * TurnOrderPanel Component
  *
  * The entire sidebar component that includes:
@@ -182,15 +197,7 @@ export default function TurnOrderPanel({
                                   filter: token.conditions && token.conditions.includes('Dying') ? 'saturate(0.2)' : 'none'
                                 }}
                               />
-                              {/* Red vignette for Bloodied */}
-                              {token.conditions && token.conditions.includes('Bloodied') && (
-                                <div
-                                  className="absolute inset-0 rounded-full pointer-events-none"
-                                  style={{
-                                    boxShadow: 'inset 0 0 15px 5px rgba(220, 38, 38, 0.42)',
-                                  }}
-                                />
-                              )}
+                              <BloodiedVignette hasCondition={token.conditions && token.conditions.includes('Bloodied')} />
                             </div>
                           </div>
                         ) : (
@@ -204,15 +211,7 @@ export default function TurnOrderPanel({
                               >
                                 {getTokenIcon(token.type)}
                               </div>
-                              {/* Red vignette for Bloodied */}
-                              {token.conditions && token.conditions.includes('Bloodied') && (
-                                <div
-                                  className="absolute inset-0 rounded-full pointer-events-none"
-                                  style={{
-                                    boxShadow: 'inset 0 0 15px 5px rgba(220, 38, 38, 0.42)',
-                                  }}
-                                />
-                              )}
+                              <BloodiedVignette hasCondition={token.conditions && token.conditions.includes('Bloodied')} />
                             </div>
                           </div>
                         )}

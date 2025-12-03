@@ -168,6 +168,13 @@ function tokensReducer(state, action) {
       });
     }
 
+    case 'TOGGLE_TEMP_HP': {
+      const { tokenId } = action.payload;
+      return state.map(t =>
+        t.id === tokenId ? { ...t, showTempHP: !t.showTempHP } : t
+      );
+    }
+
     case 'SET_ALL_TOKENS':
       return action.payload;
 
@@ -245,11 +252,8 @@ export function useTokens(tokenSize) {
   }, []);
 
   const toggleTempHP = useCallback((tokenId) => {
-    const token = tokens.find(t => t.id === tokenId);
-    if (token) {
-      dispatchTokens({ type: 'UPDATE_TOKEN', payload: { id: tokenId, updates: { showTempHP: !token.showTempHP } } });
-    }
-  }, [tokens]);
+    dispatchTokens({ type: 'TOGGLE_TEMP_HP', payload: { tokenId } });
+  }, []);
 
   const toggleCondition = useCallback((tokenId, condition) => {
     dispatchTokens({ type: 'TOGGLE_CONDITION', payload: { tokenId, condition } });
