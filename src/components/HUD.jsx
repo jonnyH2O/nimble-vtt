@@ -78,10 +78,9 @@ export function HUDDisplay({ selectedToken, tokens, HUD_Z_INDEX }) {
           </div>
 
           {/* Health Bar */}
-          {token.type !== 'legendary' && (
-            <div className="mb-1 relative">
-              {/* Temp HP "bubble" highlight */}
-              {token.tempHP > 0 && (
+          <div className="mb-1 relative">
+            {/* Temp HP "bubble" highlight */}
+            {token.tempHP > 0 && (
                 <div
                   className="absolute rounded-full animate-pulse"
                   style={{
@@ -128,8 +127,7 @@ export function HUDDisplay({ selectedToken, tokens, HUD_Z_INDEX }) {
                   </span>
                 </div>
               </div>
-            </div>
-          )}
+          </div>
 
           {/* Resource Bar */}
           {token.hasResource && (

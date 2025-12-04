@@ -354,7 +354,7 @@ export default function TurnOrderPanel({
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {token.type !== 'legendary' && (
+                        {(token.type !== 'legendary' || isMainLegendary) && (
                           <div className="text-right">
                             <div className="text-xs text-gray-400">HP</div>
                             {token.showTempHP && (
@@ -610,8 +610,8 @@ export default function TurnOrderPanel({
                           </div>
                         )}
 
-                        {/* Temp HP toggle for non-hero/companion tokens */}
-                        {token.type !== 'legendary' && token.type !== 'hero' && token.type !== 'companion' && (
+                        {/* Temp HP toggle for non-hero/companion tokens (and main legendary) */}
+                        {((token.type !== 'legendary' || isMainLegendary) && token.type !== 'hero' && token.type !== 'companion') && (
                           <div className="flex items-center justify-end mb-2">
                             <button
                               onClick={() => {
