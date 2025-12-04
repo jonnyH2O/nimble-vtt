@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback, useReducer } from 'react';
 import { Upload, Plus, Users, Swords, Heart, Crown } from 'lucide-react';
-import DiceRoller from './components/DiceRoller';
 import { HUDDisplay } from './components/HUD';
 import Toolbar from './components/Toolbar';
-import SettingsPanel from './components/SettingsPanel';
 import TurnOrderPanel from './components/TurnOrderPanel';
 import { TokenEffects, TokenEffectOverlay } from './components/TokenEffects';
 import { PartyOverview } from './components/PartyOverview';
+import DiceRoller from './components/DiceRoller';
 import { useTokens } from './hooks/useTokens';
 import { useDrawing } from './hooks/useDrawing';
 import { useTurnOrder } from './hooks/useTurnOrder';
@@ -505,7 +504,18 @@ export default function NimbleCombatTracker() {
         deleteMode,
         doomedConditions: CONDITION_CATEGORIES.DOOMED,
         majorConditions: CONDITION_CATEGORIES.MAJOR,
-        minorConditions: CONDITION_CATEGORIES.MINOR
+        minorConditions: CONDITION_CATEGORIES.MINOR,
+        // Dice state
+        diceCount,
+        // Settings state
+        backgroundSize,
+        showGrid,
+        gridSize,
+        darknessMode,
+        heroLightRadius,
+        companionLightRadius,
+        darknessIntensity,
+        showPartyOverview
       }));
     } else {
       console.log('[MainWindow] NOT broadcasting - isPopoutMode:', isPopoutMode, 'hasChannel:', !!windowSync.channel);
@@ -520,7 +530,16 @@ export default function NimbleCombatTracker() {
     expandedNotes,
     sidebarView,
     deleteMode,
-    windowSync
+    windowSync,
+    diceCount,
+    backgroundSize,
+    showGrid,
+    gridSize,
+    darknessMode,
+    heroLightRadius,
+    companionLightRadius,
+    darknessIntensity,
+    showPartyOverview
   ]);
 
   // Listen for actions from pop-out window
@@ -591,6 +610,38 @@ export default function NimbleCombatTracker() {
         case MESSAGE_TYPES.RESET_NON_HERO_ACTIONS:
           tokenManager.resetNonHeroActions();
           break;
+        case MESSAGE_TYPES.DICE_ROLL:
+          rollDice(payload.diceType);
+          break;
+        case MESSAGE_TYPES.DICE_COUNT_UPDATE:
+          setDiceCount(payload.count);
+          break;
+        case MESSAGE_TYPES.SETTINGS_UPDATE:
+          if (payload.tokenSize !== undefined) setTokenSize(payload.tokenSize);
+          if (payload.backgroundSize !== undefined) setBackgroundSize(payload.backgroundSize);
+          if (payload.showGrid !== undefined) setShowGrid(payload.showGrid);
+          if (payload.gridSize !== undefined) setGridSize(payload.gridSize);
+          if (payload.darknessMode !== undefined) setDarknessMode(payload.darknessMode);
+          if (payload.heroLightRadius !== undefined) setHeroLightRadius(payload.heroLightRadius);
+          if (payload.companionLightRadius !== undefined) setCompanionLightRadius(payload.companionLightRadius);
+          if (payload.darknessIntensity !== undefined) setDarknessIntensity(payload.darknessIntensity);
+          if (payload.showPartyOverview !== undefined) setShowPartyOverview(payload.showPartyOverview);
+          break;
+        case MESSAGE_TYPES.EXPORT_BATTLE:
+          exportBattle();
+          break;
+        case MESSAGE_TYPES.IMPORT_BATTLE:
+          const fileInput = document.createElement('input');
+          fileInput.type = 'file';
+          fileInput.accept = '.json';
+          fileInput.style.display = 'none';
+          fileInput.onchange = (e) => {
+            importBattle(e);
+            document.body.removeChild(fileInput);
+          };
+          document.body.appendChild(fileInput);
+          fileInput.click();
+          break;
         case MESSAGE_TYPES.WINDOW_CLOSING:
           setIsPopoutMode(false);
           setPopoutWindow(null);
@@ -605,7 +656,30 @@ export default function NimbleCombatTracker() {
         windowSync.channel.onmessage = null;
       }
     };
-  }, [windowSync.channel, tokenManager, turnOrderManager]);
+  }, [
+    windowSync.channel,
+    tokenManager,
+    turnOrderManager,
+    setSidebarView,
+    setDeleteMode,
+    setSelectedToken,
+    setExpandedConditions,
+    setExpandedNotes,
+    handleRemoveToken,
+    rollDice,
+    setDiceCount,
+    setTokenSize,
+    setBackgroundSize,
+    setShowGrid,
+    setGridSize,
+    setDarknessMode,
+    setHeroLightRadius,
+    setCompanionLightRadius,
+    setDarknessIntensity,
+    setShowPartyOverview,
+    exportBattle,
+    importBattle,
+  ]);
 
   // Detect when pop-out window closes (polling fallback)
   useEffect(() => {
@@ -778,40 +852,6 @@ export default function NimbleCombatTracker() {
             />
           </div>
 
-          <DiceRoller
-            showDiceMenu={showDiceMenu}
-            setShowDiceMenu={setShowDiceMenu}
-            diceCount={diceCount}
-            setDiceCount={setDiceCount}
-            rollDice={rollDice}
-            rollingDice={rollingDice}
-            diceRolls={diceRolls}
-          />
-
-          <SettingsPanel
-            showSettings={showSettings}
-            setShowSettings={setShowSettings}
-            tokenSize={tokenSize}
-            setTokenSize={setTokenSize}
-            backgroundSize={backgroundSize}
-            setBackgroundSize={setBackgroundSize}
-            showGrid={showGrid}
-            setShowGrid={setShowGrid}
-            gridSize={gridSize}
-            setGridSize={setGridSize}
-            darknessMode={darknessMode}
-            setDarknessMode={setDarknessMode}
-            heroLightRadius={heroLightRadius}
-            setHeroLightRadius={setHeroLightRadius}
-            companionLightRadius={companionLightRadius}
-            setCompanionLightRadius={setCompanionLightRadius}
-            darknessIntensity={darknessIntensity}
-            setDarknessIntensity={setDarknessIntensity}
-            showPartyOverview={showPartyOverview}
-            setShowPartyOverview={setShowPartyOverview}
-            exportBattle={exportBattle}
-            importBattle={importBattle}
-          />
         </div>
       </div>
 
@@ -1109,6 +1149,18 @@ export default function NimbleCombatTracker() {
           </div>
         </div>
 
+        {/* Dice Roller - Floating Animations Only */}
+        <DiceRoller
+          showDiceMenu={false}
+          setShowDiceMenu={() => {}}
+          diceCount={diceCount}
+          setDiceCount={setDiceCount}
+          rollDice={rollDice}
+          rollingDice={rollingDice}
+          diceRolls={diceRolls}
+          hideButton={true}
+        />
+
         {!isPopoutMode && (
           <TurnOrderPanel
             sidebarView={sidebarView}
@@ -1137,6 +1189,36 @@ export default function NimbleCombatTracker() {
             SIDEBAR_WIDTH={SIDEBAR_WIDTH}
             updateNotes={tokenManager.updateNotes}
             onPopout={handlePopout}
+            // Dice Roller props
+            showDiceMenu={showDiceMenu}
+            setShowDiceMenu={setShowDiceMenu}
+            diceCount={diceCount}
+            setDiceCount={setDiceCount}
+            rollDice={rollDice}
+            rollingDice={rollingDice}
+            diceRolls={diceRolls}
+            // Settings props
+            showSettings={showSettings}
+            setShowSettings={setShowSettings}
+            setTokenSize={setTokenSize}
+            backgroundSize={backgroundSize}
+            setBackgroundSize={setBackgroundSize}
+            showGrid={showGrid}
+            setShowGrid={setShowGrid}
+            gridSize={gridSize}
+            setGridSize={setGridSize}
+            darknessMode={darknessMode}
+            setDarknessMode={setDarknessMode}
+            heroLightRadius={heroLightRadius}
+            setHeroLightRadius={setHeroLightRadius}
+            companionLightRadius={companionLightRadius}
+            setCompanionLightRadius={setCompanionLightRadius}
+            darknessIntensity={darknessIntensity}
+            setDarknessIntensity={setDarknessIntensity}
+            showPartyOverview={showPartyOverview}
+            setShowPartyOverview={setShowPartyOverview}
+            exportBattle={exportBattle}
+            importBattle={importBattle}
           />
         )}
       </div>

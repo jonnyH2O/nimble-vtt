@@ -22,7 +22,8 @@ export default function DiceRoller({
   setDiceCount,
   rollDice,
   rollingDice,
-  diceRolls
+  diceRolls,
+  hideButton = false // New prop to hide the toggle button
 }) {
   return (
     <>
@@ -68,13 +69,15 @@ export default function DiceRoller({
         }
       `}</style>
 
-      {/* Dice Menu Toggle Button */}
-      <button
-        onClick={() => setShowDiceMenu(!showDiceMenu)}
-        className="bg-purple-600 hover:bg-purple-700 p-2 rounded flex items-center justify-center relative"
-      >
-        <Dices size={20} />
-      </button>
+      {/* Dice Menu Toggle Button - Hidden when hideButton is true */}
+      {!hideButton && (
+        <button
+          onClick={() => setShowDiceMenu(!showDiceMenu)}
+          className="bg-purple-600 hover:bg-purple-700 p-2 rounded flex items-center justify-center relative"
+        >
+          <Dices size={20} />
+        </button>
+      )}
 
       {/* Dice Menu Popup */}
       {showDiceMenu && (

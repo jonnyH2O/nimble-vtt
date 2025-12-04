@@ -116,6 +116,36 @@ export default function PopoutWindow() {
         getTokenIcon={getTokenIcon}
         tokenManager={null} // NOT passed - mutations go through onAction
         turnOrderManager={null} // NOT passed - mutations go through onAction
+        // Dice Roller props - send to main window
+        showDiceMenu={false}
+        setShowDiceMenu={() => {}}
+        diceCount={syncedState.diceCount || 1}
+        setDiceCount={(count) => sendAction(createMessage(MESSAGE_TYPES.DICE_COUNT_UPDATE, { count }))}
+        rollDice={(diceType) => sendAction(createMessage(MESSAGE_TYPES.DICE_ROLL, { diceType }))}
+        rollingDice={[]}
+        diceRolls={[]}
+        // Settings props - send to main window
+        showSettings={false}
+        setShowSettings={() => {}}
+        setTokenSize={(tokenSize) => sendAction(createMessage(MESSAGE_TYPES.SETTINGS_UPDATE, { tokenSize }))}
+        backgroundSize={syncedState.backgroundSize || 100}
+        setBackgroundSize={(backgroundSize) => sendAction(createMessage(MESSAGE_TYPES.SETTINGS_UPDATE, { backgroundSize }))}
+        showGrid={syncedState.showGrid || false}
+        setShowGrid={(showGrid) => sendAction(createMessage(MESSAGE_TYPES.SETTINGS_UPDATE, { showGrid }))}
+        gridSize={syncedState.gridSize || 50}
+        setGridSize={(gridSize) => sendAction(createMessage(MESSAGE_TYPES.SETTINGS_UPDATE, { gridSize }))}
+        darknessMode={syncedState.darknessMode || false}
+        setDarknessMode={(darknessMode) => sendAction(createMessage(MESSAGE_TYPES.SETTINGS_UPDATE, { darknessMode }))}
+        heroLightRadius={syncedState.heroLightRadius || 3}
+        setHeroLightRadius={(heroLightRadius) => sendAction(createMessage(MESSAGE_TYPES.SETTINGS_UPDATE, { heroLightRadius }))}
+        companionLightRadius={syncedState.companionLightRadius || 2}
+        setCompanionLightRadius={(companionLightRadius) => sendAction(createMessage(MESSAGE_TYPES.SETTINGS_UPDATE, { companionLightRadius }))}
+        darknessIntensity={syncedState.darknessIntensity || 0.95}
+        setDarknessIntensity={(darknessIntensity) => sendAction(createMessage(MESSAGE_TYPES.SETTINGS_UPDATE, { darknessIntensity }))}
+        showPartyOverview={syncedState.showPartyOverview !== undefined ? syncedState.showPartyOverview : true}
+        setShowPartyOverview={(showPartyOverview) => sendAction(createMessage(MESSAGE_TYPES.SETTINGS_UPDATE, { showPartyOverview }))}
+        exportBattle={() => sendAction(createMessage(MESSAGE_TYPES.EXPORT_BATTLE))}
+        importBattle={() => sendAction(createMessage(MESSAGE_TYPES.IMPORT_BATTLE))}
       />
     </div>
   );

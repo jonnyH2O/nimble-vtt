@@ -1,7 +1,9 @@
-import React, { useCallback } from 'react';
-import { Trash2, List, Book, RotateCcw, AlertCircle, Users, Heart, Swords, Crown, ExternalLink } from 'lucide-react';
+import React, { useCallback, useRef } from 'react';
+import { Trash2, List, Book, RotateCcw, AlertCircle, Users, Heart, Swords, Crown, ExternalLink, Dices, Settings } from 'lucide-react';
 import { NotesPanel } from './HUD';
 import { MESSAGE_TYPES, createMessage } from '../utils/windowMessages';
+import DiceRoller from './DiceRoller';
+import SettingsPanel from './SettingsPanel';
 
 /**
  * BloodiedVignette - Reusable component for bloodied condition visual effect
@@ -84,8 +86,39 @@ export default function TurnOrderPanel({
   onPopout = null,         // NEW: Callback to trigger pop-out
   isPopoutWindow = false,  // NEW: Are we rendering in pop-out?
   onAction = null,         // NEW: Send actions from pop-out to main
+  // Dice Roller props
+  showDiceMenu,
+  setShowDiceMenu,
+  diceCount,
+  setDiceCount,
+  rollDice,
+  rollingDice,
+  diceRolls,
+  // Settings props
+  showSettings,
+  setShowSettings,
+  setTokenSize,
+  backgroundSize,
+  setBackgroundSize,
+  showGrid,
+  setShowGrid,
+  gridSize,
+  setGridSize,
+  darknessMode,
+  setDarknessMode,
+  heroLightRadius,
+  setHeroLightRadius,
+  companionLightRadius,
+  setCompanionLightRadius,
+  darknessIntensity,
+  setDarknessIntensity,
+  showPartyOverview,
+  setShowPartyOverview,
+  exportBattle,
+  importBattle,
 }) {
   const { updateWounds, toggleTempHP } = tokenManager || {};
+  const fileInputRef = useRef(null);
 
   // Helper function to handle actions - sends to main window if in pop-out, otherwise calls directly
   const handleAction = useCallback((type, payload, directFn) => {
@@ -133,6 +166,24 @@ export default function TurnOrderPanel({
             title="Nimble Dictionary"
           >
             <Book size={20} />
+          </button>
+          <button
+            onClick={() => setSidebarView('dice')}
+            className={`p-2 rounded flex items-center justify-center ${
+              sidebarView === 'dice' ? 'bg-blue-600' : 'bg-gray-600 hover:bg-gray-500'
+            }`}
+            title="Dice Roller"
+          >
+            <Dices size={20} />
+          </button>
+          <button
+            onClick={() => setSidebarView('settings')}
+            className={`p-2 rounded flex items-center justify-center ${
+              sidebarView === 'settings' ? 'bg-blue-600' : 'bg-gray-600 hover:bg-gray-500'
+            }`}
+            title="Settings"
+          >
+            <Settings size={20} />
           </button>
         </div>
 
@@ -778,8 +829,8 @@ export default function TurnOrderPanel({
 //====================================================================================================================
 //              ----------------------------    DICTIONARY TAB/VIEW    ----------------------------
 //====================================================================================================================
-       
-         ) : (
+
+         ) : sidebarView === 'dictionary' ? (
           <>
             {/* Dictionary View */}
             <h2 className="text-xl font-bold mb-4">Nimble Dictionary</h2>
@@ -1655,7 +1706,254 @@ export default function TurnOrderPanel({
               )}
             </div>
           </>
-        )}
+        ) : sidebarView === 'dice' ? (
+          <>
+            {/* Dice Roller View */}
+            <h2 className="text-xl font-bold mb-4">Dice Roller</h2>
+
+            <div className="text-xs text-gray-400 mb-4 italic">
+              Roll dice for your tabletop game.
+            </div>
+
+            <div className="mb-4">
+              <label className="text-sm block mb-2">Number of Dice</label>
+              <input
+                type="number"
+                min="1"
+                max="20"
+                value={diceCount}
+                onChange={(e) => setDiceCount(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
+                className="w-full bg-gray-700 px-3 py-2 rounded text-center"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => rollDice(4)}
+                className="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded font-bold"
+              >
+                d4
+              </button>
+              <button
+                onClick={() => rollDice(6)}
+                className="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded font-bold"
+              >
+                d6
+              </button>
+              <button
+                onClick={() => rollDice(8)}
+                className="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded font-bold"
+              >
+                d8
+              </button>
+              <button
+                onClick={() => rollDice(10)}
+                className="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded font-bold"
+              >
+                d10
+              </button>
+              <button
+                onClick={() => rollDice(12)}
+                className="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded font-bold"
+              >
+                d12
+              </button>
+              <button
+                onClick={() => rollDice(20)}
+                className="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded font-bold"
+              >
+                d20
+              </button>
+            </div>
+          </>
+        ) : sidebarView === 'settings' ? (
+          <>
+            {/* Settings View */}
+            <h2 className="text-xl font-bold mb-4">Settings</h2>
+
+            <div className="space-y-4">
+              {/* Token Size */}
+              <div>
+                <label className="text-sm block mb-2">Token Size</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min="32"
+                    max="128"
+                    step="4"
+                    value={tokenSize}
+                    onChange={(e) => setTokenSize(parseInt(e.target.value))}
+                    className="flex-1"
+                  />
+                  <span className="text-sm w-12 text-right">{tokenSize}px</span>
+                </div>
+              </div>
+
+              {/* Background Size */}
+              <div>
+                <label className="text-sm block mb-2">Background Size</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min="50"
+                    max="200"
+                    step="5"
+                    value={backgroundSize}
+                    onChange={(e) => setBackgroundSize(parseInt(e.target.value))}
+                    className="flex-1"
+                  />
+                  <span className="text-sm w-12 text-right">{backgroundSize}%</span>
+                </div>
+              </div>
+
+              {/* Party Overview Toggle */}
+              <div className="border-t border-gray-700 pt-4">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-bold">Show Party Overview</label>
+                  <button
+                    onClick={() => setShowPartyOverview(!showPartyOverview)}
+                    className={`px-3 py-1 rounded text-sm ${
+                      showPartyOverview ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 hover:bg-gray-500'
+                    }`}
+                  >
+                    {showPartyOverview ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Grid Settings */}
+              <div className="border-t border-gray-700 pt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-bold">Show Grid</label>
+                  <button
+                    onClick={() => setShowGrid(!showGrid)}
+                    className={`px-3 py-1 rounded text-sm ${
+                      showGrid ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 hover:bg-gray-500'
+                    }`}
+                  >
+                    {showGrid ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+                {showGrid && (
+                  <div>
+                    <label className="text-sm block mb-2">Grid Size</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="range"
+                        min="20"
+                        max="150"
+                        step="5"
+                        value={gridSize}
+                        onChange={(e) => setGridSize(parseInt(e.target.value))}
+                        className="flex-1"
+                      />
+                      <span className="text-sm w-12 text-right">{gridSize}px</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Darkness Mode Settings */}
+              <div className="border-t border-gray-700 pt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-bold">Darkness Mode</label>
+                  <button
+                    onClick={() => setDarknessMode(!darknessMode)}
+                    className={`px-3 py-1 rounded text-sm ${
+                      darknessMode ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-600 hover:bg-gray-500'
+                    }`}
+                  >
+                    {darknessMode ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+                {darknessMode && (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm block mb-2">Hero Light Radius</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="range"
+                          min="1"
+                          max="6"
+                          step="0.5"
+                          value={heroLightRadius}
+                          onChange={(e) => setHeroLightRadius(parseFloat(e.target.value))}
+                          className="flex-1"
+                        />
+                        <span className="text-sm w-12 text-right">{heroLightRadius}x</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm block mb-2">Companion Light Radius</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="range"
+                          min="1"
+                          max="6"
+                          step="0.5"
+                          value={companionLightRadius}
+                          onChange={(e) => setCompanionLightRadius(parseFloat(e.target.value))}
+                          className="flex-1"
+                        />
+                        <span className="text-sm w-12 text-right">{companionLightRadius}x</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm block mb-2">Darkness Intensity</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.05"
+                          value={darknessIntensity}
+                          onChange={(e) => setDarknessIntensity(parseFloat(e.target.value))}
+                          className="flex-1"
+                        />
+                        <span className="text-sm w-16 text-right">{Math.round(darknessIntensity * 100)}%</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Export/Import Battle */}
+              <div className="border-t border-gray-700 pt-4 space-y-2">
+                <h3 className="text-sm font-bold mb-2">Save/Load</h3>
+                <button
+                  onClick={exportBattle}
+                  className="w-full bg-green-600 hover:bg-green-700 px-3 py-2 rounded flex items-center justify-center gap-2 text-sm"
+                >
+                  Export Battle
+                </button>
+                {isPopoutWindow ? (
+                  <button
+                    onClick={importBattle}
+                    className="w-full bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded flex items-center justify-center gap-2 text-sm"
+                  >
+                    Import Battle
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded flex items-center justify-center gap-2 text-sm"
+                    >
+                      Import Battle
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".json"
+                      onChange={importBattle}
+                      className="hidden"
+                    />
+                  </>
+                )}
+              </div>
+            </div>
+          </>
+        ) : null}
       </div>
 
       <NotesPanel
