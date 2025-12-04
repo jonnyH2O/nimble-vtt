@@ -94,6 +94,8 @@ export default function TurnOrderPanel({
   rollDice,
   rollingDice,
   diceRolls,
+  showDiceInViewport,
+  setShowDiceInViewport,
   // Settings props
   showSettings,
   setShowSettings,
@@ -119,6 +121,7 @@ export default function TurnOrderPanel({
 }) {
   const { updateWounds, toggleTempHP } = tokenManager || {};
   const fileInputRef = useRef(null);
+  const [popoutDragIndex, setPopoutDragIndex] = React.useState(null);
 
   // Helper function to handle actions - sends to main window if in pop-out, otherwise calls directly
   const handleAction = useCallback((type, payload, directFn) => {
@@ -143,6 +146,34 @@ export default function TurnOrderPanel({
       () => setExpandedNotes(newExpanded)
     );
   }, [expandedNotes, handleAction, setExpandedNotes]);
+
+  // Mock turnOrderManager for pop-out window drag operations
+  const popoutTurnOrderManager = React.useMemo(() => {
+    if (!isPopoutWindow || !onAction) return null;
+
+    return {
+      handleTurnDragStart: (index) => {
+        setPopoutDragIndex(index);
+      },
+      handleTurnDragOver: (e, index) => {
+        e.preventDefault();
+        if (popoutDragIndex !== null && popoutDragIndex !== index) {
+          const newOrder = [...turnOrder];
+          const draggedId = newOrder[popoutDragIndex];
+          newOrder.splice(popoutDragIndex, 1);
+          newOrder.splice(index, 0, draggedId);
+          onAction(createMessage(MESSAGE_TYPES.TURN_ORDER_UPDATE, { turnOrder: newOrder }));
+          setPopoutDragIndex(index);
+        }
+      },
+      handleTurnDragEnd: () => {
+        setPopoutDragIndex(null);
+      }
+    };
+  }, [isPopoutWindow, onAction, popoutDragIndex, turnOrder]);
+
+  // Use either the real turnOrderManager or the popout mock
+  const activeTurnOrderManager = turnOrderManager || popoutTurnOrderManager;
 
   return (
     <div className="bg-gray-800 border-l border-gray-700 flex flex-col" style={{ width: `${SIDEBAR_WIDTH}px` }}>
@@ -256,10 +287,11 @@ export default function TurnOrderPanel({
                       </div>
                     )}
                     <div
-                      draggable={!deleteMode && !isLegendaryEcho && !expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`] && turnOrderManager}
-                      onDragStart={turnOrderManager ? () => !isLegendaryEcho && turnOrderManager.handleTurnDragStart(actualIndex) : undefined}
-                      onDragOver={turnOrderManager ? (e) => !isLegendaryEcho && turnOrderManager.handleTurnDragOver(e, actualIndex) : undefined}
-                      onDragEnd={turnOrderManager ? turnOrderManager.handleTurnDragEnd : undefined}
+                      draggable={!deleteMode && !isLegendaryEcho && !expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`] && !!activeTurnOrderManager}
+                      onDragStart={activeTurnOrderManager ? () => !isLegendaryEcho && activeTurnOrderManager.handleTurnDragStart(actualIndex) : undefined}
+                      onDragOver={activeTurnOrderManager ? (e) => !isLegendaryEcho && activeTurnOrderManager.handleTurnDragOver(e, actualIndex) : undefined}
+                      onDrop={activeTurnOrderManager ? (e) => { e.preventDefault(); } : undefined}
+                      onDragEnd={activeTurnOrderManager ? activeTurnOrderManager.handleTurnDragEnd : undefined}
                       onClick={() => {
                         if (deleteMode && !isLegendaryEcho) {
                           handleRemoveToken(item.id);
@@ -268,8 +300,10 @@ export default function TurnOrderPanel({
                         }
                       }}
                       className={`bg-gray-700 p-3 rounded ${
+                        !deleteMode && !isLegendaryEcho && !expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`] && activeTurnOrderManager ? 'select-none' : ''
+                      } ${
                         deleteMode && !isLegendaryEcho ? 'cursor-pointer hover:bg-red-900' :
-                        !isLegendaryEcho && !expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`] ? 'cursor-move' : ''
+                        !isLegendaryEcho && !expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`] && activeTurnOrderManager ? 'cursor-move' : ''
                       } ${selectedToken === item.id && !isLegendaryEcho ? 'ring-2 ring-orange-500' : ''} ${
                         isLegendaryEcho ? 'opacity-75 ml-4' : ''
                       } ${isMainLegendary ? 'border-2 border-purple-500' : ''}`}
@@ -825,11 +859,6 @@ export default function TurnOrderPanel({
               )}
             </div>
           </>
-
-//====================================================================================================================
-//              ----------------------------    DICTIONARY TAB/VIEW    ----------------------------
-//====================================================================================================================
-
          ) : sidebarView === 'dictionary' ? (
           <>
             {/* Dictionary View */}
@@ -1727,7 +1756,7 @@ export default function TurnOrderPanel({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 mb-4">
               <button
                 onClick={() => rollDice(4)}
                 className="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded font-bold"
@@ -1764,6 +1793,69 @@ export default function TurnOrderPanel({
               >
                 d20
               </button>
+            </div>
+
+            {/* Show in Viewport Toggle */}
+            <div className="mb-4 flex items-center gap-2 p-3 bg-gray-800 rounded">
+              <input
+                type="checkbox"
+                id="showDiceInViewport"
+                checked={showDiceInViewport}
+                onChange={(e) => {
+                  if (isPopoutWindow) {
+                    onAction(createMessage(MESSAGE_TYPES.SETTINGS_UPDATE, { showDiceInViewport: e.target.checked }));
+                  } else {
+                    setShowDiceInViewport(e.target.checked);
+                  }
+                }}
+                className="w-4 h-4"
+              />
+              <label htmlFor="showDiceInViewport" className="text-sm cursor-pointer">
+                Show in Viewport
+              </label>
+            </div>
+
+            {/* Dice Roll Results */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-bold">Recent Rolls</h3>
+              {rollingDice.length === 0 && diceRolls.length === 0 ? (
+                <div className="text-xs text-gray-400 italic p-4 text-center">
+                  No recent rolls
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {[...rollingDice.map(r => ({ ...r, type: 'rolling' })), ...diceRolls.map(r => ({ ...r, type: 'result' }))]
+                    .sort((a, b) => b.id - a.id)
+                    .map((item) =>
+                      item.type === 'rolling' ? (
+                        <div
+                          key={`rolling-${item.id}`}
+                          className="bg-purple-600 text-white px-4 py-3 rounded shadow border-2 border-purple-400"
+                        >
+                          <div className="text-center">
+                            <div className="text-2xl">🎲</div>
+                            <div className="text-xs mt-1">Rolling...</div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div
+                          key={`result-${item.id}`}
+                          className="bg-green-600 text-white px-4 py-3 rounded shadow border-2 border-green-400"
+                        >
+                          <div className="text-center">
+                            <div className="text-xs font-bold mb-1">{item.dice}</div>
+                            <div className="text-2xl font-bold">{item.total}</div>
+                            {item.rolls.length > 1 && (
+                              <div className="text-xs mt-1 opacity-80">
+                                [{item.rolls.join(', ')}]
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    )}
+                </div>
+              )}
             </div>
           </>
         ) : sidebarView === 'settings' ? (

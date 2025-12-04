@@ -96,6 +96,7 @@ export default function NimbleCombatTracker() {
   const [companionLightRadius, setCompanionLightRadius] = useState(2); // Multiplier of token size
   const [darknessIntensity, setDarknessIntensity] = useState(0.95); // 0-1, how dark the shadows are
   const [showPartyOverview, setShowPartyOverview] = useState(true);
+  const [showDiceInViewport, setShowDiceInViewport] = useState(true); // Whether to show dice animations in viewport
 
   // Pop-out window state
   const [isPopoutMode, setIsPopoutMode] = useState(false);
@@ -507,6 +508,9 @@ export default function NimbleCombatTracker() {
         minorConditions: CONDITION_CATEGORIES.MINOR,
         // Dice state
         diceCount,
+        showDiceInViewport,
+        rollingDice,
+        diceRolls,
         // Settings state
         backgroundSize,
         showGrid,
@@ -532,6 +536,9 @@ export default function NimbleCombatTracker() {
     deleteMode,
     windowSync,
     diceCount,
+    showDiceInViewport,
+    rollingDice,
+    diceRolls,
     backgroundSize,
     showGrid,
     gridSize,
@@ -539,7 +546,8 @@ export default function NimbleCombatTracker() {
     heroLightRadius,
     companionLightRadius,
     darknessIntensity,
-    showPartyOverview
+    showPartyOverview,
+    tokenSize,
   ]);
 
   // Listen for actions from pop-out window
@@ -626,6 +634,7 @@ export default function NimbleCombatTracker() {
           if (payload.companionLightRadius !== undefined) setCompanionLightRadius(payload.companionLightRadius);
           if (payload.darknessIntensity !== undefined) setDarknessIntensity(payload.darknessIntensity);
           if (payload.showPartyOverview !== undefined) setShowPartyOverview(payload.showPartyOverview);
+          if (payload.showDiceInViewport !== undefined) setShowDiceInViewport(payload.showDiceInViewport);
           break;
         case MESSAGE_TYPES.EXPORT_BATTLE:
           exportBattle();
@@ -677,6 +686,7 @@ export default function NimbleCombatTracker() {
     setCompanionLightRadius,
     setDarknessIntensity,
     setShowPartyOverview,
+    setShowDiceInViewport,
     exportBattle,
     importBattle,
   ]);
@@ -1149,17 +1159,19 @@ export default function NimbleCombatTracker() {
           </div>
         </div>
 
-        {/* Dice Roller - Floating Animations Only */}
-        <DiceRoller
-          showDiceMenu={false}
-          setShowDiceMenu={() => {}}
-          diceCount={diceCount}
-          setDiceCount={setDiceCount}
-          rollDice={rollDice}
-          rollingDice={rollingDice}
-          diceRolls={diceRolls}
-          hideButton={true}
-        />
+        {/* Dice Roller - Floating Animations Only (if enabled) */}
+        {showDiceInViewport && (
+          <DiceRoller
+            showDiceMenu={false}
+            setShowDiceMenu={() => {}}
+            diceCount={diceCount}
+            setDiceCount={setDiceCount}
+            rollDice={rollDice}
+            rollingDice={rollingDice}
+            diceRolls={diceRolls}
+            hideButton={true}
+          />
+        )}
 
         {!isPopoutMode && (
           <TurnOrderPanel
@@ -1197,6 +1209,8 @@ export default function NimbleCombatTracker() {
             rollDice={rollDice}
             rollingDice={rollingDice}
             diceRolls={diceRolls}
+            showDiceInViewport={showDiceInViewport}
+            setShowDiceInViewport={setShowDiceInViewport}
             // Settings props
             showSettings={showSettings}
             setShowSettings={setShowSettings}

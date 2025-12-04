@@ -122,8 +122,10 @@ export default function PopoutWindow() {
         diceCount={syncedState.diceCount || 1}
         setDiceCount={(count) => sendAction(createMessage(MESSAGE_TYPES.DICE_COUNT_UPDATE, { count }))}
         rollDice={(diceType) => sendAction(createMessage(MESSAGE_TYPES.DICE_ROLL, { diceType }))}
-        rollingDice={[]}
-        diceRolls={[]}
+        rollingDice={syncedState.rollingDice || []}
+        diceRolls={syncedState.diceRolls || []}
+        showDiceInViewport={syncedState.showDiceInViewport !== undefined ? syncedState.showDiceInViewport : true}
+        setShowDiceInViewport={(showDiceInViewport) => sendAction(createMessage(MESSAGE_TYPES.SETTINGS_UPDATE, { showDiceInViewport }))}
         // Settings props - send to main window
         showSettings={false}
         setShowSettings={() => {}}
