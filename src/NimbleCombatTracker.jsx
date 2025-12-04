@@ -76,6 +76,7 @@ export default function NimbleCombatTracker() {
   // Token Dragging State
   const [dragging, setDragging] = useState(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [ghostTokenPosition, setGhostTokenPosition] = useState(null); // { x, y, tokenId, distanceMoved }
 
   // Add Token Dialog State
   const [showAddToken, setShowAddToken] = useState(false);
@@ -242,6 +243,13 @@ export default function NimbleCombatTracker() {
         x: cursorX - token.x,
         y: cursorY - token.y
       });
+      // Store the original position for the ghost token
+      setGhostTokenPosition({
+        x: token.x,
+        y: token.y,
+        tokenId: tokenId,
+        distanceMoved: 0
+      });
     }
 
     setDragging(tokenId);
@@ -323,6 +331,17 @@ export default function NimbleCombatTracker() {
       const x = cursorX - dragOffset.x;
       const y = cursorY - dragOffset.y;
       tokenManager.updateTokenPosition(dragging, x, y);
+
+      // Calculate distance moved from original position for ghost token fade-in
+      if (ghostTokenPosition && ghostTokenPosition.tokenId === dragging) {
+        const dx = x - ghostTokenPosition.x;
+        const dy = y - ghostTokenPosition.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        setGhostTokenPosition(prev => ({
+          ...prev,
+          distanceMoved: distance
+        }));
+      }
     }
 
     // Handle drawing
@@ -333,6 +352,7 @@ export default function NimbleCombatTracker() {
     drawingManager.handleDrawEnd();
     setDragging(null);
     setDragOffset({ x: 0, y: 0 });
+    setGhostTokenPosition(null);
     setPanningView(false);
   };
 
@@ -341,6 +361,7 @@ export default function NimbleCombatTracker() {
     drawingManager.clearCursorPos();
     setDragging(null);
     setDragOffset({ x: 0, y: 0 });
+    setGhostTokenPosition(null);
     setPanningView(false);
   };
 
@@ -998,7 +1019,74 @@ export default function NimbleCombatTracker() {
                   })}
                 </div>
               )}
-              
+
+              {/* Ghost Token - shows where drag started */}
+              {ghostTokenPosition && (() => {
+                const ghostToken = tokens.find(t => t.id === ghostTokenPosition.tokenId);
+                if (!ghostToken) return null;
+
+                const currentTokenSize = ghostToken.customSize || tokenSize;
+                const FADE_THRESHOLD = 200; // pixels to move before ghost fades in
+                const opacity = Math.min(ghostTokenPosition.distanceMoved / FADE_THRESHOLD, 1) * 0.5; // Max opacity 0.5
+
+                if (opacity < 0.01) return null; // Don't render if barely visible
+
+                return (
+                  <div
+                    key={`ghost-${ghostToken.id}`}
+                    className="absolute pointer-events-none"
+                    style={{
+                      left: ghostTokenPosition.x,
+                      top: ghostTokenPosition.y,
+                      opacity: opacity,
+                      transition: 'opacity 0.15s ease-out'
+                    }}
+                  >
+                    <div className="relative">
+                      {ghostToken.image ? (
+                        <div className="relative">
+                          <div
+                            className={`rounded-full ${getTokenBorderColor(ghostToken.type)} relative`}
+                            style={{
+                              width: `${currentTokenSize}px`,
+                              height: `${currentTokenSize}px`,
+                              borderWidth: `${Math.max(2, Math.round(currentTokenSize / 16))}px`,
+                              borderStyle: 'solid',
+                              zIndex: 0
+                            }}
+                          >
+                            <img
+                              src={ghostToken.image}
+                              alt={ghostToken.name}
+                              className="rounded-full object-cover w-full h-full"
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          <div
+                            className={`rounded-full ${getTokenBorderColor(ghostToken.type)} relative`}
+                            style={{
+                              width: `${currentTokenSize}px`,
+                              height: `${currentTokenSize}px`,
+                              borderWidth: `${Math.max(2, Math.round(currentTokenSize / 16))}px`,
+                              borderStyle: 'solid',
+                              zIndex: 0
+                            }}
+                          >
+                            <div
+                              className={`rounded-full flex items-center justify-center w-full h-full ${getTokenBgColor(ghostToken.type)}`}
+                            >
+                              {getTokenIcon(ghostToken.type)}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {tokens.map((token) => {
                 const currentTokenSize = token.customSize || tokenSize;
 
