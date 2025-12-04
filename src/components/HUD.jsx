@@ -77,10 +77,11 @@ export function HUDDisplay({ selectedToken, tokens, HUD_Z_INDEX }) {
             )}
           </div>
 
-          {/* Health Bar */}
-          <div className="mb-1 relative">
-            {/* Temp HP "bubble" highlight */}
-            {token.tempHP > 0 && (
+          {/* Health Bar - always show for heroes/companions, conditional for enemies/legendary */}
+          {(token.type === 'hero' || token.type === 'companion' || token.showHealthInViewport) && (
+            <div className="mb-1 relative">
+              {/* Temp HP "bubble" highlight */}
+              {token.tempHP > 0 && (
                 <div
                   className="absolute rounded-full animate-pulse"
                   style={{
@@ -127,10 +128,11 @@ export function HUDDisplay({ selectedToken, tokens, HUD_Z_INDEX }) {
                   </span>
                 </div>
               </div>
-          </div>
+            </div>
+          )}
 
-          {/* Resource Bar */}
-          {token.hasResource && (
+          {/* Resource Bar - always show for heroes/companions, conditional for enemies/legendary */}
+          {(token.type === 'hero' || token.type === 'companion' || token.showHealthInViewport) && token.hasResource && (
             <div className="mb-1">
               <div
                 className="relative rounded-full overflow-hidden"

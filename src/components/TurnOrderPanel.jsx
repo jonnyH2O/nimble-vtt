@@ -610,9 +610,29 @@ export default function TurnOrderPanel({
                           </div>
                         )}
 
-                        {/* Temp HP toggle for non-hero/companion tokens (and main legendary) */}
+                        {/* Temp HP toggle and Health Viewport toggle for non-hero/companion tokens (and main legendary) */}
                         {((token.type !== 'legendary' || isMainLegendary) && token.type !== 'hero' && token.type !== 'companion') && (
-                          <div className="flex items-center justify-end mb-2">
+                          <div className="flex items-center justify-between mb-2 gap-2">
+                            {/* Show Health In Viewport toggle for enemy/legendary */}
+                            {(token.type === 'enemy' || (token.type === 'legendary' && isMainLegendary)) && (
+                              <button
+                                onClick={() => {
+                                  handleAction(
+                                    MESSAGE_TYPES.HEALTH_IN_VIEWPORT_TOGGLE,
+                                    { tokenId: item.id },
+                                    () => tokenManager.toggleHealthInViewport(item.id)
+                                  );
+                                }}
+                                className={`py-1 px-2 rounded text-xs flex items-center gap-1 ${
+                                  token.showHealthInViewport
+                                    ? 'bg-green-600 hover:bg-green-700'
+                                    : 'bg-gray-600 hover:bg-gray-500'
+                                }`}
+                                title={token.showHealthInViewport ? 'Health visible in viewport' : 'Health hidden in viewport'}
+                              >
+                                Show Health 👁️
+                              </button>
+                            )}
                             <button
                               onClick={() => {
                                 handleAction(

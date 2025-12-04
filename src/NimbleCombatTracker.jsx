@@ -606,6 +606,9 @@ export default function NimbleCombatTracker() {
         case MESSAGE_TYPES.TEMP_HP_TOGGLE:
           tokenManager.toggleTempHP(payload.tokenId);
           break;
+        case MESSAGE_TYPES.HEALTH_IN_VIEWPORT_TOGGLE:
+          tokenManager.toggleHealthInViewport(payload.tokenId);
+          break;
         case MESSAGE_TYPES.TOKEN_SIZE_UPDATE:
           tokenManager.updateTokenSize(payload.tokenId, payload.size);
           break;

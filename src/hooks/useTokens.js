@@ -175,6 +175,13 @@ function tokensReducer(state, action) {
       );
     }
 
+    case 'TOGGLE_HEALTH_IN_VIEWPORT': {
+      const { tokenId } = action.payload;
+      return state.map(t =>
+        t.id === tokenId ? { ...t, showHealthInViewport: !t.showHealthInViewport } : t
+      );
+    }
+
     case 'SET_ALL_TOKENS':
       return action.payload;
 
@@ -220,7 +227,8 @@ export function useTokens(tokenSize) {
       resourceName: tokenData.resourceName || '',
       resourceColor: tokenData.resourceColor || '#3b82f6',
       currentResource: tokenData.currentResource || 0,
-      maxResource: tokenData.maxResource || 0
+      maxResource: tokenData.maxResource || 0,
+      showHealthInViewport: tokenData.type === 'hero' || tokenData.type === 'companion' // Off by default for enemy/legendary
     };
     dispatchTokens({ type: 'ADD_TOKEN', payload: token });
     return token.id;
@@ -295,6 +303,10 @@ export function useTokens(tokenSize) {
     dispatchTokens({ type: 'SET_ALL_TOKENS', payload: newTokens });
   }, []);
 
+  const toggleHealthInViewport = useCallback((tokenId) => {
+    dispatchTokens({ type: 'TOGGLE_HEALTH_IN_VIEWPORT', payload: { tokenId } });
+  }, []);
+
   return {
     tokens,
     selectedToken,
@@ -316,6 +328,7 @@ export function useTokens(tokenSize) {
     resetNonHeroActions,
     updateTokenPosition,
     updateTokenResource,
-    setAllTokens
+    setAllTokens,
+    toggleHealthInViewport
   };
 }
