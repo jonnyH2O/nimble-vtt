@@ -486,6 +486,22 @@ export default function NimbleCombatTracker() {
         setShiftHeld(true);
       }
 
+      // Ignore shortcuts if user is typing in an input or textarea
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      // Drawing Tools Shortcuts
+      if (e.key === 'v' || e.key === 'V') {
+        setDrawMode('select');
+      }
+      if (e.key === 'd' || e.key === 'D') {
+        setDrawMode('draw');
+      }
+      if (e.key === 'e' || e.key === 'E') {
+        setDrawMode('erase');
+      }
+
       // Clear conditions: Shift+C when a token is selected
       if (e.shiftKey && (e.key === 'c' || e.key === 'C') && selectedToken) {
         e.preventDefault();

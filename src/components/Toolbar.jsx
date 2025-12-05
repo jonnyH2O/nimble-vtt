@@ -1,5 +1,6 @@
 import React from 'react';
 import { MousePointer, Pencil, Eraser, Undo2, Redo2, Trash2 } from 'lucide-react';
+import Tooltip from './Tooltip';
 import ColorPicker from './ColorPicker';
 
 /**
@@ -50,32 +51,35 @@ export default function Toolbar({
       <div className="h-8 w-px bg-button-muted"></div>
 
       {/* Mode Selection Buttons */}
-      <button
-        onClick={() => setDrawMode('select')}
+      <Tooltip text="Select Tool" shortcut="V">
+        <button
+          onClick={() => setDrawMode('select')}
         className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${drawMode === 'select' ? 'bg-primary' : 'bg-tertiary hover:bg-tertiary-hover'
-          }`}
-      >
-        <MousePointer size={16} />
-        Select
-      </button>
+            }`}
+        >
+          <MousePointer size={16} />
+        </button>
+      </Tooltip>
 
-      <button
-        onClick={() => setDrawMode('draw')}
+      <Tooltip text="Draw Tool" shortcut="D">
+        <button
+          onClick={() => setDrawMode('draw')}
         className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${drawMode === 'draw' ? 'bg-primary' : 'bg-tertiary hover:bg-tertiary-hover'
-          }`}
-      >
-        <Pencil size={16} />
-        Draw
-      </button>
+            }`}
+        >
+          <Pencil size={16} />
+        </button>
+      </Tooltip>
 
-      <button
-        onClick={() => setDrawMode('erase')}
+      <Tooltip text="Erase Tool" shortcut="E">
+        <button
+          onClick={() => setDrawMode('erase')}
         className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${drawMode === 'erase' ? 'bg-primary' : 'bg-tertiary hover:bg-tertiary-hover'
-          }`}
-      >
-        <Eraser size={16} />
-        Erase
-      </button>
+            }`}
+        >
+          <Eraser size={16} />
+        </button>
+      </Tooltip>
 
       {/* Separator for draw/erase controls */}
       {drawMode !== 'select' && <div className="h-8 w-px bg-button-muted"></div>}
