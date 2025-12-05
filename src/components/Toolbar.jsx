@@ -1,5 +1,6 @@
 import React from 'react';
 import { MousePointer, Pencil, Eraser, Undo2, Redo2, Trash2 } from 'lucide-react';
+import ColorPicker from './ColorPicker';
 
 /**
  * Toolbar Component
@@ -51,9 +52,8 @@ export default function Toolbar({
       {/* Mode Selection Buttons */}
       <button
         onClick={() => setDrawMode('select')}
-        className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${
-          drawMode === 'select' ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'
-        }`}
+        className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${drawMode === 'select' ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'
+          }`}
       >
         <MousePointer size={16} />
         Select
@@ -61,9 +61,8 @@ export default function Toolbar({
 
       <button
         onClick={() => setDrawMode('draw')}
-        className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${
-          drawMode === 'draw' ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'
-        }`}
+        className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${drawMode === 'draw' ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'
+          }`}
       >
         <Pencil size={16} />
         Draw
@@ -71,9 +70,8 @@ export default function Toolbar({
 
       <button
         onClick={() => setDrawMode('erase')}
-        className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${
-          drawMode === 'erase' ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'
-        }`}
+        className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${drawMode === 'erase' ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'
+          }`}
       >
         <Eraser size={16} />
         Erase
@@ -84,11 +82,9 @@ export default function Toolbar({
 
       {/* Color Picker (draw mode only) */}
       {drawMode === 'draw' && (
-        <input
-          type="color"
-          value={drawColor}
-          onChange={(e) => setDrawColor(e.target.value)}
-          className="w-8 h-8 rounded cursor-pointer"
+        <ColorPicker
+          color={drawColor}
+          onChange={setDrawColor}
         />
       )}
 
@@ -111,11 +107,10 @@ export default function Toolbar({
           <button
             onClick={undo}
             disabled={historyStep <= 0}
-            className={`px-2 py-1.5 rounded flex items-center gap-1 text-sm ${
-              historyStep <= 0
-                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                : 'bg-gray-700 hover:bg-gray-600'
-            }`}
+            className={`px-2 py-1.5 rounded flex items-center gap-1 text-sm ${historyStep <= 0
+              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              : 'bg-gray-700 hover:bg-gray-600'
+              }`}
             title="Undo (Ctrl+Z)"
           >
             <Undo2 size={16} />
@@ -125,11 +120,10 @@ export default function Toolbar({
           <button
             onClick={redo}
             disabled={historyStep >= drawingHistory.length - 1}
-            className={`px-2 py-1.5 rounded flex items-center gap-1 text-sm ${
-              historyStep >= drawingHistory.length - 1
-                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                : 'bg-gray-700 hover:bg-gray-600'
-            }`}
+            className={`px-2 py-1.5 rounded flex items-center gap-1 text-sm ${historyStep >= drawingHistory.length - 1
+              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              : 'bg-gray-700 hover:bg-gray-600'
+              }`}
             title="Redo (Ctrl+Shift+Z)"
           >
             <Redo2 size={16} />
