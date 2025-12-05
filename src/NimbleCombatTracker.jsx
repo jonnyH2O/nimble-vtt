@@ -367,7 +367,7 @@ export default function NimbleCombatTracker() {
 
   const exportBattle = () => {
     const drawingData = drawingManager.getDrawingData();
-    
+
     const battleState = {
       version: '1.2',
       tokens: tokens, // This already includes conditions as they're part of token objects
@@ -386,10 +386,10 @@ export default function NimbleCombatTracker() {
       darknessIntensity: darknessIntensity,
       exportedAt: new Date().toISOString()
     };
-    
+
     const dataStr = JSON.stringify(battleState, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    
+
     // Create a temporary link and trigger download
     const link = document.createElement('a');
     link.href = URL.createObjectURL(dataBlob);
@@ -397,7 +397,7 @@ export default function NimbleCombatTracker() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     // Clean up the URL object
     setTimeout(() => URL.revokeObjectURL(link.href), 100);
   };
@@ -405,12 +405,12 @@ export default function NimbleCombatTracker() {
   const importBattle = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
         const battleState = JSON.parse(event.target.result);
-        
+
         // Restore all state (conditions are included in tokens)
         if (battleState.tokens) tokenManager.setAllTokens(battleState.tokens);
         if (battleState.turnOrder) turnOrderManager.setAllTurnOrder(battleState.turnOrder);
@@ -428,12 +428,12 @@ export default function NimbleCombatTracker() {
         if (battleState.heroLightRadius !== undefined) setHeroLightRadius(battleState.heroLightRadius);
         if (battleState.companionLightRadius !== undefined) setCompanionLightRadius(battleState.companionLightRadius);
         if (battleState.darknessIntensity !== undefined) setDarknessIntensity(battleState.darknessIntensity);
-        
+
         // Restore drawings
         if (battleState.drawings) {
           drawingManager.loadDrawing(battleState.drawings);
         }
-        
+
         setShowSettings(false);
       } catch (error) {
         console.error('Error importing battle:', error);
@@ -473,6 +473,22 @@ export default function NimbleCombatTracker() {
     const handleKeyDown = (e) => {
       if (e.key === 'Shift') {
         setShiftHeld(true);
+      }
+
+      // Ignore shortcuts if user is typing in an input or textarea
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      // Drawing Tools Shortcuts
+      if (e.key === 'v' || e.key === 'V') {
+        setDrawMode('select');
+      }
+      if (e.key === 'd' || e.key === 'D') {
+        setDrawMode('draw');
+      }
+      if (e.key === 'e' || e.key === 'E') {
+        setDrawMode('erase');
       }
 
       // Clear conditions: Shift+C when a token is selected
@@ -732,7 +748,7 @@ export default function NimbleCombatTracker() {
   // Helper to get icon component from icon name
   const getTokenIcon = (type) => {
     const iconName = getTokenIconName(type);
-    switch(iconName) {
+    switch (iconName) {
       case 'Users': return <Users size={20} />;
       case 'Swords': return <Swords size={20} />;
       case 'Heart': return <Heart size={20} />;
@@ -747,15 +763,15 @@ export default function NimbleCombatTracker() {
         <div className="flex gap-3 items-center flex-wrap justify-between">
           <div className="flex gap-3 items-center flex-wrap">
             <h1 className="text-xl font-bold">Nimble Combat Tracker</h1>
-            
+
             <div className="h-8 w-px bg-gray-600"></div>
-            
+
             <label className="bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded cursor-pointer flex items-center gap-2 text-sm">
               <Upload size={16} />
               Background
               <input type="file" accept="image/*" onChange={handleBackgroundUpload} className="hidden" />
             </label>
-            
+
             <button
               onClick={() => setShowAddToken(!showAddToken)}
               className="bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded flex items-center gap-2 text-sm"
@@ -763,11 +779,11 @@ export default function NimbleCombatTracker() {
               <Plus size={16} />
               Add Token
             </button>
-            
+
             {showAddToken && (
               <div className="absolute left-0 top-12 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-lg z-[100] w-80">
                 <h3 className="text-sm font-bold mb-3">Add New Token</h3>
-                
+
                 <div className="space-y-3">
                   <div>
                     <label className="block text-xs mb-1">Name</label>
@@ -779,7 +795,7 @@ export default function NimbleCombatTracker() {
                       placeholder="Token name"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-xs mb-1">Type</label>
                     <select
@@ -793,7 +809,7 @@ export default function NimbleCombatTracker() {
                       <option value="legendary">Legendary</option>
                     </select>
                   </div>
-                  
+
                   <div>
                     <label className="block text-xs mb-1">Image (Optional)</label>
                     <label className="w-full bg-purple-600 hover:bg-purple-700 px-3 py-2 rounded cursor-pointer text-sm flex items-center justify-center gap-2">
@@ -894,9 +910,8 @@ export default function NimbleCombatTracker() {
         <div className="flex-1 p-4 overflow-hidden">
           <div
             ref={boardRef}
-            className={`relative bg-gray-700 rounded w-full h-full min-h-[600px] overflow-hidden ${
-              drawMode === 'select' ? 'cursor-grab active:cursor-grabbing' : ''
-            }`}
+            className={`relative bg-gray-700 rounded w-full h-full min-h-[600px] overflow-hidden ${drawMode === 'select' ? 'cursor-grab active:cursor-grabbing' : ''
+              }`}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseLeave}
@@ -926,7 +941,7 @@ export default function NimbleCombatTracker() {
                   }}
                 />
               )}
-              
+
               <canvas
                 ref={drawCanvasRef}
                 className={`absolute ${drawMode === 'select' ? 'pointer-events-none' : 'cursor-crosshair'}`}
@@ -939,7 +954,7 @@ export default function NimbleCombatTracker() {
                 <svg className="absolute inset-0 pointer-events-none" style={{ width: '100%', height: '100%' }}>
                   <defs>
                     <pattern id="grid" width={gridSize} height={gridSize} patternUnits="userSpaceOnUse">
-                      <path d={`M ${gridSize} 0 L 0 0 0 ${gridSize}`} fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1"/>
+                      <path d={`M ${gridSize} 0 L 0 0 0 ${gridSize}`} fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
                     </pattern>
                   </defs>
                   <rect width="100%" height="100%" fill="url(#grid)" />
@@ -1098,125 +1113,125 @@ export default function NimbleCombatTracker() {
                 const shouldShowToken = !isInDarkness || (tokenVisibility[token.id] ?? true);
 
                 return (
-                <div
-                  key={token.id}
-                  className={`absolute ${drawMode === 'select' ? 'cursor-move' : 'pointer-events-none'}`}
-                  style={{ left: token.x, top: token.y }}
-                  onMouseDown={(e) => handleMouseDown(e, token.id)}
-                >
-                  <TokenEffects token={token} context="token">
-                    <div className="relative">
-                      {token.image ? (
-                        <div className="relative">
-                          <div
-                            className={`rounded-full ${getTokenBorderColor(token.type)} relative`}
-                            style={{
-                              width: `${currentTokenSize}px`,
-                              height: `${currentTokenSize}px`,
-                              borderWidth: `${Math.max(2, Math.round(currentTokenSize / 16))}px`,
-                              borderStyle: 'solid',
-                              opacity: !shouldShowToken ? 0 : 1,
-                              zIndex: 1,
-                              ...(selectedToken === token.id ? {
-                                boxShadow: '0 0 0 2px rgba(249, 115, 22, 0.7)'
-                              } : {})
-                            }}
-                          >
-                            <img
-                              src={token.image}
-                              alt={token.name}
-                              className="rounded-full object-cover w-full h-full"
-                            />
-                            <TokenEffectOverlay token={token} context="token" />
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="relative">
-                          <div
-                            className={`rounded-full ${getTokenBorderColor(token.type)} relative`}
-                            style={{
-                              width: `${currentTokenSize}px`,
-                              height: `${currentTokenSize}px`,
-                              borderWidth: `${Math.max(2, Math.round(currentTokenSize / 16))}px`,
-                              borderStyle: 'solid',
-                              opacity: !shouldShowToken ? 0 : 1,
-                              zIndex: 1,
-                              ...(selectedToken === token.id ? {
-                                boxShadow: '0 0 0 2px rgba(249, 115, 22, 0.7)'
-                              } : {})
-                            }}
-                          >
+                  <div
+                    key={token.id}
+                    className={`absolute ${drawMode === 'select' ? 'cursor-move' : 'pointer-events-none'}`}
+                    style={{ left: token.x, top: token.y }}
+                    onMouseDown={(e) => handleMouseDown(e, token.id)}
+                  >
+                    <TokenEffects token={token} context="token">
+                      <div className="relative">
+                        {token.image ? (
+                          <div className="relative">
                             <div
-                              className={`rounded-full flex items-center justify-center w-full h-full ${getTokenBgColor(token.type)}`}
+                              className={`rounded-full ${getTokenBorderColor(token.type)} relative`}
+                              style={{
+                                width: `${currentTokenSize}px`,
+                                height: `${currentTokenSize}px`,
+                                borderWidth: `${Math.max(2, Math.round(currentTokenSize / 16))}px`,
+                                borderStyle: 'solid',
+                                opacity: !shouldShowToken ? 0 : 1,
+                                zIndex: 1,
+                                ...(selectedToken === token.id ? {
+                                  boxShadow: '0 0 0 2px rgba(249, 115, 22, 0.7)'
+                                } : {})
+                              }}
                             >
-                              {getTokenIcon(token.type)}
+                              <img
+                                src={token.image}
+                                alt={token.name}
+                                className="rounded-full object-cover w-full h-full"
+                              />
+                              <TokenEffectOverlay token={token} context="token" />
                             </div>
-                            <TokenEffectOverlay token={token} context="token" />
                           </div>
-                        </div>
-                      )}
-
-                      {/* Shift-hover info popup */}
-                      {shiftHeld && selectedToken === token.id && (token.notes || (token.conditions && token.conditions.length > 0)) && (
-                        <div
-                          className="absolute left-1/2 transform -translate-x-1/2 bg-gray-900 border-2 border-gray-600 rounded-lg p-3 shadow-xl z-50 min-w-[200px] max-w-[300px]"
-                          style={{
-                            bottom: `${currentTokenSize + 10}px`
-                          }}
-                        >
-                          {token.conditions && token.conditions.length > 0 && (
-                            <div className="mb-2">
-                              <div className="text-xs font-bold text-gray-300 mb-2">Conditions:</div>
-
-                              {/* Doomed Conditions */}
-                              {token.conditions.some(c => doomedConditions.includes(c)) && (
-                                <div className="mb-2">
-                                  <div className="text-xs font-bold text-red-400 mb-1">Doomed</div>
-                                  <div className="flex flex-wrap gap-1">
-                                    {token.conditions.filter(c => doomedConditions.includes(c)).map(c => (
-                                      <span key={c} className="text-xs bg-red-600 px-2 py-0.5 rounded">{c}</span>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Major Conditions */}
-                              {token.conditions.some(c => majorConditions.includes(c)) && (
-                                <div className="mb-2">
-                                  <div className="text-xs font-bold text-orange-400 mb-1">Major</div>
-                                  <div className="flex flex-wrap gap-1">
-                                    {token.conditions.filter(c => majorConditions.includes(c)).map(c => (
-                                      <span key={c} className="text-xs bg-orange-600 px-2 py-0.5 rounded">{c}</span>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Minor Conditions */}
-                              {token.conditions.some(c => minorConditions.includes(c)) && (
-                                <div className="mb-2">
-                                  <div className="text-xs font-bold text-yellow-400 mb-1">Minor</div>
-                                  <div className="flex flex-wrap gap-1">
-                                    {token.conditions.filter(c => minorConditions.includes(c)).map(c => (
-                                      <span key={c} className="text-xs bg-yellow-600 px-2 py-0.5 rounded">{c}</span>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
+                        ) : (
+                          <div className="relative">
+                            <div
+                              className={`rounded-full ${getTokenBorderColor(token.type)} relative`}
+                              style={{
+                                width: `${currentTokenSize}px`,
+                                height: `${currentTokenSize}px`,
+                                borderWidth: `${Math.max(2, Math.round(currentTokenSize / 16))}px`,
+                                borderStyle: 'solid',
+                                opacity: !shouldShowToken ? 0 : 1,
+                                zIndex: 1,
+                                ...(selectedToken === token.id ? {
+                                  boxShadow: '0 0 0 2px rgba(249, 115, 22, 0.7)'
+                                } : {})
+                              }}
+                            >
+                              <div
+                                className={`rounded-full flex items-center justify-center w-full h-full ${getTokenBgColor(token.type)}`}
+                              >
+                                {getTokenIcon(token.type)}
+                              </div>
+                              <TokenEffectOverlay token={token} context="token" />
                             </div>
-                          )}
-                          {token.notes && (
-                            <div>
-                              <div className="text-xs font-bold text-blue-400 mb-1">Notes:</div>
-                              <div className="text-xs text-gray-300">{token.notes}</div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </TokenEffects>
-                </div>
-              );
+                          </div>
+                        )}
+
+                        {/* Shift-hover info popup */}
+                        {shiftHeld && selectedToken === token.id && (token.notes || (token.conditions && token.conditions.length > 0)) && (
+                          <div
+                            className="absolute left-1/2 transform -translate-x-1/2 bg-gray-900 border-2 border-gray-600 rounded-lg p-3 shadow-xl z-50 min-w-[200px] max-w-[300px]"
+                            style={{
+                              bottom: `${currentTokenSize + 10}px`
+                            }}
+                          >
+                            {token.conditions && token.conditions.length > 0 && (
+                              <div className="mb-2">
+                                <div className="text-xs font-bold text-gray-300 mb-2">Conditions:</div>
+
+                                {/* Doomed Conditions */}
+                                {token.conditions.some(c => doomedConditions.includes(c)) && (
+                                  <div className="mb-2">
+                                    <div className="text-xs font-bold text-red-400 mb-1">Doomed</div>
+                                    <div className="flex flex-wrap gap-1">
+                                      {token.conditions.filter(c => doomedConditions.includes(c)).map(c => (
+                                        <span key={c} className="text-xs bg-red-600 px-2 py-0.5 rounded">{c}</span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Major Conditions */}
+                                {token.conditions.some(c => majorConditions.includes(c)) && (
+                                  <div className="mb-2">
+                                    <div className="text-xs font-bold text-orange-400 mb-1">Major</div>
+                                    <div className="flex flex-wrap gap-1">
+                                      {token.conditions.filter(c => majorConditions.includes(c)).map(c => (
+                                        <span key={c} className="text-xs bg-orange-600 px-2 py-0.5 rounded">{c}</span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Minor Conditions */}
+                                {token.conditions.some(c => minorConditions.includes(c)) && (
+                                  <div className="mb-2">
+                                    <div className="text-xs font-bold text-yellow-400 mb-1">Minor</div>
+                                    <div className="flex flex-wrap gap-1">
+                                      {token.conditions.filter(c => minorConditions.includes(c)).map(c => (
+                                        <span key={c} className="text-xs bg-yellow-600 px-2 py-0.5 rounded">{c}</span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {token.notes && (
+                              <div>
+                                <div className="text-xs font-bold text-blue-400 mb-1">Notes:</div>
+                                <div className="text-xs text-gray-300">{token.notes}</div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </TokenEffects>
+                  </div>
+                );
               })}
             </div>
 
@@ -1254,7 +1269,7 @@ export default function NimbleCombatTracker() {
         {showDiceInViewport && (
           <DiceRoller
             showDiceMenu={false}
-            setShowDiceMenu={() => {}}
+            setShowDiceMenu={() => { }}
             diceCount={diceCount}
             setDiceCount={setDiceCount}
             rollDice={rollDice}
