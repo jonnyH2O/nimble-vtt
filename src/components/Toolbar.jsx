@@ -1,5 +1,6 @@
 import React from 'react';
 import { MousePointer, Pencil, Eraser, Undo2, Redo2, Trash2 } from 'lucide-react';
+import ColorPicker from './ColorPicker';
 
 /**
  * Toolbar Component
@@ -81,11 +82,9 @@ export default function Toolbar({
 
       {/* Color Picker (draw mode only) */}
       {drawMode === 'draw' && (
-        <input
-          type="color"
-          value={drawColor}
-          onChange={(e) => setDrawColor(e.target.value)}
-          className="w-8 h-8 rounded cursor-pointer"
+        <ColorPicker
+          color={drawColor}
+          onChange={setDrawColor}
         />
       )}
 
