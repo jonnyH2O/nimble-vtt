@@ -46,14 +46,13 @@ export default function Toolbar({
 }) {
   return (
     <div className="flex items-center gap-2 flex-1">
-      <div className="h-8 w-px bg-gray-600"></div>
+      <div className="h-8 w-px bg-button-muted"></div>
 
       {/* Mode Selection Buttons */}
       <button
         onClick={() => setDrawMode('select')}
-        className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${
-          drawMode === 'select' ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'
-        }`}
+        className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${drawMode === 'select' ? 'bg-primary' : 'bg-tertiary hover:bg-tertiary-hover'
+          }`}
       >
         <MousePointer size={16} />
         Select
@@ -61,9 +60,8 @@ export default function Toolbar({
 
       <button
         onClick={() => setDrawMode('draw')}
-        className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${
-          drawMode === 'draw' ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'
-        }`}
+        className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${drawMode === 'draw' ? 'bg-primary' : 'bg-tertiary hover:bg-tertiary-hover'
+          }`}
       >
         <Pencil size={16} />
         Draw
@@ -71,16 +69,15 @@ export default function Toolbar({
 
       <button
         onClick={() => setDrawMode('erase')}
-        className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${
-          drawMode === 'erase' ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'
-        }`}
+        className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${drawMode === 'erase' ? 'bg-primary' : 'bg-tertiary hover:bg-tertiary-hover'
+          }`}
       >
         <Eraser size={16} />
         Erase
       </button>
 
       {/* Separator for draw/erase controls */}
-      {drawMode !== 'select' && <div className="h-8 w-px bg-gray-600"></div>}
+      {drawMode !== 'select' && <div className="h-8 w-px bg-button-muted"></div>}
 
       {/* Color Picker (draw mode only) */}
       {drawMode === 'draw' && (
@@ -105,17 +102,16 @@ export default function Toolbar({
           />
           <span className="text-sm">{(drawMode === 'erase' ? eraseSize : drawSize) + 'px'}</span>
 
-          <div className="h-8 w-px bg-gray-600"></div>
+          <div className="h-8 w-px bg-button-muted"></div>
 
           {/* Undo Button */}
           <button
             onClick={undo}
             disabled={historyStep <= 0}
-            className={`px-2 py-1.5 rounded flex items-center gap-1 text-sm ${
-              historyStep <= 0
-                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                : 'bg-gray-700 hover:bg-gray-600'
-            }`}
+            className={`px-2 py-1.5 rounded flex items-center gap-1 text-sm ${historyStep <= 0
+              ? 'bg-button-muted text-text-muted cursor-not-allowed'
+              : 'bg-tertiary hover:bg-tertiary-hover'
+              }`}
             title="Undo (Ctrl+Z)"
           >
             <Undo2 size={16} />
@@ -125,11 +121,10 @@ export default function Toolbar({
           <button
             onClick={redo}
             disabled={historyStep >= drawingHistory.length - 1}
-            className={`px-2 py-1.5 rounded flex items-center gap-1 text-sm ${
-              historyStep >= drawingHistory.length - 1
-                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                : 'bg-gray-700 hover:bg-gray-600'
-            }`}
+            className={`px-2 py-1.5 rounded flex items-center gap-1 text-sm ${historyStep >= drawingHistory.length - 1
+              ? 'bg-button-muted text-text-muted cursor-not-allowed'
+              : 'bg-tertiary hover:bg-tertiary-hover'
+              }`}
             title="Redo (Ctrl+Shift+Z)"
           >
             <Redo2 size={16} />
@@ -138,7 +133,7 @@ export default function Toolbar({
           {/* Clear All Button */}
           <button
             onClick={clearDrawings}
-            className="bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded flex items-center gap-2 text-sm"
+            className="bg-destructive hover:bg-destructive-hover px-3 py-1.5 rounded flex items-center gap-2 text-sm"
           >
             <Trash2 size={16} />
             Clear All
@@ -149,19 +144,19 @@ export default function Toolbar({
       {/* Zoom Controls (select mode only) */}
       {drawMode === 'select' && (
         <>
-          <div className="h-8 w-px bg-gray-600"></div>
+          <div className="h-8 w-px bg-button-muted"></div>
           <div className="flex items-center gap-2">
             <span className="text-sm">Zoom:</span>
             <button
               onClick={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.1))}
-              className="bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded text-sm"
+              className="bg-tertiary hover:bg-tertiary-hover px-2 py-1 rounded text-sm"
             >
               -
             </button>
             <span className="text-sm w-12 text-center">{Math.round(zoomLevel * 100)}%</span>
             <button
               onClick={() => setZoomLevel(Math.min(3, zoomLevel + 0.1))}
-              className="bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded text-sm"
+              className="bg-tertiary hover:bg-tertiary-hover px-2 py-1 rounded text-sm"
             >
               +
             </button>
@@ -170,7 +165,7 @@ export default function Toolbar({
                 setZoomLevel(1);
                 setViewOffset({ x: 0, y: 0 });
               }}
-              className="bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded text-sm"
+              className="bg-tertiary hover:bg-tertiary-hover px-2 py-1 rounded text-sm"
             >
               Reset
             </button>

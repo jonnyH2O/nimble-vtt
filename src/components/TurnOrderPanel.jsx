@@ -118,6 +118,8 @@ export default function TurnOrderPanel({
   setShowPartyOverview,
   exportBattle,
   importBattle,
+  currentTheme,
+  setCurrentTheme,
 }) {
   const { updateWounds, toggleTempHP } = tokenManager || {};
   const fileInputRef = useRef(null);
@@ -176,65 +178,63 @@ export default function TurnOrderPanel({
   const activeTurnOrderManager = turnOrderManager || popoutTurnOrderManager;
 
   return (
-    <div className="bg-gray-800 border-l border-gray-700 flex flex-col" style={{ width: `${SIDEBAR_WIDTH}px` }}>
+    <div className="bg-surface border-l border-border flex flex-col" style={{ width: `${SIDEBAR_WIDTH}px` }}>
       {/* Tab Navigation */}
-      <div className="bg-gray-700 border-b border-gray-600 p-3 flex items-center justify-between">
+      <div className="bg-surface-highlight border-b border-border p-3 flex items-center justify-between">
         <div className="flex gap-2">
           <button
             onClick={() => setSidebarView('turnOrder')}
-            className={`p-2 rounded flex items-center justify-center ${
-              sidebarView === 'turnOrder' ? 'bg-blue-600' : 'bg-gray-600 hover:bg-gray-500'
-            }`}
+            className={`p-2 rounded flex items-center justify-center ${sidebarView === 'turnOrder' ? 'bg-primary' : 'bg-tertiary hover:bg-tertiary-hover'
+              }`}
             title="Turn Order"
           >
             <List size={20} />
-          </button>
+          </button >
           <button
             onClick={() => setSidebarView('dictionary')}
-            className={`p-2 rounded flex items-center justify-center ${
-              sidebarView === 'dictionary' ? 'bg-blue-600' : 'bg-gray-600 hover:bg-gray-500'
-            }`}
+            className={`p-2 rounded flex items-center justify-center ${sidebarView === 'dictionary' ? 'bg-primary' : 'bg-tertiary hover:bg-tertiary-hover'
+              }`}
             title="Nimble Dictionary"
           >
             <Book size={20} />
           </button>
           <button
             onClick={() => setSidebarView('dice')}
-            className={`p-2 rounded flex items-center justify-center ${
-              sidebarView === 'dice' ? 'bg-blue-600' : 'bg-gray-600 hover:bg-gray-500'
-            }`}
+            className={`p-2 rounded flex items-center justify-center ${sidebarView === 'dice' ? 'bg-primary' : 'bg-tertiary hover:bg-tertiary-hover'
+              }`}
             title="Dice Roller"
           >
             <Dices size={20} />
           </button>
           <button
             onClick={() => setSidebarView('settings')}
-            className={`p-2 rounded flex items-center justify-center ${
-              sidebarView === 'settings' ? 'bg-blue-600' : 'bg-gray-600 hover:bg-gray-500'
-            }`}
+            className={`p-2 rounded flex items-center justify-center ${sidebarView === 'settings' ? 'bg-primary' : 'bg-tertiary hover:bg-tertiary-hover'
+              }`}
             title="Settings"
           >
             <Settings size={20} />
           </button>
-        </div>
+        </div >
 
         {/* Action buttons */}
-        <div className="flex gap-2">
+        < div className="flex gap-2" >
           {/* Pop-out button - only in main window */}
-          {!isPopoutWindow && onPopout && (
-            <button
-              onClick={onPopout}
-              className="p-2 rounded bg-blue-600 hover:bg-blue-700"
-              title="Pop Out Sidebar"
-            >
-              <ExternalLink size={16} />
-            </button>
-          )}
-        </div>
-      </div>
+          {
+            !isPopoutWindow && onPopout && (
+              <button
+                onClick={onPopout}
+                className="p-2 rounded bg-tertiary hover:bg-tertiary-hover"
+                title="Pop Out Sidebar"
+              >
+                <ExternalLink size={16} />
+              </button>
+            )
+          }
+        </div >
+      </div >
 
       {/* Content Area */}
-      <div className="flex-1 overflow-auto p-4">
+      < div className="flex-1 overflow-auto p-4" >
         {sidebarView === 'turnOrder' ? (
           <>
             {/* Turn Order Header */}
@@ -249,23 +249,22 @@ export default function TurnOrderPanel({
                       () => tokenManager.resetNonHeroActions()
                     );
                   }}
-                  className="bg-blue-600 hover:bg-blue-700 p-2 rounded flex items-center justify-center"
+                  className="bg-primary hover:bg-primary-hover p-2 rounded flex items-center justify-center"
                   title="Reset all non-hero actions"
                 >
                   <RotateCcw size={16} />
                 </button>
                 <button
                   onClick={() => setDeleteMode(!deleteMode)}
-                  className={`p-2 rounded flex items-center justify-center ${
-                    deleteMode ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-600 hover:bg-gray-500'
-                  }`}
+                  className={`p-2 rounded flex items-center justify-center ${deleteMode ? 'bg-destructive hover:bg-destructive-hover' : 'bg-button-muted hover:bg-button-muted-hover'
+                    }`}
                   title={deleteMode ? 'Done deleting' : 'Delete mode'}
                 >
                   <Trash2 size={16} />
                 </button>
               </div>
             </div>
-            <div className="text-xs text-gray-400 mb-3">
+            <div className="text-xs text-text-muted mb-3">
               {deleteMode ? 'Click tokens to remove them' : 'Drag to reorder'}
             </div>
 
@@ -299,592 +298,577 @@ export default function TurnOrderPanel({
                           setSelectedToken(item.id);
                         }
                       }}
-                      className={`bg-gray-700 p-3 rounded ${
-                        !deleteMode && !isLegendaryEcho && !expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`] && activeTurnOrderManager ? 'select-none' : ''
-                      } ${
-                        deleteMode && !isLegendaryEcho ? 'cursor-pointer hover:bg-red-900' :
-                        !isLegendaryEcho && !expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`] && activeTurnOrderManager ? 'cursor-move' : ''
-                      } ${selectedToken === item.id && !isLegendaryEcho ? 'ring-2 ring-orange-500' : ''} ${
-                        isLegendaryEcho ? 'opacity-75 ml-4' : ''
-                      } ${isMainLegendary ? 'border-2 border-purple-500' : ''}`}
+                      className={`bg-surface-highlight p-3 rounded ${!deleteMode && !isLegendaryEcho && !expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`] && activeTurnOrderManager ? 'select-none' : ''
+                        } ${deleteMode && !isLegendaryEcho ? 'cursor-pointer hover:bg-red-900' :
+                          !isLegendaryEcho && !expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`] && activeTurnOrderManager ? 'cursor-move' : ''
+                        } ${selectedToken === item.id && !isLegendaryEcho ? 'ring-2 ring-token-selected' : ''} ${isLegendaryEcho ? 'opacity-75 ml-4' : ''
+                        } ${isMainLegendary ? 'border-2 border-legendary-highlight' : ''}`}
                     >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2 flex-1">
-                        {isMainLegendary && (
-                          <div className="text-sm font-bold text-purple-400 w-6">L</div>
-                        )}
-                        {!isLegendaryEcho && !isMainLegendary && (
-                          <div className="text-sm font-bold text-gray-400 w-6">{actualIndex + 1}</div>
-                        )}
-                        {isLegendaryEcho && (
-                          <div className="text-sm font-bold text-purple-400 w-6">→</div>
-                        )}
-                        {token.image ? (
-                          <div className="relative w-10 h-10">
-                            <div className={`w-10 h-10 rounded-full border-2 ${getTokenBorderColor(token.type)} relative`}>
-                              <img
-                                src={token.image}
-                                alt={token.name}
-                                className="w-full h-full rounded-full object-cover"
-                                style={{
-                                  filter: token.conditions && token.conditions.includes('Dying') ? 'saturate(0.2)' : 'none'
-                                }}
-                              />
-                              <BloodiedVignette hasCondition={token.conditions && token.conditions.includes('Bloodied')} />
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="relative w-10 h-10">
-                            <div className={`w-10 h-10 rounded-full border-2 ${getTokenBorderColor(token.type)} relative`}>
-                              <div
-                                className={`w-full h-full rounded-full flex items-center justify-center ${getTokenBgColor(token.type)}`}
-                                style={{
-                                  filter: token.conditions && token.conditions.includes('Dying') ? 'saturate(0.2)' : 'none'
-                                }}
-                              >
-                                {getTokenIcon(token.type)}
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2 flex-1">
+                          {isMainLegendary && (
+                            <div className="text-sm font-bold text-legendary-highlight w-6">L</div>
+                          )}
+                          {!isLegendaryEcho && !isMainLegendary && (
+                            <div className="text-sm font-bold text-text-muted w-6">{actualIndex + 1}</div>
+                          )}
+                          {isLegendaryEcho && (
+                            <div className="text-sm font-bold text-legendary-highlight w-6">→</div>
+                          )}
+                          {token.image ? (
+                            <div className="relative w-10 h-10">
+                              <div className={`w-10 h-10 rounded-full border-2 ${getTokenBorderColor(token.type)} relative`}>
+                                <img
+                                  src={token.image}
+                                  alt={token.name}
+                                  className="w-full h-full rounded-full object-cover"
+                                  style={{
+                                    filter: token.conditions && token.conditions.includes('Dying') ? 'saturate(0.2)' : 'none'
+                                  }}
+                                />
+                                <BloodiedVignette hasCondition={token.conditions && token.conditions.includes('Bloodied')} />
                               </div>
-                              <BloodiedVignette hasCondition={token.conditions && token.conditions.includes('Bloodied')} />
                             </div>
+                          ) : (
+                            <div className="relative w-10 h-10">
+                              <div className={`w-10 h-10 rounded-full border-2 ${getTokenBorderColor(token.type)} relative`}>
+                                <div
+                                  className={`w-full h-full rounded-full flex items-center justify-center ${getTokenBgColor(token.type)}`}
+                                  style={{
+                                    filter: token.conditions && token.conditions.includes('Dying') ? 'saturate(0.2)' : 'none'
+                                  }}
+                                >
+                                  {getTokenIcon(token.type)}
+                                </div>
+                                <BloodiedVignette hasCondition={token.conditions && token.conditions.includes('Bloodied')} />
+                              </div>
+                            </div>
+                          )}
+                          <div className="flex-1">
+                            <div className="font-bold text-sm">{token.name}</div>
+                            <div className="text-xs text-text-muted capitalize">{token.type}</div>
                           </div>
-                        )}
-                        <div className="flex-1">
-                          <div className="font-bold text-sm">{token.name}</div>
-                          <div className="text-xs text-gray-400 capitalize">{token.type}</div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {(token.type !== 'legendary' || isMainLegendary) && (
-                          <div className="text-right">
-                            <div className="text-xs text-gray-400">HP</div>
-                            {token.showTempHP && (
-                              <div className="flex items-center gap-1 mb-1">
+                        <div className="flex items-center gap-2">
+                          {(token.type !== 'legendary' || isMainLegendary) && (
+                            <div className="text-right">
+                              <div className="text-xs text-text-muted">HP</div>
+                              {token.showTempHP && (
+                                <div className="flex items-center gap-1 mb-1">
+                                  <input
+                                    type="number"
+                                    value={token.tempHP || 0}
+                                    onChange={(e) => {
+                                      const tempHP = parseInt(e.target.value) || 0;
+                                      handleAction(
+                                        MESSAGE_TYPES.TEMP_HP_UPDATE,
+                                        { tokenId: item.id, tempHP },
+                                        () => tokenManager.updateTempHP(item.id, tempHP)
+                                      );
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="w-12 bg-cyan-600 text-center rounded px-1 py-0.5 text-sm"
+                                    style={{ backgroundColor: '#06b6d4' }}
+                                  />
+                                  <span className="text-sm">🛡️</span>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-1">
                                 <input
                                   type="number"
-                                  value={token.tempHP || 0}
+                                  value={token.health}
                                   onChange={(e) => {
-                                    const tempHP = parseInt(e.target.value) || 0;
+                                    const newHealth = parseInt(e.target.value) || 0;
                                     handleAction(
-                                      MESSAGE_TYPES.TEMP_HP_UPDATE,
-                                      { tokenId: item.id, tempHP },
-                                      () => tokenManager.updateTempHP(item.id, tempHP)
+                                      MESSAGE_TYPES.HEALTH_UPDATE,
+                                      { tokenId: item.id, newHealth },
+                                      () => tokenManager.updateHealth(item.id, newHealth)
                                     );
                                   }}
                                   onClick={(e) => e.stopPropagation()}
-                                  className="w-12 bg-cyan-600 text-center rounded px-1 py-0.5 text-sm"
-                                  style={{ backgroundColor: '#06b6d4' }}
+                                  className="w-12 bg-button-muted text-center rounded px-1 py-0.5 text-sm"
                                 />
-                                <span className="text-sm">🛡️</span>
+                                <span className="text-xs text-text-muted">/</span>
+                                <input
+                                  type="number"
+                                  value={token.maxHealth}
+                                  onChange={(e) => {
+                                    const newMaxHealth = parseInt(e.target.value) || 1;
+                                    handleAction(
+                                      MESSAGE_TYPES.TOKEN_UPDATE,
+                                      { tokenId: item.id, newMaxHealth },
+                                      () => tokenManager.updateMaxHealth(item.id, newMaxHealth)
+                                    );
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="w-12 bg-button-muted text-center rounded px-1 py-0.5 text-sm"
+                                />
                               </div>
-                            )}
-                            <div className="flex items-center gap-1">
-                              <input
-                                type="number"
-                                value={token.health}
-                                onChange={(e) => {
-                                  const newHealth = parseInt(e.target.value) || 0;
-                                  handleAction(
-                                    MESSAGE_TYPES.HEALTH_UPDATE,
-                                    { tokenId: item.id, newHealth },
-                                    () => tokenManager.updateHealth(item.id, newHealth)
-                                  );
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                                className="w-12 bg-gray-600 text-center rounded px-1 py-0.5 text-sm"
-                              />
-                              <span className="text-xs text-gray-400">/</span>
-                              <input
-                                type="number"
-                                value={token.maxHealth}
-                                onChange={(e) => {
-                                  const newMaxHealth = parseInt(e.target.value) || 1;
-                                  handleAction(
-                                    MESSAGE_TYPES.TOKEN_UPDATE,
-                                    { tokenId: item.id, newMaxHealth },
-                                    () => tokenManager.updateMaxHealth(item.id, newMaxHealth)
-                                  );
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                                className="w-12 bg-gray-600 text-center rounded px-1 py-0.5 text-sm"
-                              />
                             </div>
-                          </div>
-                        )}
-                        {!isLegendaryEcho && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const conditionKey = `${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`;
-                              const newExpanded = {
-                                ...expandedConditions,
-                                [conditionKey]: !expandedConditions[conditionKey]
-                              };
-                              handleAction(
-                                MESSAGE_TYPES.EXPANDED_CONDITIONS_UPDATE,
-                                { expanded: newExpanded },
-                                () => setExpandedConditions(newExpanded)
-                              );
-                            }}
-                            className={`${
-                              token.conditions && token.conditions.length > 0
-                                ? 'text-yellow-400 hover:text-yellow-300'
-                                : 'text-gray-400 hover:text-gray-300'
-                            }`}
-                          >
-                            <AlertCircle size={16} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Wounds - only show when at 0 HP and for heroes/companions */}
-                    {token.health === 0 && (token.type === 'hero' || token.type === 'companion') && (
-                      <div className="mt-2 mb-2 flex items-center justify-center gap-1 px-2 flex-wrap">
-                        <span className="text-xs text-gray-400 mr-1">Wounds:</span>
-                        {Array.from({ length: token.maxWounds || 6 }, (_, i) => i + 1).map(woundNum => {
-                          const maxWounds = token.maxWounds || 6;
-                          const circleSize = maxWounds <= 6 ? 5 : Math.max(4, Math.floor(24 / maxWounds));
-                          return (
+                          )}
+                          {!isLegendaryEcho && (
                             <button
-                              key={woundNum}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                const newWounds = token.wounds === woundNum ? woundNum - 1 : woundNum;
+                                const conditionKey = `${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`;
+                                const newExpanded = {
+                                  ...expandedConditions,
+                                  [conditionKey]: !expandedConditions[conditionKey]
+                                };
                                 handleAction(
-                                  MESSAGE_TYPES.WOUNDS_UPDATE,
-                                  { tokenId: item.id, newWounds },
-                                  () => tokenManager.updateWounds(item.id, newWounds)
+                                  MESSAGE_TYPES.EXPANDED_CONDITIONS_UPDATE,
+                                  { expanded: newExpanded },
+                                  () => setExpandedConditions(newExpanded)
                                 );
                               }}
-                              className={`rounded-full border transition-all flex items-center justify-center ${
-                                (token.wounds || 0) >= woundNum
-                                  ? 'bg-red-600 border-red-400'
-                                  : 'bg-gray-700 border-gray-500 hover:border-gray-400'
-                              }`}
-                              style={{
-                                width: `${circleSize * 4}px`,
-                                height: `${circleSize * 4}px`,
-                                fontSize: `${circleSize * 3}px`
-                              }}
-                              title={`${woundNum} wound${woundNum > 1 ? 's' : ''}`}
+                              className={`${token.conditions && token.conditions.length > 0
+                                ? 'text-yellow-400 hover:text-yellow-300'
+                                : 'text-text-muted hover:text-gray-300'
+                                }`}
                             >
-                              {(token.wounds || 0) >= woundNum && (
-                                <span className="text-white leading-none">✕</span>
-                              )}
+                              <AlertCircle size={16} />
                             </button>
-                          );
-                        })}
+                          )}
+                        </div>
                       </div>
-                    )}
 
-                    {expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`] && (
-                      <div className="mb-2" onClick={(e) => e.stopPropagation()}>
-                        {/* Wounds - only for heroes and companions */}
-                        {(token.type === 'hero' || token.type === 'companion') && (
-                          <div className="mb-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <label className="text-xs text-gray-400">Wounds</label>
+                      {/* Wounds - only show when at 0 HP and for heroes/companions */}
+                      {token.health === 0 && (token.type === 'hero' || token.type === 'companion') && (
+                        <div className="mt-2 mb-2 flex items-center justify-center gap-1 px-2 flex-wrap">
+                          <span className="text-xs text-text-muted mr-1">Wounds:</span>
+                          {Array.from({ length: token.maxWounds || 6 }, (_, i) => i + 1).map(woundNum => {
+                            const maxWounds = token.maxWounds || 6;
+                            const circleSize = maxWounds <= 6 ? 5 : Math.max(4, Math.floor(24 / maxWounds));
+                            return (
+                              <button
+                                key={woundNum}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const newWounds = token.wounds === woundNum ? woundNum - 1 : woundNum;
+                                  handleAction(
+                                    MESSAGE_TYPES.WOUNDS_UPDATE,
+                                    { tokenId: item.id, newWounds },
+                                    () => tokenManager.updateWounds(item.id, newWounds)
+                                  );
+                                }}
+                                className={`rounded-full border transition-all flex items-center justify-center ${(token.wounds || 0) >= woundNum
+                                  ? 'bg-destructive border-red-400'
+                                  : 'bg-surface-highlight border-text-muted hover:border-gray-400'
+                                  }`}
+                                style={{
+                                  width: `${circleSize * 4}px`,
+                                  height: `${circleSize * 4}px`,
+                                  fontSize: `${circleSize * 3}px`
+                                }}
+                                title={`${woundNum} wound${woundNum > 1 ? 's' : ''}`}
+                              >
+                                {(token.wounds || 0) >= woundNum && (
+                                  <span className="text-text leading-none">✕</span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`] && (
+                        <div className="mb-2" onClick={(e) => e.stopPropagation()}>
+                          {/* Wounds - only for heroes and companions */}
+                          {(token.type === 'hero' || token.type === 'companion') && (
+                            <div className="mb-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <label className="text-xs text-text-muted">Wounds</label>
+                                <button
+                                  onClick={() => {
+                                    handleAction(
+                                      MESSAGE_TYPES.TEMP_HP_TOGGLE,
+                                      { tokenId: item.id },
+                                      () => tokenManager.toggleTempHP(item.id)
+                                    );
+                                  }}
+                                  className={`py-1 px-2 rounded text-xs flex items-center gap-1 ${token.showTempHP
+                                    ? 'bg-tertiary hover:bg-tertiary-hover'
+                                    : 'bg-button-muted hover:bg-button-muted-hover'
+                                    }`}
+                                >
+                                  Temp HP 🛡️
+                                </button>
+                              </div>
+                              <div className="flex gap-1 justify-center items-center flex-wrap">
+                                {Array.from({ length: token.maxWounds || 6 }, (_, i) => i + 1).map(woundNum => {
+                                  const maxWounds = token.maxWounds || 6;
+                                  const circleSize = maxWounds <= 6 ? 6 : Math.max(4, Math.floor(24 / maxWounds));
+                                  return (
+                                    <button
+                                      key={woundNum}
+                                      onClick={() => {
+                                        const newWounds = token.wounds === woundNum ? woundNum - 1 : woundNum;
+                                        handleAction(
+                                          MESSAGE_TYPES.WOUNDS_UPDATE,
+                                          { tokenId: item.id, newWounds },
+                                          () => updateWounds(item.id, newWounds)
+                                        );
+                                      }}
+                                      className={`rounded-full border transition-all flex items-center justify-center ${(token.wounds || 0) >= woundNum
+                                        ? 'bg-destructive border-red-400'
+                                        : 'bg-surface-highlight border-text-muted hover:border-gray-400'
+                                        }`}
+                                      style={{
+                                        width: `${circleSize * 4}px`,
+                                        height: `${circleSize * 4}px`,
+                                        fontSize: `${circleSize * 3}px`
+                                      }}
+                                      title={`${woundNum} wound${woundNum > 1 ? 's' : ''}`}
+                                    >
+                                      {(token.wounds || 0) >= woundNum && (
+                                        <span className="text-text leading-none">✕</span>
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                                <span className="text-xs text-text-muted mx-1">=</span>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="20"
+                                  value={token.maxWounds || 6}
+                                  onChange={(e) => {
+                                    const newMax = Math.max(1, Math.min(20, parseInt(e.target.value) || 6));
+                                    const currentToken = tokens.find(t => t.id === item.id);
+                                    const updates = {
+                                      maxWounds: newMax,
+                                      wounds: Math.min(currentToken?.wounds || 0, newMax)
+                                    };
+                                    handleAction(
+                                      MESSAGE_TYPES.TOKEN_RESOURCE_UPDATE,
+                                      { tokenId: item.id, updates },
+                                      () => tokenManager.updateTokenResource(item.id, updates)
+                                    );
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="w-12 bg-button-muted text-center rounded px-1 py-0.5 text-xs"
+                                  title="Maximum wounds"
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Resource - for any token with resources */}
+                          {token.hasResource && (
+                            <div className="mb-3">
+                              <label className="text-xs text-text-muted block mb-2">{token.resourceName || 'Resource'}</label>
+                              <div className="flex gap-2 justify-center items-center">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max={token.maxResource || 0}
+                                  value={token.currentResource || 0}
+                                  onChange={(e) => {
+                                    const newCurrent = Math.max(0, Math.min(parseInt(e.target.value) || 0, token.maxResource || 0));
+                                    const updates = { currentResource: newCurrent };
+                                    handleAction(
+                                      MESSAGE_TYPES.TOKEN_RESOURCE_UPDATE,
+                                      { tokenId: item.id, updates },
+                                      () => tokenManager.updateTokenResource(item.id, updates)
+                                    );
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="w-16 bg-button-muted text-center rounded px-2 py-1 text-sm"
+                                  style={{ borderColor: token.resourceColor, borderWidth: '2px' }}
+                                />
+                                <span className="text-xs text-text-muted">/</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={token.maxResource || 0}
+                                  onChange={(e) => {
+                                    const newMax = Math.max(0, parseInt(e.target.value) || 0);
+                                    const currentToken = tokens.find(t => t.id === item.id);
+                                    const updates = {
+                                      maxResource: newMax,
+                                      currentResource: Math.min(currentToken?.currentResource || 0, newMax)
+                                    };
+                                    handleAction(
+                                      MESSAGE_TYPES.TOKEN_RESOURCE_UPDATE,
+                                      { tokenId: item.id, updates },
+                                      () => tokenManager.updateTokenResource(item.id, updates)
+                                    );
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="w-16 bg-button-muted text-center rounded px-2 py-1 text-sm"
+                                  style={{ borderColor: token.resourceColor, borderWidth: '2px' }}
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Temp HP toggle and Health Viewport toggle for non-hero/companion tokens (and main legendary) */}
+                          {((token.type !== 'legendary' || isMainLegendary) && token.type !== 'hero' && token.type !== 'companion') && (
+                            <div className="flex items-center justify-between mb-2 gap-2">
+                              {/* Show Health In Viewport toggle for enemy/legendary */}
+                              {(token.type === 'enemy' || (token.type === 'legendary' && isMainLegendary)) && (
+                                <button
+                                  onClick={() => {
+                                    handleAction(
+                                      MESSAGE_TYPES.HEALTH_IN_VIEWPORT_TOGGLE,
+                                      { tokenId: item.id },
+                                      () => tokenManager.toggleHealthInViewport(item.id)
+                                    );
+                                  }}
+                                  className={`py-1 px-2 rounded text-xs flex items-center gap-1 ${token.showHealthInViewport
+                                    ? 'bg-secondary hover:bg-secondary-hover'
+                                    : 'bg-button-muted hover:bg-button-muted-hover'
+                                    }`}
+                                  title={token.showHealthInViewport ? 'Health visible in viewport' : 'Health hidden in viewport'}
+                                >
+                                  Show Health 👁️
+                                </button>
+                              )}
                               <button
                                 onClick={() => {
                                   handleAction(
                                     MESSAGE_TYPES.TEMP_HP_TOGGLE,
                                     { tokenId: item.id },
-                                    () => tokenManager.toggleTempHP(item.id)
+                                    () => toggleTempHP(item.id)
                                   );
                                 }}
-                                className={`py-1 px-2 rounded text-xs flex items-center gap-1 ${
-                                  token.showTempHP
-                                    ? 'bg-cyan-600 hover:bg-cyan-700'
-                                    : 'bg-gray-600 hover:bg-gray-500'
-                                }`}
+                                className={`py-1 px-2 rounded text-xs flex items-center gap-1 ${token.showTempHP
+                                  ? 'bg-tertiary hover:bg-tertiary-hover'
+                                  : 'bg-button-muted hover:bg-button-muted-hover'
+                                  }`}
                               >
                                 Temp HP 🛡️
                               </button>
                             </div>
-                            <div className="flex gap-1 justify-center items-center flex-wrap">
-                              {Array.from({ length: token.maxWounds || 6 }, (_, i) => i + 1).map(woundNum => {
-                                const maxWounds = token.maxWounds || 6;
-                                const circleSize = maxWounds <= 6 ? 6 : Math.max(4, Math.floor(24 / maxWounds));
-                                return (
-                                  <button
-                                    key={woundNum}
-                                    onClick={() => {
-                                      const newWounds = token.wounds === woundNum ? woundNum - 1 : woundNum;
-                                      handleAction(
-                                        MESSAGE_TYPES.WOUNDS_UPDATE,
-                                        { tokenId: item.id, newWounds },
-                                        () => updateWounds(item.id, newWounds)
-                                      );
-                                    }}
-                                    className={`rounded-full border transition-all flex items-center justify-center ${
-                                      (token.wounds || 0) >= woundNum
-                                        ? 'bg-red-600 border-red-400'
-                                        : 'bg-gray-700 border-gray-500 hover:border-gray-400'
-                                    }`}
-                                    style={{
-                                      width: `${circleSize * 4}px`,
-                                      height: `${circleSize * 4}px`,
-                                      fontSize: `${circleSize * 3}px`
-                                    }}
-                                    title={`${woundNum} wound${woundNum > 1 ? 's' : ''}`}
-                                  >
-                                    {(token.wounds || 0) >= woundNum && (
-                                      <span className="text-white leading-none">✕</span>
-                                    )}
-                                  </button>
-                                );
-                              })}
-                              <span className="text-xs text-gray-400 mx-1">=</span>
-                              <input
-                                type="number"
-                                min="1"
-                                max="20"
-                                value={token.maxWounds || 6}
-                                onChange={(e) => {
-                                  const newMax = Math.max(1, Math.min(20, parseInt(e.target.value) || 6));
-                                  const currentToken = tokens.find(t => t.id === item.id);
-                                  const updates = {
-                                    maxWounds: newMax,
-                                    wounds: Math.min(currentToken?.wounds || 0, newMax)
-                                  };
-                                  handleAction(
-                                    MESSAGE_TYPES.TOKEN_RESOURCE_UPDATE,
-                                    { tokenId: item.id, updates },
-                                    () => tokenManager.updateTokenResource(item.id, updates)
-                                  );
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                                className="w-12 bg-gray-600 text-center rounded px-1 py-0.5 text-xs"
-                                title="Maximum wounds"
-                              />
-                            </div>
-                          </div>
-                        )}
+                          )}
 
-                        {/* Resource - for any token with resources */}
-                        {token.hasResource && (
-                          <div className="mb-3">
-                            <label className="text-xs text-gray-400 block mb-2">{token.resourceName || 'Resource'}</label>
-                            <div className="flex gap-2 justify-center items-center">
-                              <input
-                                type="number"
-                                min="0"
-                                max={token.maxResource || 0}
-                                value={token.currentResource || 0}
-                                onChange={(e) => {
-                                  const newCurrent = Math.max(0, Math.min(parseInt(e.target.value) || 0, token.maxResource || 0));
-                                  const updates = { currentResource: newCurrent };
-                                  handleAction(
-                                    MESSAGE_TYPES.TOKEN_RESOURCE_UPDATE,
-                                    { tokenId: item.id, updates },
-                                    () => tokenManager.updateTokenResource(item.id, updates)
-                                  );
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                                className="w-16 bg-gray-600 text-center rounded px-2 py-1 text-sm"
-                                style={{ borderColor: token.resourceColor, borderWidth: '2px' }}
-                              />
-                              <span className="text-xs text-gray-400">/</span>
-                              <input
-                                type="number"
-                                min="0"
-                                value={token.maxResource || 0}
-                                onChange={(e) => {
-                                  const newMax = Math.max(0, parseInt(e.target.value) || 0);
-                                  const currentToken = tokens.find(t => t.id === item.id);
-                                  const updates = {
-                                    maxResource: newMax,
-                                    currentResource: Math.min(currentToken?.currentResource || 0, newMax)
-                                  };
-                                  handleAction(
-                                    MESSAGE_TYPES.TOKEN_RESOURCE_UPDATE,
-                                    { tokenId: item.id, updates },
-                                    () => tokenManager.updateTokenResource(item.id, updates)
-                                  );
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                                className="w-16 bg-gray-600 text-center rounded px-2 py-1 text-sm"
-                                style={{ borderColor: token.resourceColor, borderWidth: '2px' }}
-                              />
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Temp HP toggle and Health Viewport toggle for non-hero/companion tokens (and main legendary) */}
-                        {((token.type !== 'legendary' || isMainLegendary) && token.type !== 'hero' && token.type !== 'companion') && (
-                          <div className="flex items-center justify-between mb-2 gap-2">
-                            {/* Show Health In Viewport toggle for enemy/legendary */}
-                            {(token.type === 'enemy' || (token.type === 'legendary' && isMainLegendary)) && (
-                              <button
-                                onClick={() => {
-                                  handleAction(
-                                    MESSAGE_TYPES.HEALTH_IN_VIEWPORT_TOGGLE,
-                                    { tokenId: item.id },
-                                    () => tokenManager.toggleHealthInViewport(item.id)
-                                  );
-                                }}
-                                className={`py-1 px-2 rounded text-xs flex items-center gap-1 ${
-                                  token.showHealthInViewport
-                                    ? 'bg-green-600 hover:bg-green-700'
-                                    : 'bg-gray-600 hover:bg-gray-500'
-                                }`}
-                                title={token.showHealthInViewport ? 'Health visible in viewport' : 'Health hidden in viewport'}
-                              >
-                                Show Health 👁️
-                              </button>
-                            )}
-                            <button
-                              onClick={() => {
-                                handleAction(
-                                  MESSAGE_TYPES.TEMP_HP_TOGGLE,
-                                  { tokenId: item.id },
-                                  () => toggleTempHP(item.id)
-                                );
-                              }}
-                              className={`py-1 px-2 rounded text-xs flex items-center gap-1 ${
-                                token.showTempHP
-                                  ? 'bg-cyan-600 hover:bg-cyan-700'
-                                  : 'bg-gray-600 hover:bg-gray-500'
-                              }`}
-                            >
-                              Temp HP 🛡️
-                            </button>
-                          </div>
-                        )}
-
-                        <div className="flex items-center justify-between mb-2">
-                          <label className="text-xs text-gray-400">Conditions</label>
-                        </div>
-
-                        {/* Doomed Conditions */}
-                        <div className="mb-3">
-                          <div className="text-xs font-bold text-red-400 mb-1">Doomed</div>
-                          <div className="flex flex-wrap gap-1">
-                            {doomedConditions.map(condition => (
-                              <button
-                                key={condition}
-                                onClick={() => {
-                                  handleAction(
-                                    MESSAGE_TYPES.CONDITION_TOGGLE,
-                                    { tokenId: item.id, condition },
-                                    () => tokenManager.toggleCondition(item.id, condition)
-                                  );
-                                }}
-                                className={`text-xs px-2 py-1 rounded ${
-                                  token.conditions && token.conditions.includes(condition)
-                                    ? 'bg-red-600 hover:bg-red-700'
-                                    : 'bg-gray-600 hover:bg-gray-500'
-                                }`}
-                              >
-                                {condition}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Major Conditions */}
-                        <div className="mb-3">
-                          <div className="text-xs font-bold text-orange-400 mb-1">Major</div>
-                          <div className="flex flex-wrap gap-1">
-                            {majorConditions.map(condition => (
-                              <button
-                                key={condition}
-                                onClick={() => {
-                                  handleAction(
-                                    MESSAGE_TYPES.CONDITION_TOGGLE,
-                                    { tokenId: item.id, condition },
-                                    () => tokenManager.toggleCondition(item.id, condition)
-                                  );
-                                }}
-                                className={`text-xs px-2 py-1 rounded ${
-                                  token.conditions && token.conditions.includes(condition)
-                                    ? 'bg-orange-600 hover:bg-orange-700'
-                                    : 'bg-gray-600 hover:bg-gray-500'
-                                }`}
-                              >
-                                {condition}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Minor Conditions */}
-                        <div className="mb-3">
-                          <div className="text-xs font-bold text-yellow-400 mb-1">Minor</div>
-                          <div className="flex flex-wrap gap-1">
-                            {minorConditions.map(condition => (
-                              <button
-                                key={condition}
-                                onClick={() => {
-                                  handleAction(
-                                    MESSAGE_TYPES.CONDITION_TOGGLE,
-                                    { tokenId: item.id, condition },
-                                    () => tokenManager.toggleCondition(item.id, condition)
-                                  );
-                                }}
-                                className={`text-xs px-2 py-1 rounded ${
-                                  token.conditions && token.conditions.includes(condition)
-                                    ? 'bg-yellow-600 hover:bg-yellow-700'
-                                    : 'bg-gray-600 hover:bg-gray-500'
-                                }`}
-                              >
-                                {condition}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Token Size Slider */}
-                        <div className="border-t border-gray-600 pt-3">
                           <div className="flex items-center justify-between mb-2">
-                            <label className="text-xs font-bold text-gray-300">Token Size</label>
-                            {token.customSize !== null && (
-                              <button
-                                onClick={() => {
+                            <label className="text-xs text-text-muted">Conditions</label>
+                          </div>
+
+                          {/* Doomed Conditions */}
+                          <div className="mb-3">
+                            <div className="text-xs font-bold text-red-400 mb-1">Doomed</div>
+                            <div className="flex flex-wrap gap-1">
+                              {doomedConditions.map(condition => (
+                                <button
+                                  key={condition}
+                                  onClick={() => {
+                                    handleAction(
+                                      MESSAGE_TYPES.CONDITION_TOGGLE,
+                                      { tokenId: item.id, condition },
+                                      () => tokenManager.toggleCondition(item.id, condition)
+                                    );
+                                  }}
+                                  className={`text-xs px-2 py-1 rounded ${token.conditions && token.conditions.includes(condition)
+                                    ? 'bg-doomed-buttons hover:bg-doomed-buttons-hover'
+                                    : 'bg-button-muted hover:bg-button-muted-hover'
+                                    }`}
+                                >
+                                  {condition}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Major Conditions */}
+                          <div className="mb-3">
+                            <div className="text-xs font-bold text-orange-400 mb-1">Major</div>
+                            <div className="flex flex-wrap gap-1">
+                              {majorConditions.map(condition => (
+                                <button
+                                  key={condition}
+                                  onClick={() => {
+                                    handleAction(
+                                      MESSAGE_TYPES.CONDITION_TOGGLE,
+                                      { tokenId: item.id, condition },
+                                      () => tokenManager.toggleCondition(item.id, condition)
+                                    );
+                                  }}
+                                  className={`text-xs px-2 py-1 rounded ${token.conditions && token.conditions.includes(condition)
+                                    ? 'bg-major-buttons hover:bg-major-buttons-hover'
+                                    : 'bg-button-muted hover:bg-button-muted-hover'
+                                    }`}
+                                >
+                                  {condition}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Minor Conditions */}
+                          <div className="mb-3">
+                            <div className="text-xs font-bold text-yellow-400 mb-1">Minor</div>
+                            <div className="flex flex-wrap gap-1">
+                              {minorConditions.map(condition => (
+                                <button
+                                  key={condition}
+                                  onClick={() => {
+                                    handleAction(
+                                      MESSAGE_TYPES.CONDITION_TOGGLE,
+                                      { tokenId: item.id, condition },
+                                      () => tokenManager.toggleCondition(item.id, condition)
+                                    );
+                                  }}
+                                  className={`text-xs px-2 py-1 rounded ${token.conditions && token.conditions.includes(condition)
+                                    ? 'bg-minor-buttons hover:bg-minor-buttons-hover'
+                                    : 'bg-button-muted hover:bg-button-muted-hover'
+                                    }`}
+                                >
+                                  {condition}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Token Size Slider */}
+                          <div className="border-t border-border pt-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <label className="text-xs font-bold text-gray-300">Token Size</label>
+                              {token.customSize !== null && (
+                                <button
+                                  onClick={() => {
+                                    handleAction(
+                                      MESSAGE_TYPES.TOKEN_SIZE_UPDATE,
+                                      { tokenId: item.id, size: null },
+                                      () => tokenManager.updateTokenSize(item.id, null)
+                                    );
+                                  }}
+                                  className="text-xs text-blue-400 hover:text-blue-300"
+                                  title="Reset to global size"
+                                >
+                                  Reset
+                                </button>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="range"
+                                min="32"
+                                max="192"
+                                step="4"
+                                value={token.customSize || tokenSize}
+                                onChange={(e) => {
+                                  const size = parseInt(e.target.value);
                                   handleAction(
                                     MESSAGE_TYPES.TOKEN_SIZE_UPDATE,
-                                    { tokenId: item.id, size: null },
-                                    () => tokenManager.updateTokenSize(item.id, null)
+                                    { tokenId: item.id, size },
+                                    () => tokenManager.updateTokenSize(item.id, size)
                                   );
                                 }}
-                                className="text-xs text-blue-400 hover:text-blue-300"
-                                title="Reset to global size"
-                              >
-                                Reset
-                              </button>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="range"
-                              min="32"
-                              max="192"
-                              step="4"
-                              value={token.customSize || tokenSize}
-                              onChange={(e) => {
-                                const size = parseInt(e.target.value);
-                                handleAction(
-                                  MESSAGE_TYPES.TOKEN_SIZE_UPDATE,
-                                  { tokenId: item.id, size },
-                                  () => tokenManager.updateTokenSize(item.id, size)
-                                );
-                              }}
-                              className="flex-1"
-                            />
-                            <span className="text-xs w-12 text-right">
-                              {token.customSize || tokenSize}px
-                            </span>
+                                className="flex-1"
+                              />
+                              <span className="text-xs w-12 text-right">
+                                {token.customSize || tokenSize}px
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {token.actions && (
-                      <div>
-                        {token.type === 'hero' && (
-                          <div className="mb-2">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (token.isActiveTurn) {
-                                  handleAction(
-                                    MESSAGE_TYPES.END_TURN,
-                                    { tokenId: item.id },
-                                    () => tokenManager.endTurn(item.id)
-                                  );
-                                } else {
-                                  handleAction(
-                                    MESSAGE_TYPES.START_TURN,
-                                    { tokenId: item.id },
-                                    () => tokenManager.startTurn(item.id)
-                                  );
-                                }
-                              }}
-                              className={`w-full py-1.5 rounded text-xs font-bold transition-colors ${
-                                token.isActiveTurn
-                                  ? 'bg-yellow-500 hover:bg-yellow-600 text-black'
-                                  : 'bg-gray-600 hover:bg-gray-500'
-                              }`}
-                            >
-                              {token.isActiveTurn ? '★ Active Turn' : 'Start Turn'}
-                            </button>
-                          </div>
-                        )}
-                        {!isLegendaryEcho && !isMainLegendary && (
-                          <div className="flex gap-1">
-                            {token.actions.map((used, actionIndex) => (
+                      {token.actions && (
+                        <div>
+                          {token.type === 'hero' && (
+                            <div className="mb-2">
                               <button
-                                key={actionIndex}
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  if (token.isActiveTurn) {
+                                    handleAction(
+                                      MESSAGE_TYPES.END_TURN,
+                                      { tokenId: item.id },
+                                      () => tokenManager.endTurn(item.id)
+                                    );
+                                  } else {
+                                    handleAction(
+                                      MESSAGE_TYPES.START_TURN,
+                                      { tokenId: item.id },
+                                      () => tokenManager.startTurn(item.id)
+                                    );
+                                  }
+                                }}
+                                className={`w-full py-1.5 rounded text-xs font-bold transition-colors ${token.isActiveTurn
+                                  ? 'bg-yellow-500 hover:bg-yellow-600 text-black'
+                                  : 'bg-button-muted hover:bg-button-muted-hover'
+                                  }`}
+                              >
+                                {token.isActiveTurn ? '★ Active Turn' : 'Start Turn'}
+                              </button>
+                            </div>
+                          )}
+                          {!isLegendaryEcho && !isMainLegendary && (
+                            <div className="flex gap-1">
+                              {token.actions.map((used, actionIndex) => (
+                                <button
+                                  key={actionIndex}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAction(
+                                      MESSAGE_TYPES.ACTION_TOGGLE,
+                                      { tokenId: item.id, actionIndex },
+                                      () => tokenManager.toggleAction(item.id, actionIndex)
+                                    );
+                                  }}
+                                  className={`flex-1 h-8 rounded transition-colors ${used
+                                    ? 'bg-button-muted-hover'
+                                    : token.isActiveTurn
+                                      ? 'bg-blue-500 hover:bg-primary'
+                                      : token.type === 'enemy'
+                                        ? 'bg-red-500 hover:bg-destructive'
+                                        : 'bg-green-500 hover:bg-secondary'
+                                    }`}
+                                >
+                                  {token.type === 'hero' ? actionIndex + 1 : '✓'}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          {isLegendaryEcho && (
+                            <div className="flex gap-1">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // Use the index within the display order to track which legendary turn this is
+                                  const legendaryTurnIndex = displayTurnOrder
+                                    .slice(0, index)
+                                    .filter(i => i.id === item.id && i.isLegendaryEcho).length;
                                   handleAction(
                                     MESSAGE_TYPES.ACTION_TOGGLE,
-                                    { tokenId: item.id, actionIndex },
-                                    () => tokenManager.toggleAction(item.id, actionIndex)
+                                    { tokenId: item.id, actionIndex: legendaryTurnIndex },
+                                    () => tokenManager.toggleAction(item.id, legendaryTurnIndex)
                                   );
                                 }}
-                                className={`flex-1 h-8 rounded transition-colors ${
-                                  used
-                                    ? 'bg-gray-500'
-                                    : token.isActiveTurn
-                                      ? 'bg-blue-500 hover:bg-blue-600'
-                                      : token.type === 'enemy'
-                                        ? 'bg-red-500 hover:bg-red-600'
-                                        : 'bg-green-500 hover:bg-green-600'
-                                }`}
-                              >
-                                {token.type === 'hero' ? actionIndex + 1 : '✓'}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                        {isLegendaryEcho && (
-                          <div className="flex gap-1">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                // Use the index within the display order to track which legendary turn this is
-                                const legendaryTurnIndex = displayTurnOrder
-                                  .slice(0, index)
-                                  .filter(i => i.id === item.id && i.isLegendaryEcho).length;
-                                handleAction(
-                                  MESSAGE_TYPES.ACTION_TOGGLE,
-                                  { tokenId: item.id, actionIndex: legendaryTurnIndex },
-                                  () => tokenManager.toggleAction(item.id, legendaryTurnIndex)
-                                );
-                              }}
-                              className={`flex-1 h-8 rounded transition-colors ${
-                                token.actions[displayTurnOrder
+                                className={`flex-1 h-8 rounded transition-colors ${token.actions[displayTurnOrder
                                   .slice(0, index)
                                   .filter(i => i.id === item.id && i.isLegendaryEcho).length]
-                                  ? 'bg-gray-500'
-                                  : 'bg-purple-500 hover:bg-purple-600'
-                              }`}
-                            >
-                              ✓
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                                  ? 'bg-button-muted-hover'
+                                  : 'bg-purple-500 hover:bg-primary'
+                                  }`}
+                              >
+                                ✓
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
               })}
 
               {turnOrder.length === 0 && (
-                <div className="text-gray-400 text-center py-8 text-sm">
+                <div className="text-text-muted text-center py-8 text-sm">
                   No tokens added yet. Click "Add Token" to get started.
                 </div>
               )}
             </div>
           </>
-         ) : sidebarView === 'dictionary' ? (
+        ) : sidebarView === 'dictionary' ? (
           <>
             {/* Dictionary View */}
             <h2 className="text-xl font-bold mb-4">Nimble Dictionary</h2>
 
-            <div className="text-xs text-gray-400 mb-4 italic">
+            <div className="text-xs text-text-muted mb-4 italic">
               Reference for rules and conditions during gameplay.
             </div>
 
@@ -892,14 +876,14 @@ export default function TurnOrderPanel({
             <div className="mb-4">
               <button
                 onClick={() => toggleDictionarySection('vttFeatures')}
-                className="w-full bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded flex items-center justify-between text-left"
+                className="w-full bg-surface-highlight hover:bg-button-muted px-3 py-2 rounded flex items-center justify-between text-left"
               >
                 <span className="font-bold">VTT Features</span>
-                <span className="text-gray-400">{expandedNotes['vttFeatures'] ? '−' : '+'}</span>
+                <span className="text-text-muted">{expandedNotes['vttFeatures'] ? '−' : '+'}</span>
               </button>
 
               {expandedNotes['vttFeatures'] && (
-                <div className="bg-gray-700 p-3 rounded-b mt-1">
+                <div className="bg-surface-highlight p-3 rounded-b mt-1">
                   <div className="text-xs text-gray-300 mb-4">
                     Complete guide to all features available in Nimble VTT for managing combat encounters.
                   </div>
@@ -1022,14 +1006,14 @@ export default function TurnOrderPanel({
             <div className="mb-4">
               <button
                 onClick={() => toggleDictionarySection('conditions')}
-                className="w-full bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded flex items-center justify-between text-left"
+                className="w-full bg-surface-highlight hover:bg-button-muted px-3 py-2 rounded flex items-center justify-between text-left"
               >
                 <span className="font-bold">Conditions</span>
-                <span className="text-gray-400">{expandedNotes['conditions'] ? '−' : '+'}</span>
+                <span className="text-text-muted">{expandedNotes['conditions'] ? '−' : '+'}</span>
               </button>
 
               {expandedNotes['conditions'] && (
-                <div className="bg-gray-700 p-3 rounded-b mt-1">
+                <div className="bg-surface-highlight p-3 rounded-b mt-1">
                   <div className="text-xs text-gray-300 mb-4">
                     Some attacks, traps, spells, or other effects can inflict conditions—usually negative effects other than damage. Some conditions are temporary, lasting as little as a single round; others may last until cured in some way, and some can be ended by using an action to make an appropriate save.
                   </div>
@@ -1146,14 +1130,14 @@ export default function TurnOrderPanel({
             <div className="mb-4">
               <button
                 onClick={() => toggleDictionarySection('Skill Checks & Saves')}
-                className="w-full bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded flex items-center justify-between text-left"
+                className="w-full bg-surface-highlight hover:bg-button-muted px-3 py-2 rounded flex items-center justify-between text-left"
               >
                 <span className="font-bold">Skill Checks & Saves</span>
-                <span className="text-gray-400">{expandedNotes['Skill Checks & Saves'] ? '−' : '+'}</span>
+                <span className="text-text-muted">{expandedNotes['Skill Checks & Saves'] ? '−' : '+'}</span>
               </button>
 
               {expandedNotes['Skill Checks & Saves'] && (
-                <div className="bg-gray-700 p-3 rounded-b mt-1">
+                <div className="bg-surface-highlight p-3 rounded-b mt-1">
                   <div className="text-xs text-gray-300 mb-4">
                     When you want to affect the world (convince an NPC, spot a trap, pick a lock, etc.), the GM may call for a skill check. Roll 1d20 and add your skill (the max bonus a skill can ever have is +12). If the total meets or exceeds the Difficulty Challenge (DC), you succeed; otherwise, you fail.
                   </div>
@@ -1253,14 +1237,14 @@ export default function TurnOrderPanel({
             <div className="mb-4">
               <button
                 onClick={() => toggleDictionarySection('Size')}
-                className="w-full bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded flex items-center justify-between text-left"
+                className="w-full bg-surface-highlight hover:bg-button-muted px-3 py-2 rounded flex items-center justify-between text-left"
               >
                 <span className="font-bold">Size</span>
-                <span className="text-gray-400">{expandedNotes['Size'] ? '−' : '+'}</span>
+                <span className="text-text-muted">{expandedNotes['Size'] ? '−' : '+'}</span>
               </button>
 
               {expandedNotes['Size'] && (
-                <div className="bg-gray-700 p-3 rounded-b mt-1">
+                <div className="bg-surface-highlight p-3 rounded-b mt-1">
                   <div className="text-xs text-gray-300 mb-4">
                     Some spells and abilities affect differently sized objects or creatures. Use the following guidelines for size:
                   </div>
@@ -1303,14 +1287,14 @@ export default function TurnOrderPanel({
             <div className="mb-4">
               <button
                 onClick={() => toggleDictionarySection('Hit Points & Dying')}
-                className="w-full bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded flex items-center justify-between text-left"
+                className="w-full bg-surface-highlight hover:bg-button-muted px-3 py-2 rounded flex items-center justify-between text-left"
               >
                 <span className="font-bold">Hit Points & Dying</span>
-                <span className="text-gray-400">{expandedNotes['Hit Points & Dying'] ? '−' : '+'}</span>
+                <span className="text-text-muted">{expandedNotes['Hit Points & Dying'] ? '−' : '+'}</span>
               </button>
 
               {expandedNotes['Hit Points & Dying'] && (
-                <div className="bg-gray-700 p-3 rounded-b mt-1">
+                <div className="bg-surface-highlight p-3 rounded-b mt-1">
                   <div className="text-xs text-gray-300 mb-4">
                     Hit Points (HP) represent your ability to endure damage. Damage reduces your HP (which can't go below 0). When reduced to 0 HP, gain 1 Wound; you also gain the Dying condition until you regain HP.
                   </div>
@@ -1389,14 +1373,14 @@ export default function TurnOrderPanel({
             <div className="mb-4">
               <button
                 onClick={() => toggleDictionarySection('Speed & Range')}
-                className="w-full bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded flex items-center justify-between text-left"
+                className="w-full bg-surface-highlight hover:bg-button-muted px-3 py-2 rounded flex items-center justify-between text-left"
               >
                 <span className="font-bold">Speed & Range</span>
-                <span className="text-gray-400">{expandedNotes['Speed & Range'] ? '−' : '+'}</span>
+                <span className="text-text-muted">{expandedNotes['Speed & Range'] ? '−' : '+'}</span>
               </button>
 
               {expandedNotes['Speed & Range'] && (
-                <div className="bg-gray-700 p-3 rounded-b mt-1">
+                <div className="bg-surface-highlight p-3 rounded-b mt-1">
                   <div className="text-xs text-gray-300 mb-4">
                     A character's Speed is how fast they can move, which, unless otherwise noted, is 6. Often play is done on a grid with 1 inch squares or hexagons representing roughly 5 ft. or 1 meter each.
                   </div>
@@ -1476,14 +1460,14 @@ export default function TurnOrderPanel({
             <div className="mb-4">
               <button
                 onClick={() => toggleDictionarySection('Concentration')}
-                className="w-full bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded flex items-center justify-between text-left"
+                className="w-full bg-surface-highlight hover:bg-button-muted px-3 py-2 rounded flex items-center justify-between text-left"
               >
                 <span className="font-bold">Concentration</span>
-                <span className="text-gray-400">{expandedNotes['Concentration'] ? '−' : '+'}</span>
+                <span className="text-text-muted">{expandedNotes['Concentration'] ? '−' : '+'}</span>
               </button>
 
               {expandedNotes['Concentration'] && (
-                <div className="bg-gray-700 p-3 rounded-b mt-1">
+                <div className="bg-surface-highlight p-3 rounded-b mt-1">
                   <div className="text-xs text-gray-300 mb-4">
                     Some activities require Concentration to maintain. A character can only concentrate on one activity at a time.
                   </div>
@@ -1510,14 +1494,14 @@ export default function TurnOrderPanel({
             <div className="mb-4">
               <button
                 onClick={() => toggleDictionarySection('Cover & Hiding')}
-                className="w-full bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded flex items-center justify-between text-left"
+                className="w-full bg-surface-highlight hover:bg-button-muted px-3 py-2 rounded flex items-center justify-between text-left"
               >
                 <span className="font-bold">Cover & Hiding</span>
-                <span className="text-gray-400">{expandedNotes['Cover & Hiding'] ? '−' : '+'}</span>
+                <span className="text-text-muted">{expandedNotes['Cover & Hiding'] ? '−' : '+'}</span>
               </button>
 
               {expandedNotes['Cover & Hiding'] && (
-                <div className="bg-gray-700 p-3 rounded-b mt-1">
+                <div className="bg-surface-highlight p-3 rounded-b mt-1">
                   <div className="text-xs text-gray-300 mb-4">
                     Cover provides protection from attacks by obscuring line of sight.
                   </div>
@@ -1563,14 +1547,14 @@ export default function TurnOrderPanel({
             <div className="mb-4">
               <button
                 onClick={() => toggleDictionarySection('Grappling')}
-                className="w-full bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded flex items-center justify-between text-left"
+                className="w-full bg-surface-highlight hover:bg-button-muted px-3 py-2 rounded flex items-center justify-between text-left"
               >
                 <span className="font-bold">Grappling</span>
-                <span className="text-gray-400">{expandedNotes['Grappling'] ? '−' : '+'}</span>
+                <span className="text-text-muted">{expandedNotes['Grappling'] ? '−' : '+'}</span>
               </button>
 
               {expandedNotes['Grappling'] && (
-                <div className="bg-gray-700 p-3 rounded-b mt-1">
+                <div className="bg-surface-highlight p-3 rounded-b mt-1">
                   <div className="text-xs text-gray-300 mb-4">
                     You can attempt to grab another creature provided you are within Reach and have at least 1 arm free (or some other way to grab them).
                   </div>
@@ -1620,14 +1604,14 @@ export default function TurnOrderPanel({
             <div className="mb-4">
               <button
                 onClick={() => toggleDictionarySection('Resting & Downtime')}
-                className="w-full bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded flex items-center justify-between text-left"
+                className="w-full bg-surface-highlight hover:bg-button-muted px-3 py-2 rounded flex items-center justify-between text-left"
               >
                 <span className="font-bold">Resting & Downtime</span>
-                <span className="text-gray-400">{expandedNotes['Resting & Downtime'] ? '−' : '+'}</span>
+                <span className="text-text-muted">{expandedNotes['Resting & Downtime'] ? '−' : '+'}</span>
               </button>
 
               {expandedNotes['Resting & Downtime'] && (
-                <div className="bg-gray-700 p-3 rounded-b mt-1">
+                <div className="bg-surface-highlight p-3 rounded-b mt-1">
                   <div className="text-xs text-gray-300 mb-4">
                     Rest to recover from injuries and spend downtime on various activities to prepare for your next adventure.
                   </div>
@@ -1760,7 +1744,7 @@ export default function TurnOrderPanel({
             {/* Dice Roller View */}
             <h2 className="text-xl font-bold mb-4">Dice Roller</h2>
 
-            <div className="text-xs text-gray-400 mb-4 italic">
+            <div className="text-xs text-text-muted mb-4 italic">
               Roll dice for your tabletop game.
             </div>
 
@@ -1772,51 +1756,51 @@ export default function TurnOrderPanel({
                 max="20"
                 value={diceCount}
                 onChange={(e) => setDiceCount(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
-                className="w-full bg-gray-700 px-3 py-2 rounded text-center"
+                className="w-full bg-surface-highlight px-3 py-2 rounded text-center"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-2 mb-4">
               <button
                 onClick={() => rollDice(4)}
-                className="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded font-bold"
+                className="bg-primary hover:bg-primary-hover px-4 py-3 rounded font-bold"
               >
                 d4
               </button>
               <button
                 onClick={() => rollDice(6)}
-                className="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded font-bold"
+                className="bg-primary hover:bg-primary-hover px-4 py-3 rounded font-bold"
               >
                 d6
               </button>
               <button
                 onClick={() => rollDice(8)}
-                className="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded font-bold"
+                className="bg-primary hover:bg-primary-hover px-4 py-3 rounded font-bold"
               >
                 d8
               </button>
               <button
                 onClick={() => rollDice(10)}
-                className="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded font-bold"
+                className="bg-primary hover:bg-primary-hover px-4 py-3 rounded font-bold"
               >
                 d10
               </button>
               <button
                 onClick={() => rollDice(12)}
-                className="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded font-bold"
+                className="bg-primary hover:bg-primary-hover px-4 py-3 rounded font-bold"
               >
                 d12
               </button>
               <button
                 onClick={() => rollDice(20)}
-                className="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded font-bold"
+                className="bg-primary hover:bg-primary-hover px-4 py-3 rounded font-bold"
               >
                 d20
               </button>
             </div>
 
             {/* Show in Viewport Toggle */}
-            <div className="mb-4 flex items-center gap-2 p-3 bg-gray-800 rounded">
+            <div className="mb-4 flex items-center gap-2 p-3 bg-surface rounded">
               <input
                 type="checkbox"
                 id="showDiceInViewport"
@@ -1839,7 +1823,7 @@ export default function TurnOrderPanel({
             <div className="space-y-2">
               <h3 className="text-sm font-bold">Recent Rolls</h3>
               {rollingDice.length === 0 && diceRolls.length === 0 ? (
-                <div className="text-xs text-gray-400 italic p-4 text-center">
+                <div className="text-xs text-text-muted italic p-4 text-center">
                   No recent rolls
                 </div>
               ) : (
@@ -1850,7 +1834,7 @@ export default function TurnOrderPanel({
                       item.type === 'rolling' ? (
                         <div
                           key={`rolling-${item.id}`}
-                          className="bg-purple-600 text-white px-4 py-3 rounded shadow border-2 border-purple-400"
+                          className="bg-primary text-text px-4 py-3 rounded shadow border-2 border-purple-400"
                         >
                           <div className="text-center">
                             <div className="text-2xl">🎲</div>
@@ -1860,7 +1844,7 @@ export default function TurnOrderPanel({
                       ) : (
                         <div
                           key={`result-${item.id}`}
-                          className="bg-green-600 text-white px-4 py-3 rounded shadow border-2 border-green-400"
+                          className="bg-secondary text-text px-4 py-3 rounded shadow border-2 border-green-400"
                         >
                           <div className="text-center">
                             <div className="text-xs font-bold mb-1">{item.dice}</div>
@@ -1919,14 +1903,13 @@ export default function TurnOrderPanel({
               </div>
 
               {/* Party Overview Toggle */}
-              <div className="border-t border-gray-700 pt-4">
+              <div className="border-t border-border pt-4">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-bold">Show Party Overview</label>
                   <button
                     onClick={() => setShowPartyOverview(!showPartyOverview)}
-                    className={`px-3 py-1 rounded text-sm ${
-                      showPartyOverview ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 hover:bg-gray-500'
-                    }`}
+                    className={`px-3 py-1 rounded text-sm ${showPartyOverview ? 'bg-secondary hover:bg-secondary-hover' : 'bg-tertiary hover:bg-tertiary-hover'
+                      }`}
                   >
                     {showPartyOverview ? 'ON' : 'OFF'}
                   </button>
@@ -1934,14 +1917,13 @@ export default function TurnOrderPanel({
               </div>
 
               {/* Grid Settings */}
-              <div className="border-t border-gray-700 pt-4">
+              <div className="border-t border-border pt-4">
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-sm font-bold">Show Grid</label>
                   <button
                     onClick={() => setShowGrid(!showGrid)}
-                    className={`px-3 py-1 rounded text-sm ${
-                      showGrid ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 hover:bg-gray-500'
-                    }`}
+                    className={`px-3 py-1 rounded text-sm ${showGrid ? 'bg-secondary hover:bg-secondary-hover' : 'bg-tertiary hover:bg-tertiary-hover'
+                      }`}
                   >
                     {showGrid ? 'ON' : 'OFF'}
                   </button>
@@ -1966,14 +1948,13 @@ export default function TurnOrderPanel({
               </div>
 
               {/* Darkness Mode Settings */}
-              <div className="border-t border-gray-700 pt-4">
+              <div className="border-t border-border pt-4">
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-sm font-bold">Darkness Mode</label>
                   <button
                     onClick={() => setDarknessMode(!darknessMode)}
-                    className={`px-3 py-1 rounded text-sm ${
-                      darknessMode ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-600 hover:bg-gray-500'
-                    }`}
+                    className={`px-3 py-1 rounded text-sm ${darknessMode ? 'bg-secondary hover:bg-secondary-hover' : 'bg-tertiary hover:bg-tertiary-hover'
+                      }`}
                   >
                     {darknessMode ? 'ON' : 'OFF'}
                   </button>
@@ -2029,19 +2010,34 @@ export default function TurnOrderPanel({
                 )}
               </div>
 
+              {/* Theme Selector */}
+              <div className="border-t border-border pt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-bold">Theme</label>
+                  <select
+                    value={currentTheme}
+                    onChange={(e) => setCurrentTheme(e.target.value)}
+                    className="bg-tertiary text-text text-sm rounded px-2 py-1 border border-gray-500"
+                  >
+                    <option value="default">Default</option>
+                    <option value="dracula">Dracula</option>
+                  </select>
+                </div>
+              </div>
+
               {/* Export/Import Battle */}
-              <div className="border-t border-gray-700 pt-4 space-y-2">
+              <div className="border-t border-border pt-4 space-y-2">
                 <h3 className="text-sm font-bold mb-2">Save/Load</h3>
                 <button
                   onClick={exportBattle}
-                  className="w-full bg-green-600 hover:bg-green-700 px-3 py-2 rounded flex items-center justify-center gap-2 text-sm"
+                  className="w-full bg-secondary hover:bg-secondary-hover px-3 py-2 rounded flex items-center justify-center gap-2 text-sm"
                 >
                   Export Battle
                 </button>
                 {isPopoutWindow ? (
                   <button
                     onClick={importBattle}
-                    className="w-full bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded flex items-center justify-center gap-2 text-sm"
+                    className="w-full bg-primary hover:bg-primary-hover px-3 py-2 rounded flex items-center justify-center gap-2 text-sm"
                   >
                     Import Battle
                   </button>
@@ -2049,7 +2045,7 @@ export default function TurnOrderPanel({
                   <>
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="w-full bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded flex items-center justify-center gap-2 text-sm"
+                      className="w-full bg-primary hover:bg-primary-hover px-3 py-2 rounded flex items-center justify-center gap-2 text-sm"
                     >
                       Import Battle
                     </button>
@@ -2065,14 +2061,15 @@ export default function TurnOrderPanel({
               </div>
             </div>
           </>
-        ) : null}
-      </div>
+        ) : null
+        }
+      </div >
 
       <NotesPanel
         selectedToken={selectedToken}
         tokens={tokens}
         updateNotes={updateNotes}
       />
-    </div>
+    </div >
   );
 }

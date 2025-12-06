@@ -1,6 +1,7 @@
 import React from 'react';
 import { Users, Heart, Swords, Crown } from 'lucide-react';
 import { CONDITION_EMOJIS } from '../effects/conditionEffects';
+import { getTokenBorderColor, getTokenBgColor } from '../constants';
 
 /**
  * HUD Component - Heads-Up Display for selected token
@@ -38,7 +39,7 @@ export function HUDDisplay({ selectedToken, tokens, HUD_Z_INDEX }) {
       <div className="relative flex items-start gap-3">
         {/* Circular Portrait Frame */}
         <div
-          className="relative rounded-full border-4 border-orange-500 bg-gray-900 overflow-hidden flex-shrink-0"
+          className={`relative rounded-full border-4 ${getTokenBorderColor(token.type)} ${getTokenBgColor(token.type)} overflow-hidden flex-shrink-0`}
           style={{
             width: `${portraitSize}px`,
             height: `${portraitSize}px`,
@@ -48,11 +49,7 @@ export function HUDDisplay({ selectedToken, tokens, HUD_Z_INDEX }) {
           {token.image ? (
             <img src={token.image} alt={token.name} className="w-full h-full object-cover" />
           ) : (
-            <div className={`w-full h-full flex items-center justify-center ${
-              token.type === 'hero' ? 'bg-blue-600' :
-              token.type === 'companion' ? 'bg-green-600' :
-              token.type === 'enemy' ? 'bg-red-600' : 'bg-purple-600'
-            }`}>
+            <div className={`w-full h-full flex items-center justify-center ${getTokenBgColor(token.type)}`}>
               {token.type === 'hero' && <Users size={40} />}
               {token.type === 'companion' && <Heart size={40} />}
               {token.type === 'enemy' && <Swords size={40} />}
@@ -119,7 +116,7 @@ export function HUDDisplay({ selectedToken, tokens, HUD_Z_INDEX }) {
                 {/* HP Text */}
                 <div className="absolute inset-0 flex items-center justify-center gap-2">
                   {token.tempHP > 0 && (
-                    <span className="text-cyan-400 text-xs font-bold drop-shadow-lg" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+                    <span className="text-primary text-xs font-bold drop-shadow-lg" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
                       {token.tempHP} THP
                     </span>
                   )}
@@ -207,7 +204,7 @@ export function NotesPanel({ selectedToken, tokens, updateNotes }) {
   if (!token) return null;
 
   return (
-    <div className="border-t border-gray-700 bg-gray-800 p-4">
+    <div className="border-t border-border bg-surface p-4">
       <h3 className="text-sm font-bold mb-2">
         {token.name} - Notes
       </h3>
@@ -215,7 +212,7 @@ export function NotesPanel({ selectedToken, tokens, updateNotes }) {
         value={token.notes}
         onChange={(e) => updateNotes(selectedToken, e.target.value)}
         placeholder="Track resources, conditions, etc..."
-        className="w-full bg-gray-700 rounded px-3 py-2 text-sm resize-none"
+        className="w-full bg-surface-highlight rounded px-3 py-2 text-sm resize-none"
         rows={4}
       />
     </div>

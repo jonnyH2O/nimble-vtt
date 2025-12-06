@@ -17,25 +17,27 @@ export const MODAL_Z_INDEX = 100;
  */
 export const TOKEN_STYLES = {
   hero: {
-    border: 'border-blue-500',
-    bg: 'bg-blue-600',
+    border: 'border-hero-highlight',
+    bg: 'bg-hero',
     icon: 'Users'
   },
   enemy: {
-    border: 'border-red-500',
-    bg: 'bg-red-600',
+    border: 'border-enemy-highlight',
+    bg: 'bg-enemy',
     icon: 'Swords'
   },
   companion: {
-    border: 'border-green-500',
-    bg: 'bg-green-600',
+    border: 'border-companion-highlight',
+    bg: 'bg-companion',
     icon: 'Heart'
   },
   legendary: {
-    border: 'border-purple-500',
-    bg: 'bg-purple-600',
+    border: 'border-legendary-highlight',
+    bg: 'bg-legendary',
     icon: 'Crown'
   }
+
+
 };
 
 /**
