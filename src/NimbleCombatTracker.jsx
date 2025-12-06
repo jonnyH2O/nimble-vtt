@@ -23,6 +23,7 @@ export default function NimbleCombatTracker() {
 
   // Refs
   const boardRef = useRef(null);
+  const previousDrawModeRef = useRef(null);
 
   // View State (needed for drawing hook)
   const [viewOffset, setViewOffset] = useState({ x: 0, y: 0 });
@@ -480,6 +481,33 @@ export default function NimbleCombatTracker() {
         return;
       }
 
+      // Spacebar Tool Toggle (press to Select, release to revert)
+      if (e.code === 'Space') {
+        // Prevent scrolling
+        if (e.target === document.body) {
+          e.preventDefault();
+        }
+
+        if (!e.repeat && previousDrawModeRef.current === null) {
+          previousDrawModeRef.current = drawMode;
+          setDrawMode('select');
+        }
+        return;
+      }
+
+      // Token Selection Shortcuts (1-9)
+      if (e.key >= '1' && e.key <= '9') {
+        const index = parseInt(e.key) - 1;
+        if (index < turnOrder.length) {
+          const tokenId = turnOrder[index];
+          // Check if token exists in tokens array (might be hidden/deleted but still in turn order? shouldn't happen but good to check)
+          const token = tokens.find(t => t.id === tokenId);
+          if (token) {
+            setSelectedToken(tokenId);
+          }
+        }
+      }
+
       // Drawing Tools Shortcuts
       if (e.key === 'v' || e.key === 'V') {
         setDrawMode('select');
@@ -516,6 +544,12 @@ export default function NimbleCombatTracker() {
       if (e.key === 'Shift') {
         setShiftHeld(false);
       }
+
+      // Spacebar release - revert to previous tool
+      if (e.code === 'Space' && previousDrawModeRef.current !== null) {
+        setDrawMode(previousDrawModeRef.current);
+        previousDrawModeRef.current = null;
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -524,7 +558,7 @@ export default function NimbleCombatTracker() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [historyStep, drawingHistory, selectedToken]);
+  }, [historyStep, drawingHistory, selectedToken, drawMode]);
 
   // Broadcast state to pop-out window
   useEffect(() => {
