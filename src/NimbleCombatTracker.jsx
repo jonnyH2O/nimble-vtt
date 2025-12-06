@@ -491,6 +491,33 @@ export default function NimbleCombatTracker() {
         return;
       }
 
+      // Spacebar Tool Toggle (press to Select, release to revert)
+      if (e.code === 'Space') {
+        // Prevent scrolling
+        if (e.target === document.body) {
+          e.preventDefault();
+        }
+
+        if (!e.repeat && previousDrawModeRef.current === null) {
+          previousDrawModeRef.current = drawMode;
+          setDrawMode('select');
+        }
+        return;
+      }
+
+      // Token Selection Shortcuts (1-9)
+      if (e.key >= '1' && e.key <= '9') {
+        const index = parseInt(e.key) - 1;
+        if (index < turnOrder.length) {
+          const tokenId = turnOrder[index];
+          // Check if token exists in tokens array (might be hidden/deleted but still in turn order? shouldn't happen but good to check)
+          const token = tokens.find(t => t.id === tokenId);
+          if (token) {
+            setSelectedToken(tokenId);
+          }
+        }
+      }
+
       // Drawing Tools Shortcuts
       if (e.key === 'v' || e.key === 'V') {
         setDrawMode('select');
