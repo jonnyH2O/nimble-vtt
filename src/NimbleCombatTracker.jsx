@@ -33,6 +33,7 @@ export default function NimbleCombatTracker() {
 
   // Refs
   const boardRef = useRef(null);
+  const previousDrawModeRef = useRef(null);
 
   // View State (needed for drawing hook)
   const [viewOffset, setViewOffset] = useState({ x: 0, y: 0 });
@@ -510,6 +511,12 @@ export default function NimbleCombatTracker() {
       if (e.key === 'Shift') {
         setShiftHeld(false);
       }
+
+      // Spacebar release - revert to previous tool
+      if (e.code === 'Space' && previousDrawModeRef.current !== null) {
+        setDrawMode(previousDrawModeRef.current);
+        previousDrawModeRef.current = null;
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -518,7 +525,7 @@ export default function NimbleCombatTracker() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [historyStep, drawingHistory, selectedToken]);
+  }, [historyStep, drawingHistory, selectedToken, drawMode]);
 
   // Broadcast state to pop-out window
   useEffect(() => {
