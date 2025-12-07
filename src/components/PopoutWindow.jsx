@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Users, Heart, Swords, Crown } from 'lucide-react';
 import TurnOrderPanel from './TurnOrderPanel';
 import { useWindowSync } from '../hooks/useWindowSync';
@@ -14,6 +14,26 @@ import { SIDEBAR_WIDTH, getTokenBorderColor, getTokenBgColor, getTokenIconName }
 export default function PopoutWindow() {
   const [syncedState, setSyncedState] = useState(null);
   const windowSync = useWindowSync(false); // false = pop-out window
+  const fileInputRef = useRef(null);
+
+  const handleFileImport = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const battleState = JSON.parse(event.target.result);
+        windowSync.broadcast(createMessage(MESSAGE_TYPES.IMPORT_BATTLE_DATA, battleState));
+      } catch (error) {
+        console.error('Error parsing battle file:', error);
+        alert('Error importing battle file. Please make sure it\'s a valid battle export.');
+      }
+    };
+    reader.readAsText(file);
+    // Reset input so same file can be selected again if needed
+    e.target.value = '';
+  };
 
   useEffect(() => {
     if (!windowSync.channel) {
@@ -170,7 +190,14 @@ export default function PopoutWindow() {
         currentTheme={syncedState.currentTheme || 'default'}
         setCurrentTheme={(theme) => sendAction(createMessage(MESSAGE_TYPES.SETTINGS_UPDATE, { currentTheme: theme }))}
         exportBattle={() => sendAction(createMessage(MESSAGE_TYPES.EXPORT_BATTLE))}
-        importBattle={() => sendAction(createMessage(MESSAGE_TYPES.IMPORT_BATTLE))}
+        importBattle={() => fileInputRef.current?.click()}
+      />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        onChange={handleFileImport}
+        className="hidden"
       />
     </div>
   );

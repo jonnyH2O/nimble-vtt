@@ -46,6 +46,7 @@ export const MESSAGE_TYPES = {
   // Pop-out → Main: File operations
   EXPORT_BATTLE: 'EXPORT_BATTLE',
   IMPORT_BATTLE: 'IMPORT_BATTLE',
+  IMPORT_BATTLE_DATA: 'IMPORT_BATTLE_DATA',
 
   // Handshake messages
   WINDOW_READY: 'WINDOW_READY',

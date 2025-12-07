@@ -97,7 +97,7 @@ export default function NimbleCombatTracker() {
   const [expandedNotes, setExpandedNotes] = useState({});
   const [panningView, setPanningView] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
-  const [showSettings, setShowSettings] = useState(false);
+
   const [showGrid, setShowGrid] = useState(false);
   const [gridSize, setGridSize] = useState(50);
   const [expandedConditions, setExpandedConditions] = useState({});
@@ -413,6 +413,39 @@ export default function NimbleCombatTracker() {
     setTimeout(() => URL.revokeObjectURL(link.href), 100);
   };
 
+  const loadBattleState = (battleState) => {
+    try {
+      // Restore all state (conditions are included in tokens)
+      if (battleState.tokens) tokenManager.setAllTokens(battleState.tokens);
+      if (battleState.turnOrder) turnOrderManager.setAllTurnOrder(battleState.turnOrder);
+      if (battleState.background) setBackground(battleState.background);
+      if (battleState.backgroundSize) setBackgroundSize(battleState.backgroundSize);
+      if (battleState.tokenSize) setTokenSize(battleState.tokenSize);
+
+      // Reset view to default to ensure consistent positioning across machines
+      setZoomLevel(1);
+      setViewOffset({ x: 0, y: 0 });
+
+      if (battleState.gridSize !== undefined) setGridSize(battleState.gridSize);
+      if (battleState.showGrid !== undefined) setShowGrid(battleState.showGrid);
+      if (battleState.darknessMode !== undefined) setDarknessMode(battleState.darknessMode);
+      if (battleState.heroLightRadius !== undefined) setHeroLightRadius(battleState.heroLightRadius);
+      if (battleState.companionLightRadius !== undefined) setCompanionLightRadius(battleState.companionLightRadius);
+      if (battleState.darknessIntensity !== undefined) setDarknessIntensity(battleState.darknessIntensity);
+
+      // Restore drawings
+      if (battleState.drawings) {
+        drawingManager.loadDrawing(battleState.drawings);
+      }
+
+      // Switch back to turn order view
+      setSidebarView('turnOrder');
+    } catch (error) {
+      console.error('Error loading battle state:', error);
+      alert('Error loading battle state. File may be corrupted.');
+    }
+  };
+
   const importBattle = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -421,31 +454,7 @@ export default function NimbleCombatTracker() {
     reader.onload = (event) => {
       try {
         const battleState = JSON.parse(event.target.result);
-
-        // Restore all state (conditions are included in tokens)
-        if (battleState.tokens) tokenManager.setAllTokens(battleState.tokens);
-        if (battleState.turnOrder) turnOrderManager.setAllTurnOrder(battleState.turnOrder);
-        if (battleState.background) setBackground(battleState.background);
-        if (battleState.backgroundSize) setBackgroundSize(battleState.backgroundSize);
-        if (battleState.tokenSize) setTokenSize(battleState.tokenSize);
-
-        // Reset view to default to ensure consistent positioning across machines
-        setZoomLevel(1);
-        setViewOffset({ x: 0, y: 0 });
-
-        if (battleState.gridSize !== undefined) setGridSize(battleState.gridSize);
-        if (battleState.showGrid !== undefined) setShowGrid(battleState.showGrid);
-        if (battleState.darknessMode !== undefined) setDarknessMode(battleState.darknessMode);
-        if (battleState.heroLightRadius !== undefined) setHeroLightRadius(battleState.heroLightRadius);
-        if (battleState.companionLightRadius !== undefined) setCompanionLightRadius(battleState.companionLightRadius);
-        if (battleState.darknessIntensity !== undefined) setDarknessIntensity(battleState.darknessIntensity);
-
-        // Restore drawings
-        if (battleState.drawings) {
-          drawingManager.loadDrawing(battleState.drawings);
-        }
-
-        setShowSettings(false);
+        loadBattleState(battleState);
       } catch (error) {
         console.error('Error importing battle:', error);
         alert('Error importing battle file. Please make sure it\'s a valid battle export.');
@@ -737,6 +746,9 @@ export default function NimbleCombatTracker() {
           };
           document.body.appendChild(fileInput);
           fileInput.click();
+          break;
+        case MESSAGE_TYPES.IMPORT_BATTLE_DATA:
+          loadBattleState(payload);
           break;
         case MESSAGE_TYPES.WINDOW_CLOSING:
           setIsPopoutMode(false);
@@ -1255,8 +1267,6 @@ export default function NimbleCombatTracker() {
             showDiceInViewport={showDiceInViewport}
             setShowDiceInViewport={setShowDiceInViewport}
             // Settings props
-            showSettings={showSettings}
-            setShowSettings={setShowSettings}
             setTokenSize={setTokenSize}
             backgroundSize={backgroundSize}
             setBackgroundSize={setBackgroundSize}
