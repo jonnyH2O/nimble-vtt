@@ -54,7 +54,7 @@ export default function Toolbar({
       <Tooltip text="Select Tool" shortcut="V">
         <button
           onClick={() => setDrawMode('select')}
-        className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${drawMode === 'select' ? 'bg-primary' : 'bg-tertiary hover:bg-tertiary-hover'
+          className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${drawMode === 'select' ? 'bg-primary' : 'bg-tertiary hover:bg-tertiary-hover'
             }`}
         >
           <MousePointer size={16} />
@@ -64,7 +64,7 @@ export default function Toolbar({
       <Tooltip text="Draw Tool" shortcut="D">
         <button
           onClick={() => setDrawMode('draw')}
-        className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${drawMode === 'draw' ? 'bg-primary' : 'bg-tertiary hover:bg-tertiary-hover'
+          className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${drawMode === 'draw' ? 'bg-primary' : 'bg-tertiary hover:bg-tertiary-hover'
             }`}
         >
           <Pencil size={16} />
@@ -74,7 +74,7 @@ export default function Toolbar({
       <Tooltip text="Erase Tool" shortcut="E">
         <button
           onClick={() => setDrawMode('erase')}
-        className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${drawMode === 'erase' ? 'bg-primary' : 'bg-tertiary hover:bg-tertiary-hover'
+          className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm ${drawMode === 'erase' ? 'bg-primary' : 'bg-tertiary hover:bg-tertiary-hover'
             }`}
         >
           <Eraser size={16} />
@@ -139,7 +139,6 @@ export default function Toolbar({
             className="bg-destructive hover:bg-destructive-hover px-3 py-1.5 rounded flex items-center gap-2 text-sm"
           >
             <Trash2 size={16} />
-            Clear All
           </button>
         </>
       )}

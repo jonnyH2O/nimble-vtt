@@ -46,6 +46,9 @@
   --color-major-buttons-hover: #c2410c;
   --color-minor-buttons: #ca8a04;
   --color-minor-buttons-hover: #a16207;
+
+  --color-slider: #dc2626;
+  --color-slider-track: #b91c1c;
 }
 
 [data-theme='dracula'] {
@@ -91,6 +94,9 @@
   --color-major-buttons-hover: #a75a08;
   --color-minor-buttons: #899410;
   --color-minor-buttons-hover: #abb811;
+
+  --color-slider: #7d2eed;
+  --color-slider-track: #5914bb;
 }
 
 * {
@@ -110,4 +116,65 @@ body {
 #root {
   width: 100%;
   height: 100vh;
+}
+
+/* Range Input Slider Styling */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  width: 100%;
+}
+
+/* Webkit browsers (Chrome, Safari, Edge) */
+input[type="range"]::-webkit-slider-track {
+  background: var(--color-slider-track);
+  height: 0.5rem;
+  border-radius: 0.25rem;
+  width: 100%;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  background: var(--color-slider-track);
+  height: 0.5rem;
+  border-radius: 0.25rem;
+  width: 100%;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--color-slider);
+  height: 1rem;
+  width: 1rem;
+  border-radius: 50%;
+  margin-top: -0.25rem;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  background: var(--color-slider);
+  filter: brightness(1.1);
+}
+
+/* Firefox */
+input[type="range"]::-moz-range-track {
+  background: var(--color-slider-track);
+  height: 0.5rem;
+  border-radius: 0.25rem;
+}
+
+input[type="range"]::-moz-range-thumb {
+  background: var(--color-slider);
+  height: 1rem;
+  width: 1rem;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  background: var(--color-slider);
+  filter: brightness(1.1);
 }
