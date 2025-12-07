@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Trash2, List, Book, RotateCcw, AlertCircle, Users, Heart, Swords, Crown, ExternalLink, Dices, Settings, Upload, Plus } from 'lucide-react';
 import { NotesPanel } from './HUD';
 import { MESSAGE_TYPES, createMessage } from '../utils/windowMessages';
@@ -132,6 +132,7 @@ export default function TurnOrderPanel({
   const { updateWounds, toggleTempHP } = tokenManager || {};
   const fileInputRef = useRef(null);
   const [popoutDragIndex, setPopoutDragIndex] = React.useState(null);
+  const [hoveredTurnButton, setHoveredTurnButton] = useState(null);
 
   // Helper function to handle actions - sends to main window if in pop-out, otherwise calls directly
   const handleAction = useCallback((type, payload, directFn) => {
@@ -795,12 +796,14 @@ export default function TurnOrderPanel({
                                     );
                                   }
                                 }}
+                                onMouseEnter={() => setHoveredTurnButton(item.id)}
+                                onMouseLeave={() => setHoveredTurnButton(null)}
                                 className={`w-full py-1.5 rounded text-xs font-bold transition-colors ${token.isActiveTurn
-                                  ? 'bg-yellow-500 hover:bg-yellow-600 text-black'
+                                  ? 'bg-primary hover:bg-primary-hover text-white'
                                   : 'bg-button-muted hover:bg-button-muted-hover'
                                   }`}
                               >
-                                {token.isActiveTurn ? '★ Active Turn' : 'Start Turn'}
+                                {token.isActiveTurn ? (hoveredTurnButton === item.id ? 'End Turn' : '★ Active Turn ★') : 'Start Turn'}
                               </button>
                             </div>
                           )}
@@ -820,10 +823,10 @@ export default function TurnOrderPanel({
                                   className={`flex-1 h-8 rounded transition-colors ${used
                                     ? 'bg-button-muted-hover'
                                     : token.isActiveTurn
-                                      ? 'bg-blue-500 hover:bg-primary'
+                                      ? 'bg-secondary hover:bg-secondary-hover'
                                       : token.type === 'enemy'
-                                        ? 'bg-red-500 hover:bg-destructive'
-                                        : 'bg-green-500 hover:bg-secondary'
+                                        ? 'bg-secondary hover:bg-secondary-hover'
+                                        : 'bg-secondary hover:bg-secondary-hover'
                                     }`}
                                 >
                                   {token.type === 'hero' ? actionIndex + 1 : '✓'}
@@ -850,7 +853,7 @@ export default function TurnOrderPanel({
                                   .slice(0, index)
                                   .filter(i => i.id === item.id && i.isLegendaryEcho).length]
                                   ? 'bg-button-muted-hover'
-                                  : 'bg-purple-500 hover:bg-primary'
+                                  : 'bg-secondary hover:bg-secondary-hover'
                                   }`}
                               >
                                 ✓
