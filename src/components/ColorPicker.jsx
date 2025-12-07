@@ -46,7 +46,7 @@ export default function ColorPicker({ color, onChange }) {
             />
 
             {isOpen && (
-                <div className="absolute top-full left-0 mt-2 p-2 bg-gray-800 rounded-lg shadow-xl border border-gray-700 z-50 grid grid-cols-4 gap-2 w-max">
+                <div className="absolute top-full right-0 mt-2 p-2 bg-gray-800 rounded-lg shadow-xl border border-gray-700 z-50 grid grid-cols-4 gap-2 w-max">
                     {COLORS.map((c) => (
                         <button
                             key={c}

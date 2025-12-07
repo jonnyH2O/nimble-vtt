@@ -55,6 +55,19 @@ export default function PopoutWindow() {
     };
   }, [windowSync.channel, windowSync.broadcast]);
 
+  // Apply theme to popout window's document
+  // MUST be before early return to maintain hooks order
+  useEffect(() => {
+    if (!syncedState) return;
+
+    const theme = syncedState.currentTheme || 'default';
+    if (theme === 'dracula') {
+      document.documentElement.setAttribute('data-theme', 'dracula');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+  }, [syncedState]);
+
   // Loading state
   if (!syncedState) {
     return (
@@ -146,6 +159,16 @@ export default function PopoutWindow() {
         setDarknessIntensity={(darknessIntensity) => sendAction(createMessage(MESSAGE_TYPES.SETTINGS_UPDATE, { darknessIntensity }))}
         showPartyOverview={syncedState.showPartyOverview !== undefined ? syncedState.showPartyOverview : true}
         setShowPartyOverview={(showPartyOverview) => sendAction(createMessage(MESSAGE_TYPES.SETTINGS_UPDATE, { showPartyOverview }))}
+        // Add Token props - buttons are disabled in popout window mode
+        handleBackgroundUpload={() => { }} // No-op - button disabled
+        showAddToken={false}
+        setShowAddToken={() => { }} // No-op - button disabled
+        newToken={{}} // Stub
+        setNewToken={() => { }} // Stub
+        handleAddToken={() => { }} // Stub
+        handleTokenImageUpload={() => { }} // Stub
+        currentTheme={syncedState.currentTheme || 'default'}
+        setCurrentTheme={(theme) => sendAction(createMessage(MESSAGE_TYPES.SETTINGS_UPDATE, { currentTheme: theme }))}
         exportBattle={() => sendAction(createMessage(MESSAGE_TYPES.EXPORT_BATTLE))}
         importBattle={() => sendAction(createMessage(MESSAGE_TYPES.IMPORT_BATTLE))}
       />

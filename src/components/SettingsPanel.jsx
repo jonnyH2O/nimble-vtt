@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Download, FileUp } from 'lucide-react';
+import { Settings, Download, FileUp, Upload, Plus } from 'lucide-react';
 
 /**
  * SettingsPanel Component
@@ -25,6 +25,8 @@ import { Settings, Download, FileUp } from 'lucide-react';
  * @param {Function} props.setCompanionLightRadius - Function to set companion light radius
  * @param {number} props.darknessIntensity - Darkness intensity (0-1)
  * @param {Function} props.setDarknessIntensity - Function to set darkness intensity
+ * @param {Function} props.handleBackgroundUpload - Function to handle background image upload
+ * @param {Function} props.setShowAddToken - Function to toggle add token dialog
  * @param {Function} props.exportBattle - Function to export battle state
  * @param {Function} props.importBattle - Function to import battle state (event handler)
  */
@@ -49,6 +51,8 @@ export default function SettingsPanel({
   setDarknessIntensity,
   showPartyOverview,
   setShowPartyOverview,
+  handleBackgroundUpload,
+  setShowAddToken,
   exportBattle,
   importBattle,
   currentTheme,
@@ -71,6 +75,22 @@ export default function SettingsPanel({
           <h3 className="text-sm font-bold mb-3">Display Settings</h3>
 
           <div className="space-y-4">
+            {/* Background and Add Token Buttons */}
+            <div className="flex gap-2">
+              <label className="flex-1 bg-primary hover:bg-primary-hover px-3 py-2 rounded cursor-pointer flex items-center justify-center gap-2 text-sm">
+                <Upload size={16} />
+                Background
+                <input type="file" accept="image/*" onChange={handleBackgroundUpload} className="hidden" />
+              </label>
+              <button
+                onClick={() => setShowAddToken(true)}
+                className="flex-1 bg-secondary hover:bg-secondary-hover px-3 py-2 rounded flex items-center justify-center gap-2 text-sm"
+              >
+                <Plus size={16} />
+                Add Token
+              </button>
+            </div>
+
             {/* Token Size */}
             <div>
               <label className="text-sm block mb-2">Token Size</label>

@@ -297,7 +297,7 @@ export default function NimbleCombatTracker() {
     const popout = window.open(
       '/?popout=true',
       'nimble-sidebar',
-      'width=400,height=800,left=100,top=100,resizable=yes,scrollbars=yes'
+      'width=400,height=1100,left=100,top=100,resizable=yes,scrollbars=yes'
     );
 
     if (popout) {
@@ -600,7 +600,8 @@ export default function NimbleCombatTracker() {
         heroLightRadius,
         companionLightRadius,
         darknessIntensity,
-        showPartyOverview
+        showPartyOverview,
+        currentTheme
       }));
     } else {
       console.log('[MainWindow] NOT broadcasting - isPopoutMode:', isPopoutMode, 'hasChannel:', !!windowSync.channel);
@@ -629,6 +630,7 @@ export default function NimbleCombatTracker() {
     darknessIntensity,
     showPartyOverview,
     tokenSize,
+    currentTheme,
   ]);
 
   // Listen for actions from pop-out window
@@ -719,6 +721,7 @@ export default function NimbleCombatTracker() {
           if (payload.darknessIntensity !== undefined) setDarknessIntensity(payload.darknessIntensity);
           if (payload.showPartyOverview !== undefined) setShowPartyOverview(payload.showPartyOverview);
           if (payload.showDiceInViewport !== undefined) setShowDiceInViewport(payload.showDiceInViewport);
+          if (payload.currentTheme !== undefined) setCurrentTheme(payload.currentTheme);
           break;
         case MESSAGE_TYPES.EXPORT_BATTLE:
           exportBattle();
@@ -807,123 +810,6 @@ export default function NimbleCombatTracker() {
         <div className="flex gap-3 items-center flex-wrap justify-between">
           <div className="flex gap-3 items-center flex-wrap">
             <h1 className="text-xl font-bold">Nimble Combat Tracker</h1>
-
-            <div className="h-8 w-px bg-button-muted"></div>
-
-            <label className="bg-primary hover:bg-primary-hover px-3 py-1.5 rounded cursor-pointer flex items-center gap-2 text-sm">
-              <Upload size={16} />
-              Background
-              <input type="file" accept="image/*" onChange={handleBackgroundUpload} className="hidden" />
-            </label>
-
-            <button
-              onClick={() => setShowAddToken(!showAddToken)}
-              className="bg-secondary hover:bg-secondary-hover px-3 py-1.5 rounded flex items-center gap-2 text-sm"
-            >
-              <Plus size={16} />
-              Add Token
-            </button>
-
-            {showAddToken && (
-              <div className="absolute left-0 top-12 bg-surface border border-border rounded-lg p-4 shadow-lg z-[100] w-80">
-                <h3 className="text-sm font-bold mb-3">Add New Token</h3>
-
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs mb-1">Name</label>
-                    <input
-                      type="text"
-                      value={newToken.name}
-                      onChange={(e) => setNewToken({ ...newToken, name: e.target.value })}
-                      className="w-full bg-surface-highlight px-3 py-2 rounded text-sm"
-                      placeholder="Token name"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs mb-1">Type</label>
-                    <select
-                      value={newToken.type}
-                      onChange={(e) => setNewToken({ ...newToken, type: e.target.value })}
-                      className="w-full bg-surface-highlight px-3 py-2 rounded text-sm"
-                    >
-                      <option value="hero">Hero</option>
-                      <option value="companion">Companion</option>
-                      <option value="enemy">Enemy</option>
-                      <option value="legendary">Legendary</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs mb-1">Image (Optional)</label>
-                    <label className="w-full bg-primary hover:bg-primary-hover px-3 py-2 rounded cursor-pointer text-sm flex items-center justify-center gap-2">
-                      <Upload size={16} />
-                      {newToken.image ? 'Change Image' : 'Upload Image'}
-                      <input type="file" accept="image/*" onChange={handleTokenImageUpload} className="hidden" />
-                    </label>
-                    {newToken.image && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <img src={newToken.image} alt="Preview" className="w-10 h-10 rounded-full object-cover" />
-                        <span className="text-xs text-text-muted">Image uploaded</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={newToken.hasResource}
-                        onChange={(e) => setNewToken({ ...newToken, hasResource: e.target.checked })}
-                        className="w-4 h-4"
-                      />
-                      <span className="text-xs font-bold">Has Resource?</span>
-                    </label>
-
-                    {newToken.hasResource && (
-                      <div className="mt-2 space-y-2 pl-6">
-                        <div className="flex gap-2 items-end">
-                          <div className="flex-1">
-                            <label className="block text-xs mb-1">Resource Name</label>
-                            <input
-                              type="text"
-                              value={newToken.resourceName}
-                              onChange={(e) => setNewToken({ ...newToken, resourceName: e.target.value })}
-                              className="w-full bg-surface-highlight px-3 py-2 rounded text-sm"
-                              placeholder="e.g., Mana, Focus, Rage"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs mb-1">Color</label>
-                            <input
-                              type="color"
-                              value={newToken.resourceColor}
-                              onChange={(e) => setNewToken({ ...newToken, resourceColor: e.target.value })}
-                              className="w-12 h-10 bg-surface-highlight rounded cursor-pointer"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex gap-2 pt-2">
-                    <button
-                      onClick={handleAddToken}
-                      className="flex-1 bg-secondary hover:bg-secondary-hover px-3 py-2 rounded text-sm font-bold"
-                    >
-                      Add
-                    </button>
-                    <button
-                      onClick={() => setShowAddToken(false)}
-                      className="flex-1 bg-button-muted hover:bg-button-muted-hover px-3 py-2 rounded text-sm"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
 
             <Toolbar
               drawMode={drawMode}
@@ -1374,6 +1260,13 @@ export default function NimbleCombatTracker() {
             setDarknessIntensity={setDarknessIntensity}
             showPartyOverview={showPartyOverview}
             setShowPartyOverview={setShowPartyOverview}
+            handleBackgroundUpload={handleBackgroundUpload}
+            showAddToken={showAddToken}
+            setShowAddToken={setShowAddToken}
+            newToken={newToken}
+            setNewToken={setNewToken}
+            handleAddToken={handleAddToken}
+            handleTokenImageUpload={handleTokenImageUpload}
             exportBattle={exportBattle}
             importBattle={importBattle}
             currentTheme={currentTheme}
