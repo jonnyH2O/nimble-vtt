@@ -48,7 +48,7 @@ export default function Toolbar({
 }) {
   return (
     <div className="flex items-center gap-2 flex-1">
-      <div className="h-8 w-px bg-button-muted"></div>
+
 
       {/* Mode Selection Buttons */}
       <Tooltip text="Select Tool" shortcut="V">
@@ -108,30 +108,32 @@ export default function Toolbar({
           <div className="h-8 w-px bg-button-muted"></div>
 
           {/* Undo Button */}
-          <button
-            onClick={undo}
-            disabled={historyStep <= 0}
-            className={`px-2 py-1.5 rounded flex items-center gap-1 text-sm ${historyStep <= 0
-              ? 'bg-button-muted text-text-muted cursor-not-allowed'
-              : 'bg-tertiary hover:bg-tertiary-hover'
-              }`}
-            title="Undo (Ctrl+Z)"
-          >
-            <Undo2 size={16} />
-          </button>
+          <Tooltip text="Undo" shortcut="Ctrl+Z">
+            <button
+              onClick={undo}
+              disabled={historyStep <= 0}
+              className={`px-2 py-1.5 rounded flex items-center gap-1 text-sm ${historyStep <= 0
+                ? 'bg-button-muted text-text-muted cursor-not-allowed'
+                : 'bg-tertiary hover:bg-tertiary-hover'
+                }`}
+            >
+              <Undo2 size={16} />
+            </button>
+          </Tooltip>
 
           {/* Redo Button */}
-          <button
-            onClick={redo}
-            disabled={historyStep >= drawingHistory.length - 1}
-            className={`px-2 py-1.5 rounded flex items-center gap-1 text-sm ${historyStep >= drawingHistory.length - 1
-              ? 'bg-button-muted text-text-muted cursor-not-allowed'
-              : 'bg-tertiary hover:bg-tertiary-hover'
-              }`}
-            title="Redo (Ctrl+Shift+Z)"
-          >
-            <Redo2 size={16} />
-          </button>
+          <Tooltip text="Redo" shortcut="Ctrl+Shift+Z">
+            <button
+              onClick={redo}
+              disabled={historyStep >= drawingHistory.length - 1}
+              className={`px-2 py-1.5 rounded flex items-center gap-1 text-sm ${historyStep >= drawingHistory.length - 1
+                ? 'bg-button-muted text-text-muted cursor-not-allowed'
+                : 'bg-tertiary hover:bg-tertiary-hover'
+                }`}
+            >
+              <Redo2 size={16} />
+            </button>
+          </Tooltip>
 
           {/* Clear All Button */}
           <button
