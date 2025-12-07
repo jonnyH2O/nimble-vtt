@@ -1,9 +1,10 @@
 import React, { useCallback, useRef } from 'react';
-import { Trash2, List, Book, RotateCcw, AlertCircle, Users, Heart, Swords, Crown, ExternalLink, Dices, Settings } from 'lucide-react';
+import { Trash2, List, Book, RotateCcw, AlertCircle, Users, Heart, Swords, Crown, ExternalLink, Dices, Settings, Upload, Plus } from 'lucide-react';
 import { NotesPanel } from './HUD';
 import { MESSAGE_TYPES, createMessage } from '../utils/windowMessages';
 import DiceRoller from './DiceRoller';
 import SettingsPanel from './SettingsPanel';
+import ColorPicker from './ColorPicker';
 
 /**
  * BloodiedVignette - Reusable component for bloodied condition visual effect
@@ -116,6 +117,13 @@ export default function TurnOrderPanel({
   setDarknessIntensity,
   showPartyOverview,
   setShowPartyOverview,
+  handleBackgroundUpload,
+  showAddToken,
+  setShowAddToken,
+  newToken,
+  setNewToken,
+  handleAddToken,
+  handleTokenImageUpload,
   exportBattle,
   importBattle,
   currentTheme,
@@ -178,7 +186,7 @@ export default function TurnOrderPanel({
   const activeTurnOrderManager = turnOrderManager || popoutTurnOrderManager;
 
   return (
-    <div className="bg-surface border-l border-border flex flex-col" style={{ width: `${SIDEBAR_WIDTH}px` }}>
+    <div className={`bg-surface border-l border-border flex flex-col ${isPopoutWindow ? 'w-full h-full' : ''}`} style={isPopoutWindow ? {} : { width: `${SIDEBAR_WIDTH}px` }}>
       {/* Tab Navigation */}
       <div className="bg-surface-highlight border-b border-border p-3 flex items-center justify-between">
         <div className="flex gap-2">
@@ -1868,6 +1876,124 @@ export default function TurnOrderPanel({
             <h2 className="text-xl font-bold mb-4">Settings</h2>
 
             <div className="space-y-4">
+              {/* Background and Add Token Buttons */}
+              <div className="flex gap-2">
+                <label className={`flex-1 px-3 py-2 rounded flex items-center justify-center gap-2 text-sm ${isPopoutWindow
+                  ? 'bg-button-muted text-text-muted cursor-not-allowed'
+                  : 'bg-primary hover:bg-primary-hover cursor-pointer'
+                  }`}>
+                  <Upload size={16} />
+                  Background
+                  {!isPopoutWindow && <input type="file" accept="image/*" onChange={handleBackgroundUpload} className="hidden" />}
+                </label>
+                <button
+                  onClick={() => !isPopoutWindow && setShowAddToken(!showAddToken)}
+                  disabled={isPopoutWindow}
+                  className={`flex-1 px-3 py-2 rounded flex items-center justify-center gap-2 text-sm ${isPopoutWindow
+                    ? 'bg-button-muted text-text-muted cursor-not-allowed'
+                    : showAddToken
+                      ? 'bg-tertiary hover:bg-tertiary-hover'
+                      : 'bg-secondary hover:bg-secondary-hover'
+                    }`}
+                >
+                  <Plus size={16} />
+                  {showAddToken ? 'Cancel' : 'Add Token'}
+                </button>
+              </div>
+
+              {/* Add Token Form - Inline */}
+              {showAddToken && (
+                <div className="bg-surface-highlight border border-border rounded-lg p-4 space-y-3">
+                  <h3 className="text-sm font-bold mb-2">Add New Token</h3>
+
+                  <div>
+                    <label className="block text-xs mb-1">Name</label>
+                    <input
+                      type="text"
+                      value={newToken.name}
+                      onChange={(e) => setNewToken({ ...newToken, name: e.target.value })}
+                      className="w-full bg-surface px-3 py-2 rounded text-sm"
+                      placeholder="Token name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs mb-1">Type</label>
+                    <select
+                      value={newToken.type}
+                      onChange={(e) => setNewToken({ ...newToken, type: e.target.value })}
+                      className="w-full bg-surface px-3 py-2 rounded text-sm"
+                    >
+                      <option value="hero">Hero</option>
+                      <option value="companion">Companion</option>
+                      <option value="enemy">Enemy</option>
+                      <option value="legendary">Legendary</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newToken.hasResource}
+                        onChange={(e) => setNewToken({ ...newToken, hasResource: e.target.checked })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-xs font-bold">Has Resource?</span>
+                    </label>
+
+                    {newToken.hasResource && (
+                      <div className="mt-2 space-y-2 pl-6">
+                        <div className="flex gap-2 items-end">
+                          <div className="flex-1">
+                            <label className="block text-xs mb-1">Resource Name</label>
+                            <input
+                              type="text"
+                              value={newToken.resourceName}
+                              onChange={(e) => setNewToken({ ...newToken, resourceName: e.target.value })}
+                              className="w-full bg-surface px-3 py-2 rounded text-sm"
+                              placeholder="e.g., Mana, Focus, Rage"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs mb-1">Color</label>
+                            <ColorPicker
+                              color={newToken.resourceColor}
+                              onChange={(color) => setNewToken({ ...newToken, resourceColor: color })}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs mb-1">Image (Optional)</label>
+                    <label className="w-full bg-primary hover:bg-primary-hover px-3 py-2 rounded cursor-pointer text-sm flex items-center justify-center gap-2">
+                      <Upload size={16} />
+                      {newToken.image ? 'Change Image' : 'Upload Image'}
+                      <input type="file" accept="image/*" onChange={handleTokenImageUpload} className="hidden" />
+                    </label>
+                    {newToken.image && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <img src={newToken.image} alt="Preview" className="w-10 h-10 rounded-full object-cover" />
+                        <span className="text-xs text-text-muted">Image uploaded</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      handleAddToken();
+                      setShowAddToken(false);
+                    }}
+                    className="w-full bg-secondary hover:bg-secondary-hover px-3 py-2 rounded text-sm font-bold mt-2"
+                  >
+                    Add Token
+                  </button>
+                </div>
+              )}
+
               {/* Token Size */}
               <div>
                 <label className="text-sm block mb-2">Token Size</label>
@@ -2065,11 +2191,13 @@ export default function TurnOrderPanel({
         }
       </div >
 
-      <NotesPanel
-        selectedToken={selectedToken}
-        tokens={tokens}
-        updateNotes={updateNotes}
-      />
+      <div className={isPopoutWindow ? 'mt-auto border-t border-border flex-shrink-0' : ''}>
+        <NotesPanel
+          selectedToken={selectedToken}
+          tokens={tokens}
+          updateNotes={updateNotes}
+        />
+      </div>
     </div >
   );
 }
