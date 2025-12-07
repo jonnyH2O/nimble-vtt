@@ -58,10 +58,10 @@ export default function PopoutWindow() {
   // Loading state
   if (!syncedState) {
     return (
-      <div className="h-screen bg-gray-900 text-white flex items-center justify-center">
+      <div className="h-screen bg-background text-white flex items-center justify-center">
         <div className="text-center">
           <div className="text-xl mb-2">Connecting to main window...</div>
-          <div className="text-sm text-gray-400">
+          <div className="text-sm text-text-muted">
             If this persists, ensure the main window is still open
           </div>
         </div>
@@ -87,7 +87,7 @@ export default function PopoutWindow() {
   };
 
   return (
-    <div className="h-screen bg-gray-900 text-white flex flex-col">
+    <div className="h-screen bg-background text-white flex flex-col">
       <TurnOrderPanel
         isPopoutWindow={true}
         onAction={sendAction}
@@ -118,7 +118,7 @@ export default function PopoutWindow() {
         turnOrderManager={null} // NOT passed - mutations go through onAction
         // Dice Roller props - send to main window
         showDiceMenu={false}
-        setShowDiceMenu={() => {}}
+        setShowDiceMenu={() => { }}
         diceCount={syncedState.diceCount || 1}
         setDiceCount={(count) => sendAction(createMessage(MESSAGE_TYPES.DICE_COUNT_UPDATE, { count }))}
         rollDice={(diceType) => sendAction(createMessage(MESSAGE_TYPES.DICE_ROLL, { diceType }))}
@@ -128,7 +128,7 @@ export default function PopoutWindow() {
         setShowDiceInViewport={(showDiceInViewport) => sendAction(createMessage(MESSAGE_TYPES.SETTINGS_UPDATE, { showDiceInViewport }))}
         // Settings props - send to main window
         showSettings={false}
-        setShowSettings={() => {}}
+        setShowSettings={() => { }}
         setTokenSize={(tokenSize) => sendAction(createMessage(MESSAGE_TYPES.SETTINGS_UPDATE, { tokenSize }))}
         backgroundSize={syncedState.backgroundSize || 100}
         setBackgroundSize={(backgroundSize) => sendAction(createMessage(MESSAGE_TYPES.SETTINGS_UPDATE, { backgroundSize }))}

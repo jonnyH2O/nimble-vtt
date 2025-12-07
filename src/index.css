@@ -2,6 +2,103 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Default Theme */
+
+  --color-background: #111827;
+  --color-surface: #1f2937;
+  --color-surface-highlight: #374151;
+
+  --color-border: #374151;
+
+  --color-text: #ffffff;
+  --color-text-muted: #9ca3af;
+
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+
+  --color-secondary: #059669;
+  --color-secondary-hover: #047857;
+
+  --color-destructive: #dc2626;
+  --color-destructive-hover: #b91c1c;
+
+  --color-button-muted: #4b5563;
+  --color-button-muted-hover: #6b7280;
+
+  --color-tertiary: #374151;
+  --color-tertiary-hover: #4b5563;
+
+  --color-token-selected: #f97316;
+
+  --color-hero: #2563EB;
+  --color-companion: #16A34A;
+  --color-enemy: #DC2626;
+  --color-legendary: #9333EA;
+  --color-hero-highlight: #3b82f6;
+  --color-companion-highlight: #22c55e;
+  --color-enemy-highlight: #ef4444;
+  --color-legendary-highlight: #a855f7;
+
+  --color-doomed-buttons: #dc2626;
+  --color-doomed-buttons-hover: #b91c1c;
+  --color-major-buttons: #ea580c;
+  --color-major-buttons-hover: #c2410c;
+  --color-minor-buttons: #ca8a04;
+  --color-minor-buttons-hover: #a16207;
+
+  --color-slider: #dc2626;
+  --color-slider-track: #b91c1c;
+}
+
+[data-theme='dracula'] {
+
+  --color-background: #373a4d;
+  --color-surface: #282a36;
+  --color-surface-highlight: #373a4d;
+
+  --color-border: #454a64;
+
+  --color-text: #f8f8f2;
+  --color-text-muted: #858bb0;
+
+  --color-primary: #491298;
+  --color-primary-hover: #5914bb;
+
+  --color-secondary: #0a8329;
+  --color-secondary-hover: #0ba833;
+
+  --color-destructive: #910707;
+  --color-destructive-hover: #b70607;
+
+  --color-button-muted: #525771;
+  --color-button-muted-hover: #9ca3af;
+
+  --color-tertiary: #44475a;
+  --color-tertiary-hover: #525771;
+
+  --color-token-selected: #f80e95;
+
+  --color-hero: #0c819a;
+  --color-companion: #0a8329;
+  --color-enemy: #910707;
+  --color-legendary: #491298;
+  --color-hero-highlight: #0ca0bf;
+  --color-companion-highlight: #0ba833;
+  --color-enemy-highlight: #b70707;
+  --color-legendary-highlight: #5914bb;
+
+  --color-doomed-buttons: #910707;
+  --color-doomed-buttons-hover: #b70707;
+  --color-major-buttons: #824707;
+  --color-major-buttons-hover: #a75a08;
+  --color-minor-buttons: #899410;
+  --color-minor-buttons-hover: #abb811;
+
+  --color-slider: #7d2eed;
+  --color-slider-track: #5914bb;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -19,4 +116,65 @@ body {
 #root {
   width: 100%;
   height: 100vh;
+}
+
+/* Range Input Slider Styling */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  width: 100%;
+}
+
+/* Webkit browsers (Chrome, Safari, Edge) */
+input[type="range"]::-webkit-slider-track {
+  background: var(--color-slider-track);
+  height: 0.5rem;
+  border-radius: 0.25rem;
+  width: 100%;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  background: var(--color-slider-track);
+  height: 0.5rem;
+  border-radius: 0.25rem;
+  width: 100%;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--color-slider);
+  height: 1rem;
+  width: 1rem;
+  border-radius: 50%;
+  margin-top: -0.25rem;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  background: var(--color-slider);
+  filter: brightness(1.1);
+}
+
+/* Firefox */
+input[type="range"]::-moz-range-track {
+  background: var(--color-slider-track);
+  height: 0.5rem;
+  border-radius: 0.25rem;
+}
+
+input[type="range"]::-moz-range-thumb {
+  background: var(--color-slider);
+  height: 1rem;
+  width: 1rem;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  background: var(--color-slider);
+  filter: brightness(1.1);
 }

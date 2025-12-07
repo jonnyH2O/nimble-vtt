@@ -50,14 +50,16 @@ export default function SettingsPanel({
   showPartyOverview,
   setShowPartyOverview,
   exportBattle,
-  importBattle
+  importBattle,
+  currentTheme,
+  setCurrentTheme
 }) {
   return (
     <div className="relative">
       {/* Settings Button */}
       <button
         onClick={() => setShowSettings(!showSettings)}
-        className="bg-gray-700 hover:bg-gray-600 p-2 rounded flex items-center justify-center"
+        className="bg-surface-highlight hover:bg-button-muted p-2 rounded flex items-center justify-center"
         title="Settings"
       >
         <Settings size={20} />
@@ -65,7 +67,7 @@ export default function SettingsPanel({
 
       {/* Settings Dropdown Panel */}
       {showSettings && (
-        <div className="absolute right-0 top-12 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-lg z-50 w-64">
+        <div className="absolute right-0 top-12 bg-surface border border-border rounded-lg p-4 shadow-lg z-50 w-64">
           <h3 className="text-sm font-bold mb-3">Display Settings</h3>
 
           <div className="space-y-4">
@@ -104,14 +106,13 @@ export default function SettingsPanel({
             </div>
 
             {/* Party Overview Toggle */}
-            <div className="border-t border-gray-700 pt-4">
+            <div className="border-t border-border pt-4">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-bold">Show Party Overview</label>
                 <button
                   onClick={() => setShowPartyOverview(!showPartyOverview)}
-                  className={`px-3 py-1 rounded text-sm ${
-                    showPartyOverview ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 hover:bg-gray-500'
-                  }`}
+                  className={`px-3 py-1 rounded text-sm ${showPartyOverview ? 'bg-secondary hover:bg-secondary-hover' : 'bg-button-muted hover:bg-button-muted-hover'
+                    }`}
                 >
                   {showPartyOverview ? 'ON' : 'OFF'}
                 </button>
@@ -119,14 +120,13 @@ export default function SettingsPanel({
             </div>
 
             {/* Grid Settings */}
-            <div className="border-t border-gray-700 pt-4">
+            <div className="border-t border-border pt-4">
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm font-bold">Show Grid</label>
                 <button
                   onClick={() => setShowGrid(!showGrid)}
-                  className={`px-3 py-1 rounded text-sm ${
-                    showGrid ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 hover:bg-gray-500'
-                  }`}
+                  className={`px-3 py-1 rounded text-sm ${showGrid ? 'bg-secondary hover:bg-secondary-hover' : 'bg-button-muted hover:bg-button-muted-hover'
+                    }`}
                 >
                   {showGrid ? 'ON' : 'OFF'}
                 </button>
@@ -151,14 +151,13 @@ export default function SettingsPanel({
             </div>
 
             {/* Darkness Mode Settings */}
-            <div className="border-t border-gray-700 pt-4">
+            <div className="border-t border-border pt-4">
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm font-bold">Darkness Mode</label>
                 <button
                   onClick={() => setDarknessMode(!darknessMode)}
-                  className={`px-3 py-1 rounded text-sm ${
-                    darknessMode ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-600 hover:bg-gray-500'
-                  }`}
+                  className={`px-3 py-1 rounded text-sm ${darknessMode ? 'bg-secondary hover:bg-secondary-hover' : 'bg-button-muted hover:bg-button-muted-hover'
+                    }`}
                 >
                   {darknessMode ? 'ON' : 'OFF'}
                 </button>
@@ -214,17 +213,32 @@ export default function SettingsPanel({
               )}
             </div>
 
+            {/* Theme Selector */}
+            <div className="border-t border-border pt-4">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-bold">Theme</label>
+                <select
+                  value={currentTheme}
+                  onChange={(e) => setCurrentTheme(e.target.value)}
+                  className="bg-button-muted text-text text-sm rounded px-2 py-1 border border-gray-500"
+                >
+                  <option value="default">Default</option>
+                  <option value="dracula">Dracula</option>
+                </select>
+              </div>
+            </div>
+
             {/* Export/Import Battle */}
-            <div className="border-t border-gray-700 pt-4 space-y-2">
+            <div className="border-t border-border pt-4 space-y-2">
               <h3 className="text-sm font-bold mb-2">Save/Load</h3>
               <button
                 onClick={exportBattle}
-                className="w-full bg-green-600 hover:bg-green-700 px-3 py-2 rounded flex items-center justify-center gap-2 text-sm"
+                className="w-full bg-secondary hover:bg-secondary-hover px-3 py-2 rounded flex items-center justify-center gap-2 text-sm"
               >
                 <Download size={16} />
                 Export Battle
               </button>
-              <label className="w-full bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded flex items-center justify-center gap-2 text-sm cursor-pointer">
+              <label className="w-full bg-primary hover:bg-primary-hover px-3 py-2 rounded flex items-center justify-center gap-2 text-sm cursor-pointer">
                 <FileUp size={16} />
                 Import Battle
                 <input type="file" accept=".json" onChange={importBattle} className="hidden" />

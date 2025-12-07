@@ -73,7 +73,7 @@ export default function DiceRoller({
       {!hideButton && (
         <button
           onClick={() => setShowDiceMenu(!showDiceMenu)}
-          className="bg-purple-600 hover:bg-purple-700 p-2 rounded flex items-center justify-center relative"
+          className="bg-primary hover:bg-primary-hover p-2 rounded flex items-center justify-center relative"
         >
           <Dices size={20} />
         </button>
@@ -81,7 +81,7 @@ export default function DiceRoller({
 
       {/* Dice Menu Popup */}
       {showDiceMenu && (
-        <div className="absolute right-80 top-12 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-lg z-[100] w-64">
+        <div className="absolute right-80 top-12 bg-surface border border-border rounded-lg p-4 shadow-lg z-[100] w-64">
           <h3 className="text-sm font-bold mb-3">Roll Dice</h3>
 
           <div className="mb-4">
@@ -92,44 +92,44 @@ export default function DiceRoller({
               max="20"
               value={diceCount}
               onChange={(e) => setDiceCount(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
-              className="w-full bg-gray-700 px-3 py-2 rounded text-center"
+              className="w-full bg-surface-highlight px-3 py-2 rounded text-center"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => rollDice(4)}
-              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-bold"
+              className="bg-primary hover:bg-primary-hover px-4 py-2 rounded font-bold"
             >
               d4
             </button>
             <button
               onClick={() => rollDice(6)}
-              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-bold"
+              className="bg-primary hover:bg-primary-hover px-4 py-2 rounded font-bold"
             >
               d6
             </button>
             <button
               onClick={() => rollDice(8)}
-              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-bold"
+              className="bg-primary hover:bg-primary-hover px-4 py-2 rounded font-bold"
             >
               d8
             </button>
             <button
               onClick={() => rollDice(10)}
-              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-bold"
+              className="bg-primary hover:bg-primary-hover px-4 py-2 rounded font-bold"
             >
               d10
             </button>
             <button
               onClick={() => rollDice(12)}
-              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-bold"
+              className="bg-primary hover:bg-primary-hover px-4 py-2 rounded font-bold"
             >
               d12
             </button>
             <button
               onClick={() => rollDice(20)}
-              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-bold"
+              className="bg-primary hover:bg-primary-hover px-4 py-2 rounded font-bold"
             >
               d20
             </button>
@@ -146,7 +146,7 @@ export default function DiceRoller({
               item.type === 'rolling' ? (
                 <div
                   key={`rolling-${item.id}`}
-                  className="bg-purple-600 text-white px-8 py-6 rounded-lg shadow-2xl border-4 border-purple-400 transition-all duration-300"
+                  className="bg-primary text-text px-8 py-6 rounded-lg shadow-2xl border-4 border-purple-400 transition-all duration-300"
                 >
                   <div key={item.id} className="text-center dice-spin">
                     <div className="text-6xl">🎲</div>
@@ -155,9 +155,8 @@ export default function DiceRoller({
               ) : (
                 <div
                   key={`result-${item.id}`}
-                  className={`bg-green-600 text-white px-6 py-4 rounded-lg shadow-2xl border-4 border-green-400 transition-all duration-300 ${
-                    item.fading ? 'dice-fade' : 'dice-pop'
-                  }`}
+                  className={`bg-green-600 text-text px-6 py-4 rounded-lg shadow-2xl border-4 border-green-400 transition-all duration-300 ${item.fading ? 'dice-fade' : 'dice-pop'
+                    }`}
                 >
                   <div className="text-center">
                     <div className="text-sm font-bold mb-1">{item.dice}</div>

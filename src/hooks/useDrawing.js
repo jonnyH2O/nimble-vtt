@@ -15,8 +15,8 @@ const DRAWING_HISTORY_LIMIT = 10;
 export function useDrawing(boardRef, viewOffset, zoomLevel) {
   const [drawing, setDrawing] = useState(false);
   const [drawMode, setDrawMode] = useState('select');
-  const [drawColor, setDrawColor] = useState('#ff0000');
-  const [drawSize, setDrawSize] = useState(3);
+  const [drawColor, setDrawColor] = useState('#22c55e');
+  const [drawSize, setDrawSize] = useState(8);
   const [eraseSize, setEraseSize] = useState(10);
   const [drawingHistory, setDrawingHistory] = useState([]);
   const [historyStep, setHistoryStep] = useState(-1);
@@ -96,9 +96,11 @@ export function useDrawing(boardRef, viewOffset, zoomLevel) {
       if (drawMode === 'erase') {
         ctx.globalCompositeOperation = 'destination-out';
         ctx.strokeStyle = 'rgba(0,0,0,1)';
+        ctx.globalAlpha = 1.0;
       } else {
         ctx.globalCompositeOperation = 'source-over';
         ctx.strokeStyle = drawColor;
+        ctx.globalAlpha = 0.70;
       }
 
       if (drawingRef.current.length > 0) {
