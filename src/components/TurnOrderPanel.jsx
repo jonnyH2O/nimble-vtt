@@ -1,8 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { Trash2, List, Book, RotateCcw, AlertCircle, Users, Heart, Swords, Crown, ExternalLink, Dices, Settings, Upload, Plus } from 'lucide-react';
+import { Trash2, List, Book, RotateCcw, AlertCircle, ExternalLink, Dices, Settings, Upload, Plus } from 'lucide-react';
 import { NotesPanel } from './HUD';
 import { MESSAGE_TYPES, createMessage } from '../utils/windowMessages';
-import DiceRoller from './DiceRoller';
 import ColorPicker from './ColorPicker';
 
 /**

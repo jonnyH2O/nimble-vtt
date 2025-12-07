@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback, useReducer } from 'react';
-import { Upload, Plus, Users, Swords, Heart, Crown } from 'lucide-react';
+import { Users, Swords, Heart, Crown } from 'lucide-react';
 import { HUDDisplay } from './components/HUD';
 import Toolbar from './components/Toolbar';
 import TurnOrderPanel from './components/TurnOrderPanel';
