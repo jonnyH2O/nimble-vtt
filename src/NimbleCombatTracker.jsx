@@ -806,42 +806,18 @@ export default function NimbleCombatTracker() {
 
   return (
     <div className="h-screen bg-background text-text flex flex-col">
-      <div className="bg-surface border-b border-border p-3">
-        <div className="flex gap-3 items-center flex-wrap justify-between">
-          <div className="flex gap-3 items-center flex-wrap">
-            <h1 className="text-xl font-bold">Nimble Combat Tracker</h1>
-
-            <Toolbar
-              drawMode={drawMode}
-              setDrawMode={setDrawMode}
-              drawColor={drawColor}
-              setDrawColor={setDrawColor}
-              drawSize={drawSize}
-              setDrawSize={setDrawSize}
-              eraseSize={eraseSize}
-              setEraseSize={setEraseSize}
-              historyStep={historyStep}
-              drawingHistory={drawingHistory}
-              undo={drawingManager.undo}
-              redo={drawingManager.redo}
-              clearDrawings={drawingManager.clearDrawings}
-              zoomLevel={zoomLevel}
-              setZoomLevel={setZoomLevel}
-              viewOffset={viewOffset}
-              setViewOffset={setViewOffset}
-            />
-          </div>
-
-        </div>
-      </div>
-
-
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 p-4 overflow-hidden">
           <div
             ref={boardRef}
-            className={`relative bg-surface-highlight rounded w-full h-full min-h-[600px] overflow-hidden ${drawMode === 'select' ? 'cursor-grab active:cursor-grabbing' : ''
-              }`}
+            className={`relative bg-surface-highlight rounded w-full h-full min-h-[600px] overflow-hidden`}
+            style={{
+              cursor: drawMode === 'select'
+                ? panningView
+                  ? `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(1px 1px 1px black);"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/><path d="M7 15c1.49 1.48 3.2 2.34 6 2.34h2a8 8 0 0 0 8-8V8"/></svg>') 12 12, grabbing`
+                  : `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(1px 1px 1px black);"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>') 12 12, grab`
+                : 'default'
+            }}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseLeave}
@@ -849,6 +825,28 @@ export default function NimbleCombatTracker() {
             onContextMenu={(e) => e.preventDefault()}
             onWheel={handleWheel}
           >
+            {/* Floating Toolbar */}
+            <div className="absolute top-4 right-4 z-50 bg-surface/90 backdrop-blur-sm p-2 rounded-lg border border-border shadow-lg">
+              <Toolbar
+                drawMode={drawMode}
+                setDrawMode={setDrawMode}
+                drawColor={drawColor}
+                setDrawColor={setDrawColor}
+                drawSize={drawSize}
+                setDrawSize={setDrawSize}
+                eraseSize={eraseSize}
+                setEraseSize={setEraseSize}
+                historyStep={historyStep}
+                drawingHistory={drawingHistory}
+                undo={drawingManager.undo}
+                redo={drawingManager.redo}
+                clearDrawings={drawingManager.clearDrawings}
+                zoomLevel={zoomLevel}
+                setZoomLevel={setZoomLevel}
+                viewOffset={viewOffset}
+                setViewOffset={setViewOffset}
+              />
+            </div>
             <div
               className="absolute"
               style={{
@@ -871,11 +869,21 @@ export default function NimbleCombatTracker() {
                   }}
                 />
               )}
-
               <canvas
                 ref={drawCanvasRef}
-                className={`absolute ${drawMode === 'select' ? 'pointer-events-none' : 'cursor-crosshair'}`}
-                style={{ width: '2000px', height: '2000px', top: 0, left: 0 }}
+                className={`absolute ${drawMode === 'select' ? 'pointer-events-none' : ''}`}
+                style={{
+                  width: '2000px',
+                  height: '2000px',
+                  top: 0,
+                  left: 0,
+                  zIndex: 5,
+                  cursor: drawMode === 'draw'
+                    ? `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(1px 1px 1px black);"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>') 0 24, auto`
+                    : drawMode === 'erase'
+                      ? `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(1px 1px 1px black);"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>') 0 24, auto`
+                      : 'default'
+                }}
                 onMouseDown={drawingManager.handleDrawStart}
               />
 
@@ -1044,8 +1052,14 @@ export default function NimbleCombatTracker() {
                 return (
                   <div
                     key={token.id}
-                    className={`absolute ${drawMode === 'select' ? 'cursor-move' : 'pointer-events-none'}`}
-                    style={{ left: token.x, top: token.y }}
+                    className={`absolute ${drawMode === 'select' ? '' : 'pointer-events-none'}`}
+                    style={{
+                      left: token.x,
+                      top: token.y,
+                      cursor: drawMode === 'select'
+                        ? `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(1px 1px 1px black);"><path d="M5 9l-3 3 3 3"/><path d="M9 5l3-3 3 3"/><path d="M19 9l3 3-3 3"/><path d="M15 19l-3 3-3-3"/><path d="M2 12h20"/><path d="M12 2v20"/></svg>') 12 12, move`
+                        : 'inherit'
+                    }}
                     onMouseDown={(e) => handleMouseDown(e, token.id)}
                   >
                     <TokenEffects token={token} context="token">
@@ -1060,7 +1074,7 @@ export default function NimbleCombatTracker() {
                                 borderWidth: `${Math.max(2, Math.round(currentTokenSize / 16))}px`,
                                 borderStyle: 'solid',
                                 opacity: !shouldShowToken ? 0 : 1,
-                                zIndex: 1,
+                                zIndex: 10,
                               }}
                             >
                               <img
@@ -1081,7 +1095,7 @@ export default function NimbleCombatTracker() {
                                 borderWidth: `${Math.max(2, Math.round(currentTokenSize / 16))}px`,
                                 borderStyle: 'solid',
                                 opacity: !shouldShowToken ? 0 : 1,
-                                zIndex: 1,
+                                zIndex: 10,
                               }}
                             >
                               <div
@@ -1166,8 +1180,8 @@ export default function NimbleCombatTracker() {
                   top: cursorPos.y - (drawMode === 'erase' ? eraseSize : drawSize) / 2,
                   width: drawMode === 'erase' ? eraseSize : drawSize,
                   height: drawMode === 'erase' ? eraseSize : drawSize,
-                  borderColor: drawMode === 'erase' ? '#ef4444' : drawColor,
-                  backgroundColor: drawMode === 'erase' ? 'rgba(239, 68, 68, 0.2)' : `${drawColor}40`
+                  borderColor: drawMode === 'erase' ? '#ffffff' : drawColor,
+                  backgroundColor: drawMode === 'erase' ? 'rgba(255, 255, 255, 0.2)' : `${drawColor}40`
                 }}
               />
             )}
@@ -1274,6 +1288,6 @@ export default function NimbleCombatTracker() {
           />
         )}
       </div>
-    </div>
+    </div >
   );
 }

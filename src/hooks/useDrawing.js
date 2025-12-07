@@ -100,7 +100,7 @@ export function useDrawing(boardRef, viewOffset, zoomLevel) {
       } else {
         ctx.globalCompositeOperation = 'source-over';
         ctx.strokeStyle = drawColor;
-        ctx.globalAlpha = 0.70;
+        ctx.globalAlpha = 1;
       }
 
       if (drawingRef.current.length > 0) {
