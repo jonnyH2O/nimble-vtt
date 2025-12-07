@@ -1,13 +1,9 @@
 # Tasks
 
-- [x] Remove unused `SettingsPanel.jsx` file <!-- id: 0 -->
-- [x] Remove unused `SettingsPanel` import in `TurnOrderPanel.jsx` <!-- id: 1 -->
-- [x] Remove unused `showSettings` props in `TurnOrderPanel.jsx` <!-- id: 2 -->
-- [x] Remove unused `showSettings` state in `NimbleCombatTracker.jsx` <!-- id: 3 -->
-- [x] Place Import and Export buttons side-by-side with Import first <!-- id: 4 -->
+- [x] Prevent Party Status token container from expanding >3 emojis wide <!-- id: 0 -->
+    - [x] Change `flex flex-wrap` to `grid grid-cols-3 w-fit` in `PartyOverview.jsx` <!-- id: 1 -->
 
 ## Review
-- Deleted `src/components/SettingsPanel.jsx` as it was unused and its functionality is duplicated within `TurnOrderPanel.jsx`.
-- Removed `SettingsPanel` import and unused `showSettings` props from `TurnOrderPanel.jsx`.
-- Cleaned up `NimbleCombatTracker.jsx` by removing the unused `showSettings` state and its prop passing.
-- Updated the "Import & Export" section in `TurnOrderPanel.jsx` to display the "Import Battle" and "Export Battle" buttons side-by-side (flex row) with equal width, placing "Import Battle" on the left.
+- Modified `src/components/PartyOverview.jsx` to use CSS Grid for displaying conditions.
+- Used `grid-cols-3` to enforce a maximum of 3 items per row.
+- Added `w-fit` to ensure the grid container doesn't expand to fill the full width of the card, but rather fits its content (up to the 3 columns). This effectively prevents the container from widening when more conditions are added, causing them to stack vertically instead.

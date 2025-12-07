@@ -70,7 +70,7 @@ export function PartyOverview({ tokens }) {
 
               {/* Conditions */}
               {token.conditions && token.conditions.length > 0 && (
-                <div className="flex flex-wrap gap-1">
+                <div className="grid grid-cols-3 gap-1 w-fit">
                   {token.conditions.map(condition => (
                     <span
                       key={condition}
