@@ -208,11 +208,11 @@ export function useTokens(tokenSize) {
       name: tokenData.name,
       type: tokenData.type,
       image: tokenData.image,
-      x: DEFAULT_TOKEN_POSITION.x,
-      y: DEFAULT_TOKEN_POSITION.y,
+      x: tokenData.x !== undefined ? tokenData.x : DEFAULT_TOKEN_POSITION.x,
+      y: tokenData.y !== undefined ? tokenData.y : DEFAULT_TOKEN_POSITION.y,
       actions: tokenData.type === 'hero' ? [false, false, false] :
-               tokenData.type === 'legendary' ? [false, false, false, false, false, false] :
-               [false],
+        tokenData.type === 'legendary' ? [false, false, false, false, false, false] :
+          [false],
       isActiveTurn: false,
       health: 10,
       maxHealth: 10,

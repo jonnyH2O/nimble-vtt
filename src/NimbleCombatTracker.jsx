@@ -139,7 +139,30 @@ export default function NimbleCombatTracker() {
 
   const handleAddToken = () => {
     if (newToken.name) {
-      const tokenId = tokenManager.addToken(newToken);
+      // Calculate start position to be top-middle of current view
+      let startX = 100;
+      let startY = 100;
+
+      if (boardRef.current) {
+        const boardWidth = boardRef.current.offsetWidth;
+        // Center horizontally in viewport
+        // Equation: x * zoom + viewOffset = centerScreen
+        // x = (centerScreen - viewOffset) / zoom
+        const centerScreenX = boardWidth / 2;
+        startX = (centerScreenX - viewOffset.x) / zoomLevel - (tokenSize / 2);
+
+        // Top of viewport with padding
+        // Equation: y * zoom + viewOffset = topPadding
+        // y = (topPadding - viewOffset) / zoom
+        const topPadding = 50;
+        startY = (topPadding - viewOffset.y) / zoomLevel;
+      }
+
+      const tokenId = tokenManager.addToken({
+        ...newToken,
+        x: startX,
+        y: startY
+      });
       turnOrderManager.addToTurnOrder(tokenId);
       setNewToken({ name: '', type: 'hero', image: null, hasResource: false, resourceName: '', resourceColor: '#3b82f6', currentResource: 5, maxResource: 5 });
       setShowAddToken(false);

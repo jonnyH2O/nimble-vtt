@@ -1,9 +1,13 @@
 # Tasks
 
-- [x] Prevent Party Status token container from expanding >3 emojis wide <!-- id: 0 -->
-    - [x] Change `flex flex-wrap` to `grid grid-cols-3 w-fit` in `PartyOverview.jsx` <!-- id: 1 -->
+- [x] Update `src/hooks/useTokens.js` to accept `x` and `y` in `addToken`. <!-- id: 0 -->
+- [x] Update `src/NimbleCombatTracker.jsx` to calculate "top middle" coordinates relative to the viewport and pass them to `addToken`. <!-- id: 1 -->
+- [x] Verify the changes. <!-- id: 2 -->
 
-## Review
-- Modified `src/components/PartyOverview.jsx` to use CSS Grid for displaying conditions.
-- Used `grid-cols-3` to enforce a maximum of 3 items per row.
-- Added `w-fit` to ensure the grid container doesn't expand to fill the full width of the card, but rather fits its content (up to the 3 columns). This effectively prevents the container from widening when more conditions are added, causing them to stack vertically instead.
+# Review
+- Modified `src/hooks/useTokens.js` to optionally accept `x` and `y` properties in the `addToken` payload. If provided, these values are used for the new token's position; otherwise, it falls back to the default position (100, 100).
+- Modified `src/NimbleCombatTracker.jsx`'s `handleAddToken` function.
+    - It now calculates the `startX` and `startY` for the new token.
+    - `startX` is calculated to center the token horizontally in the current viewport: `(boardWidth / 2 - viewOffset.x) / zoomLevel - (tokenSize / 2)`.
+    - `startY` is calculated to place the token 50px from the top of the current viewport: `(50 - viewOffset.y) / zoomLevel`.
+    - These calculated coordinates are passed to `tokenManager.addToken`.
