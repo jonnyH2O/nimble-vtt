@@ -305,7 +305,7 @@ export default function TurnOrderPanel({
                         }
                       }}
                       className={`bg-surface-highlight p-3 rounded ${!deleteMode && !isLegendaryEcho && !expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`] && activeTurnOrderManager ? 'select-none' : ''
-                        } ${deleteMode && !isLegendaryEcho ? 'cursor-pointer hover:bg-red-900' :
+                        } ${deleteMode && !isLegendaryEcho ? 'cursor-pointer hover:bg-destructive' :
                           !isLegendaryEcho && !expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`] && activeTurnOrderManager ? 'cursor-move' : ''
                         } ${selectedToken === item.id && !isLegendaryEcho ? 'ring-2 ring-token-selected' : ''} ${isLegendaryEcho ? 'opacity-75 ml-4' : ''
                         } ${isMainLegendary ? 'border-2 border-legendary-highlight' : ''}`}
