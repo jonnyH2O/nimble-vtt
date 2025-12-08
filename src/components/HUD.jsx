@@ -1,7 +1,6 @@
 import React from 'react';
 import { Users, Heart, Swords, Crown } from 'lucide-react';
 import { CONDITION_EMOJIS } from '../effects/conditionEffects';
-// import { getTokenBorderColor, getTokenBgColor } from '../constants'; // Removed
 import { getHealthColor, getHealthPercent, getResourcePercent, getTokenBorderColor, getTokenBgColor } from '../utils/tokenUtils';
 
 /**

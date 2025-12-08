@@ -937,7 +937,7 @@ export default function NimbleCombatTracker() {
 
               {/* Darkness overlay with light sources */}
               {darknessMode && (
-                <svg className="absolute inset-0 pointer-events-none" style={{ width: '100%', height: '100%', zIndex: 10 }}>
+                <svg className="absolute inset-0 pointer-events-none" style={{ width: '100%', height: '100%', zIndex: 20 }}>
                   <defs>
                     {/* Create radial gradients for each light source */}
                     {lightSources.map((token) => {
@@ -983,7 +983,7 @@ export default function NimbleCombatTracker() {
 
               {/* Selection rings overlay - only for hidden tokens in darkness */}
               {selectedToken && darknessMode && (
-                <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 11 }}>
+                <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 25 }}>
                   {tokens.filter(t => {
                     if (t.id !== selectedToken) return false;
                     // Only show ring if token is enemy/legendary AND hidden in darkness
