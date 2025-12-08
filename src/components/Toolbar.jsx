@@ -149,21 +149,9 @@ export default function Toolbar({
       {drawMode === 'select' && (
         <>
           <div className="h-8 w-px bg-button-muted"></div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <span className="text-sm">Zoom:</span>
-            <button
-              onClick={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.1))}
-              className="bg-tertiary hover:bg-tertiary-hover px-2 py-1 rounded text-sm"
-            >
-              -
-            </button>
-            <span className="text-sm w-12 text-center">{Math.round(zoomLevel * 100)}%</span>
-            <button
-              onClick={() => setZoomLevel(Math.min(3, zoomLevel + 0.1))}
-              className="bg-tertiary hover:bg-tertiary-hover px-2 py-1 rounded text-sm"
-            >
-              +
-            </button>
+            <span className="text-sm w-12">{Math.round(zoomLevel * 100)}%</span>
             <button
               onClick={() => {
                 setZoomLevel(1);
