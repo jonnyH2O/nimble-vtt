@@ -1,5 +1,6 @@
 import React from 'react';
 import { CONDITION_EMOJIS } from '../effects/conditionEffects';
+import { getHealthColor, getHealthPercent } from '../utils/tokenUtils';
 
 
 /**
@@ -22,9 +23,7 @@ export function PartyOverview({ tokens }) {
 
       <div className="space-y-3">
         {tokens.map(token => {
-          const healthPercent = token.maxHealth > 0 ? (token.health / token.maxHealth) * 100 : 0;
-          const healthColor = healthPercent <= 10 ? '#ef4444' : healthPercent <= 30 ? '#eab308' : '#22c55e';
-
+          const healthPercent = getHealthPercent(token.health, token.maxHealth);
 
           return (
             <div key={token.id} className="bg-surface-highlight p-3 rounded-lg border border-border">
@@ -45,8 +44,8 @@ export function PartyOverview({ tokens }) {
                 </div>
                 <div className="w-full bg-background rounded-full h-2">
                   <div
-                    className="h-2 rounded-full transition-all"
-                    style={{ width: `${healthPercent}%`, backgroundColor: healthColor }}
+                    className={`h-2 rounded-full transition-all ${getHealthColor(healthPercent)}`}
+                    style={{ width: `${healthPercent}%` }}
                   />
                 </div>
               </div>

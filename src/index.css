@@ -49,6 +49,10 @@
 
   --color-slider: #dc2626;
   --color-slider-track: #b91c1c;
+
+  --color-health-healthy: #22c55e;
+  --color-health-warning: #eab308;
+  --color-health-critical: #ef4444;
 }
 
 [data-theme='dracula'] {
@@ -97,6 +101,10 @@
 
   --color-slider: #7d2eed;
   --color-slider-track: #5914bb;
+
+  --color-health-healthy: #0ba833;
+  --color-health-warning: #f38107;
+  --color-health-critical: #fb0e0e;
 }
 
 * {

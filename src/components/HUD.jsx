@@ -1,7 +1,8 @@
 import React from 'react';
 import { Users, Heart, Swords, Crown } from 'lucide-react';
 import { CONDITION_EMOJIS } from '../effects/conditionEffects';
-import { getTokenBorderColor, getTokenBgColor } from '../constants';
+// import { getTokenBorderColor, getTokenBgColor } from '../constants'; // Removed
+import { getHealthColor, getHealthPercent, getResourcePercent, getTokenBorderColor, getTokenBgColor } from '../utils/tokenUtils';
 
 /**
  * HUD Component - Heads-Up Display for selected token
@@ -19,15 +20,8 @@ export function HUDDisplay({ selectedToken, tokens, HUD_Z_INDEX }) {
   const token = tokens.find(t => t.id === selectedToken);
   if (!token) return null;
 
-  const healthPercent = (token.health / token.maxHealth) * 100;
-  const resourcePercent = token.hasResource ? (token.currentResource / token.maxResource) * 100 : 0;
-
-  // Health bar color based on thresholds
-  const getHealthColor = () => {
-    if (healthPercent <= 10) return '#ef4444'; // red-500
-    if (healthPercent <= 30) return '#eab308'; // yellow-500
-    return '#22c55e'; // green-500
-  };
+  const healthPercent = getHealthPercent(token.health, token.maxHealth);
+  const resourcePercent = getResourcePercent(token.currentResource, token.maxResource);
 
   const portraitSize = 80;
   const barHeight = 20;
@@ -106,10 +100,10 @@ export function HUDDisplay({ selectedToken, tokens, HUD_Z_INDEX }) {
               >
                 {/* Health fill with smooth transition */}
                 <div
-                  className="absolute top-0 left-0 h-full transition-all duration-300 ease-out"
+                  className={`absolute top-0 left-0 h-full transition-all duration-300 ease-out ${getHealthColor(healthPercent)}`}
                   style={{
                     width: `${healthPercent}%`,
-                    backgroundColor: getHealthColor(),
+                    // backgroundColor: 'green',
                     boxShadow: `inset 0 2px 4px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.3)`
                   }}
                 />

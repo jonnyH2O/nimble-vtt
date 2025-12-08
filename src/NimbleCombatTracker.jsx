@@ -12,7 +12,8 @@ import { useTurnOrder } from './hooks/useTurnOrder';
 import { useDiceRoller } from './hooks/useDiceRoller';
 import { useWindowSync } from './hooks/useWindowSync';
 import { MESSAGE_TYPES, createMessage } from './utils/windowMessages';
-import { VIRTUAL_CANVAS_SIZE, SIDEBAR_WIDTH, HUD_Z_INDEX, getTokenBorderColor, getTokenBgColor, getTokenIconName } from './constants';
+import { VIRTUAL_CANVAS_SIZE, SIDEBAR_WIDTH, HUD_Z_INDEX } from './constants';
+import { getTokenBorderColor, getTokenBgColor, getTokenIconName } from './utils/tokenUtils';
 import { CONDITION_CATEGORIES } from './effects/conditionEffects';
 
 export default function NimbleCombatTracker() {

@@ -3,7 +3,8 @@ import { Users, Heart, Swords, Crown } from 'lucide-react';
 import TurnOrderPanel from './TurnOrderPanel';
 import { useWindowSync } from '../hooks/useWindowSync';
 import { MESSAGE_TYPES, createMessage } from '../utils/windowMessages';
-import { SIDEBAR_WIDTH, getTokenBorderColor, getTokenBgColor, getTokenIconName } from '../constants';
+import { SIDEBAR_WIDTH } from '../constants';
+import { getTokenBorderColor, getTokenBgColor, getTokenIconName } from '../utils/tokenUtils';
 
 /**
  * PopoutWindow Component

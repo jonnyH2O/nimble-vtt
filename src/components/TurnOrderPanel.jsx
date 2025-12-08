@@ -3,6 +3,7 @@ import { Trash2, List, Book, RotateCcw, AlertCircle, ExternalLink, Dices, Settin
 import { NotesPanel } from './HUD';
 import { MESSAGE_TYPES, createMessage } from '../utils/windowMessages';
 import ColorPicker from './ColorPicker';
+import { getTokenBorderColor } from '../utils/tokenUtils';
 
 /**
  * BloodiedVignette - Reusable component for bloodied condition visual effect
