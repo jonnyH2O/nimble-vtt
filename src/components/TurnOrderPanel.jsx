@@ -1,10 +1,9 @@
-import React, { useCallback, useRef } from 'react';
-import { Trash2, List, Book, RotateCcw, AlertCircle, Users, Heart, Swords, Crown, ExternalLink, Dices, Settings, Upload, Plus } from 'lucide-react';
+import React, { useCallback, useRef, useState } from 'react';
+import { Trash2, List, Book, RotateCcw, AlertCircle, ExternalLink, Dices, Settings, Upload, Plus } from 'lucide-react';
 import { NotesPanel } from './HUD';
 import { MESSAGE_TYPES, createMessage } from '../utils/windowMessages';
-import DiceRoller from './DiceRoller';
-import SettingsPanel from './SettingsPanel';
 import ColorPicker from './ColorPicker';
+import { getTokenBorderColor } from '../utils/tokenUtils';
 
 /**
  * BloodiedVignette - Reusable component for bloodied condition visual effect
@@ -98,8 +97,6 @@ export default function TurnOrderPanel({
   showDiceInViewport,
   setShowDiceInViewport,
   // Settings props
-  showSettings,
-  setShowSettings,
   setTokenSize,
   backgroundSize,
   setBackgroundSize,
@@ -129,9 +126,11 @@ export default function TurnOrderPanel({
   currentTheme,
   setCurrentTheme,
 }) {
+
   const { updateWounds, toggleTempHP } = tokenManager || {};
   const fileInputRef = useRef(null);
   const [popoutDragIndex, setPopoutDragIndex] = React.useState(null);
+  const [hoveredTurnButton, setHoveredTurnButton] = useState(null);
 
   // Helper function to handle actions - sends to main window if in pop-out, otherwise calls directly
   const handleAction = useCallback((type, payload, directFn) => {
@@ -307,7 +306,7 @@ export default function TurnOrderPanel({
                         }
                       }}
                       className={`bg-surface-highlight p-3 rounded ${!deleteMode && !isLegendaryEcho && !expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`] && activeTurnOrderManager ? 'select-none' : ''
-                        } ${deleteMode && !isLegendaryEcho ? 'cursor-pointer hover:bg-red-900' :
+                        } ${deleteMode && !isLegendaryEcho ? 'cursor-pointer hover:bg-destructive' :
                           !isLegendaryEcho && !expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`] && activeTurnOrderManager ? 'cursor-move' : ''
                         } ${selectedToken === item.id && !isLegendaryEcho ? 'ring-2 ring-token-selected' : ''} ${isLegendaryEcho ? 'opacity-75 ml-4' : ''
                         } ${isMainLegendary ? 'border-2 border-legendary-highlight' : ''}`}
@@ -795,12 +794,14 @@ export default function TurnOrderPanel({
                                     );
                                   }
                                 }}
+                                onMouseEnter={() => setHoveredTurnButton(item.id)}
+                                onMouseLeave={() => setHoveredTurnButton(null)}
                                 className={`w-full py-1.5 rounded text-xs font-bold transition-colors ${token.isActiveTurn
-                                  ? 'bg-yellow-500 hover:bg-yellow-600 text-black'
+                                  ? 'bg-primary hover:bg-primary-hover text-white'
                                   : 'bg-button-muted hover:bg-button-muted-hover'
                                   }`}
                               >
-                                {token.isActiveTurn ? '★ Active Turn' : 'Start Turn'}
+                                {token.isActiveTurn ? (hoveredTurnButton === item.id ? 'End Turn' : '★ Active Turn ★') : 'Start Turn'}
                               </button>
                             </div>
                           )}
@@ -820,10 +821,10 @@ export default function TurnOrderPanel({
                                   className={`flex-1 h-8 rounded transition-colors ${used
                                     ? 'bg-button-muted-hover'
                                     : token.isActiveTurn
-                                      ? 'bg-blue-500 hover:bg-primary'
+                                      ? 'bg-secondary hover:bg-secondary-hover'
                                       : token.type === 'enemy'
-                                        ? 'bg-red-500 hover:bg-destructive'
-                                        : 'bg-green-500 hover:bg-secondary'
+                                        ? 'bg-secondary hover:bg-secondary-hover'
+                                        : 'bg-secondary hover:bg-secondary-hover'
                                     }`}
                                 >
                                   {token.type === 'hero' ? actionIndex + 1 : '✓'}
@@ -850,7 +851,7 @@ export default function TurnOrderPanel({
                                   .slice(0, index)
                                   .filter(i => i.id === item.id && i.isLegendaryEcho).length]
                                   ? 'bg-button-muted-hover'
-                                  : 'bg-purple-500 hover:bg-primary'
+                                  : 'bg-secondary hover:bg-secondary-hover'
                                   }`}
                               >
                                 ✓
@@ -2152,38 +2153,40 @@ export default function TurnOrderPanel({
               </div>
 
               {/* Export/Import Battle */}
-              <div className="border-t border-border pt-4 space-y-2">
-                <h3 className="text-sm font-bold mb-2">Save/Load</h3>
-                <button
-                  onClick={exportBattle}
-                  className="w-full bg-secondary hover:bg-secondary-hover px-3 py-2 rounded flex items-center justify-center gap-2 text-sm"
-                >
-                  Export Battle
-                </button>
-                {isPopoutWindow ? (
-                  <button
-                    onClick={importBattle}
-                    className="w-full bg-primary hover:bg-primary-hover px-3 py-2 rounded flex items-center justify-center gap-2 text-sm"
-                  >
-                    Import Battle
-                  </button>
-                ) : (
-                  <>
+              <div className="border-t border-border pt-4">
+                <h3 className="text-sm font-bold mb-2">Import & Export</h3>
+                <div className="flex gap-2">
+                  {isPopoutWindow ? (
                     <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full bg-primary hover:bg-primary-hover px-3 py-2 rounded flex items-center justify-center gap-2 text-sm"
+                      onClick={importBattle}
+                      className="flex-1 bg-primary hover:bg-primary-hover px-3 py-2 rounded flex items-center justify-center gap-2 text-sm"
                     >
                       Import Battle
                     </button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".json"
-                      onChange={importBattle}
-                      className="hidden"
-                    />
-                  </>
-                )}
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex-1 bg-primary hover:bg-primary-hover px-3 py-2 rounded flex items-center justify-center gap-2 text-sm"
+                      >
+                        Import Battle
+                      </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".json"
+                        onChange={importBattle}
+                        className="hidden"
+                      />
+                    </>
+                  )}
+                  <button
+                    onClick={exportBattle}
+                    className="flex-1 bg-secondary hover:bg-secondary-hover px-3 py-2 rounded flex items-center justify-center gap-2 text-sm"
+                  >
+                    Export Battle
+                  </button>
+                </div>
               </div>
             </div>
           </>

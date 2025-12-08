@@ -49,13 +49,17 @@
 
   --color-slider: #dc2626;
   --color-slider-track: #b91c1c;
+
+  --color-health-healthy: #22c55e;
+  --color-health-warning: #eab308;
+  --color-health-critical: #ef4444;
 }
 
 [data-theme='dracula'] {
 
   --color-background: #373a4d;
   --color-surface: #282a36;
-  --color-surface-highlight: #373a4d;
+  --color-surface-highlight: #454a64;
 
   --color-border: #454a64;
 
@@ -95,8 +99,12 @@
   --color-minor-buttons: #899410;
   --color-minor-buttons-hover: #abb811;
 
-  --color-slider: #7d2eed;
-  --color-slider-track: #5914bb;
+  --color-slider: #dd0606;
+  --color-slider-track: #b70707;
+
+  --color-health-healthy: #0ba833;
+  --color-health-warning: #f38107;
+  --color-health-critical: #fb0e0e;
 }
 
 * {

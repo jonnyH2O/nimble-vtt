@@ -39,6 +39,9 @@ export default {
         'enemy-highlight': 'var(--color-enemy-highlight)',
         'companion-highlight': 'var(--color-companion-highlight)',
         'legendary-highlight': 'var(--color-legendary-highlight)',
+        'health-healthy': 'var(--color-health-healthy)',
+        'health-warning': 'var(--color-health-warning)',
+        'health-critical': 'var(--color-health-critical)',
       }
     },
   },

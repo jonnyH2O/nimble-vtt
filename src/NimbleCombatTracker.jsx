@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback, useReducer } from 'react';
-import { Upload, Plus, Users, Swords, Heart, Crown } from 'lucide-react';
+import { Users, Swords, Heart, Crown } from 'lucide-react';
 import { HUDDisplay } from './components/HUD';
 import Toolbar from './components/Toolbar';
 import TurnOrderPanel from './components/TurnOrderPanel';
@@ -12,7 +12,8 @@ import { useTurnOrder } from './hooks/useTurnOrder';
 import { useDiceRoller } from './hooks/useDiceRoller';
 import { useWindowSync } from './hooks/useWindowSync';
 import { MESSAGE_TYPES, createMessage } from './utils/windowMessages';
-import { VIRTUAL_CANVAS_SIZE, SIDEBAR_WIDTH, HUD_Z_INDEX, getTokenBorderColor, getTokenBgColor, getTokenIconName } from './constants';
+import { VIRTUAL_CANVAS_SIZE, SIDEBAR_WIDTH, HUD_Z_INDEX } from './constants';
+import { getTokenBorderColor, getTokenBgColor, getTokenIconName } from './utils/tokenUtils';
 import { CONDITION_CATEGORIES } from './effects/conditionEffects';
 
 export default function NimbleCombatTracker() {
@@ -97,7 +98,7 @@ export default function NimbleCombatTracker() {
   const [expandedNotes, setExpandedNotes] = useState({});
   const [panningView, setPanningView] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
-  const [showSettings, setShowSettings] = useState(false);
+
   const [showGrid, setShowGrid] = useState(false);
   const [gridSize, setGridSize] = useState(50);
   const [expandedConditions, setExpandedConditions] = useState({});
@@ -139,7 +140,30 @@ export default function NimbleCombatTracker() {
 
   const handleAddToken = () => {
     if (newToken.name) {
-      const tokenId = tokenManager.addToken(newToken);
+      // Calculate start position to be top-middle of current view
+      let startX = 100;
+      let startY = 100;
+
+      if (boardRef.current) {
+        const boardWidth = boardRef.current.offsetWidth;
+        // Center horizontally in viewport
+        // Equation: x * zoom + viewOffset = centerScreen
+        // x = (centerScreen - viewOffset) / zoom
+        const centerScreenX = boardWidth / 2;
+        startX = (centerScreenX - viewOffset.x) / zoomLevel - (tokenSize / 2);
+
+        // Top of viewport with padding
+        // Equation: y * zoom + viewOffset = topPadding
+        // y = (topPadding - viewOffset) / zoom
+        const topPadding = 50;
+        startY = (topPadding - viewOffset.y) / zoomLevel;
+      }
+
+      const tokenId = tokenManager.addToken({
+        ...newToken,
+        x: startX,
+        y: startY
+      });
       turnOrderManager.addToTurnOrder(tokenId);
       setNewToken({ name: '', type: 'hero', image: null, hasResource: false, resourceName: '', resourceColor: '#3b82f6', currentResource: 5, maxResource: 5 });
       setShowAddToken(false);
@@ -413,6 +437,39 @@ export default function NimbleCombatTracker() {
     setTimeout(() => URL.revokeObjectURL(link.href), 100);
   };
 
+  const loadBattleState = (battleState) => {
+    try {
+      // Restore all state (conditions are included in tokens)
+      if (battleState.tokens) tokenManager.setAllTokens(battleState.tokens);
+      if (battleState.turnOrder) turnOrderManager.setAllTurnOrder(battleState.turnOrder);
+      if (battleState.background) setBackground(battleState.background);
+      if (battleState.backgroundSize) setBackgroundSize(battleState.backgroundSize);
+      if (battleState.tokenSize) setTokenSize(battleState.tokenSize);
+
+      // Reset view to default to ensure consistent positioning across machines
+      setZoomLevel(1);
+      setViewOffset({ x: 0, y: 0 });
+
+      if (battleState.gridSize !== undefined) setGridSize(battleState.gridSize);
+      if (battleState.showGrid !== undefined) setShowGrid(battleState.showGrid);
+      if (battleState.darknessMode !== undefined) setDarknessMode(battleState.darknessMode);
+      if (battleState.heroLightRadius !== undefined) setHeroLightRadius(battleState.heroLightRadius);
+      if (battleState.companionLightRadius !== undefined) setCompanionLightRadius(battleState.companionLightRadius);
+      if (battleState.darknessIntensity !== undefined) setDarknessIntensity(battleState.darknessIntensity);
+
+      // Restore drawings
+      if (battleState.drawings) {
+        drawingManager.loadDrawing(battleState.drawings);
+      }
+
+      // Switch back to turn order view
+      setSidebarView('turnOrder');
+    } catch (error) {
+      console.error('Error loading battle state:', error);
+      alert('Error loading battle state. File may be corrupted.');
+    }
+  };
+
   const importBattle = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -421,31 +478,7 @@ export default function NimbleCombatTracker() {
     reader.onload = (event) => {
       try {
         const battleState = JSON.parse(event.target.result);
-
-        // Restore all state (conditions are included in tokens)
-        if (battleState.tokens) tokenManager.setAllTokens(battleState.tokens);
-        if (battleState.turnOrder) turnOrderManager.setAllTurnOrder(battleState.turnOrder);
-        if (battleState.background) setBackground(battleState.background);
-        if (battleState.backgroundSize) setBackgroundSize(battleState.backgroundSize);
-        if (battleState.tokenSize) setTokenSize(battleState.tokenSize);
-
-        // Reset view to default to ensure consistent positioning across machines
-        setZoomLevel(1);
-        setViewOffset({ x: 0, y: 0 });
-
-        if (battleState.gridSize !== undefined) setGridSize(battleState.gridSize);
-        if (battleState.showGrid !== undefined) setShowGrid(battleState.showGrid);
-        if (battleState.darknessMode !== undefined) setDarknessMode(battleState.darknessMode);
-        if (battleState.heroLightRadius !== undefined) setHeroLightRadius(battleState.heroLightRadius);
-        if (battleState.companionLightRadius !== undefined) setCompanionLightRadius(battleState.companionLightRadius);
-        if (battleState.darknessIntensity !== undefined) setDarknessIntensity(battleState.darknessIntensity);
-
-        // Restore drawings
-        if (battleState.drawings) {
-          drawingManager.loadDrawing(battleState.drawings);
-        }
-
-        setShowSettings(false);
+        loadBattleState(battleState);
       } catch (error) {
         console.error('Error importing battle:', error);
         alert('Error importing battle file. Please make sure it\'s a valid battle export.');
@@ -738,6 +771,9 @@ export default function NimbleCombatTracker() {
           document.body.appendChild(fileInput);
           fileInput.click();
           break;
+        case MESSAGE_TYPES.IMPORT_BATTLE_DATA:
+          loadBattleState(payload);
+          break;
         case MESSAGE_TYPES.WINDOW_CLOSING:
           setIsPopoutMode(false);
           setPopoutWindow(null);
@@ -901,7 +937,7 @@ export default function NimbleCombatTracker() {
 
               {/* Darkness overlay with light sources */}
               {darknessMode && (
-                <svg className="absolute inset-0 pointer-events-none" style={{ width: '100%', height: '100%', zIndex: 10 }}>
+                <svg className="absolute inset-0 pointer-events-none" style={{ width: '100%', height: '100%', zIndex: 20 }}>
                   <defs>
                     {/* Create radial gradients for each light source */}
                     {lightSources.map((token) => {
@@ -947,7 +983,7 @@ export default function NimbleCombatTracker() {
 
               {/* Selection rings overlay - only for hidden tokens in darkness */}
               {selectedToken && darknessMode && (
-                <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 11 }}>
+                <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 25 }}>
                   {tokens.filter(t => {
                     if (t.id !== selectedToken) return false;
                     // Only show ring if token is enemy/legendary AND hidden in darkness
@@ -1255,8 +1291,6 @@ export default function NimbleCombatTracker() {
             showDiceInViewport={showDiceInViewport}
             setShowDiceInViewport={setShowDiceInViewport}
             // Settings props
-            showSettings={showSettings}
-            setShowSettings={setShowSettings}
             setTokenSize={setTokenSize}
             backgroundSize={backgroundSize}
             setBackgroundSize={setBackgroundSize}
