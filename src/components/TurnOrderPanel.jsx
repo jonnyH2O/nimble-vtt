@@ -2148,6 +2148,8 @@ export default function TurnOrderPanel({
                   >
                     <option value="default">Default</option>
                     <option value="dracula">Dracula</option>
+                    <option value="retro">Retro</option>
+                    <option value="hero">Hero</option>
                   </select>
                 </div>
               </div>

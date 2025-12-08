@@ -84,6 +84,10 @@ export default function PopoutWindow() {
     const theme = syncedState.currentTheme || 'default';
     if (theme === 'dracula') {
       document.documentElement.setAttribute('data-theme', 'dracula');
+    } else if (theme === 'retro') {
+      document.documentElement.setAttribute('data-theme', 'retro');
+    } else if (theme === 'hero') {
+      document.documentElement.setAttribute('data-theme', 'hero');
     } else {
       document.documentElement.removeAttribute('data-theme');
     }

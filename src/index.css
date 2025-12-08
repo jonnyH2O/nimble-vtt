@@ -17,8 +17,8 @@
   --color-primary: #2563eb;
   --color-primary-hover: #1d4ed8;
 
-  --color-secondary: #059669;
-  --color-secondary-hover: #047857;
+  --color-secondary: #1ca850;
+  --color-secondary-hover: #168740;
 
   --color-destructive: #dc2626;
   --color-destructive-hover: #b91c1c;
@@ -105,6 +105,110 @@
   --color-health-healthy: #0ba833;
   --color-health-warning: #f38107;
   --color-health-critical: #fb0e0e;
+}
+
+[data-theme='retro'] {
+
+  --color-background: #001219;
+  --color-surface: #005f73;
+  --color-surface-highlight: #0a9396;
+
+  --color-border: #94d2bd;
+
+  --color-text: #e9d8a6;
+  --color-text-muted: #94d2bd;
+
+  --color-primary: #0a9396;
+  --color-primary-hover: #94d2bd;
+
+  --color-secondary: #ee9b00;
+  --color-secondary-hover: #ca6702;
+
+  --color-destructive: #ae2012;
+  --color-destructive-hover: #9b2226;
+
+  --color-button-muted: #005f73;
+  --color-button-muted-hover: #0a9396;
+
+  --color-tertiary: #005f73;
+  --color-tertiary-hover: #0a9396;
+
+  --color-token-selected: #ee9b00;
+
+  --color-hero: #0a9396;
+  --color-companion: #94d2bd;
+  --color-enemy: #bb3e03;
+  --color-legendary: #ee9b00;
+  --color-hero-highlight: #94d2bd;
+  --color-companion-highlight: #e9d8a6;
+  --color-enemy-highlight: #ae2012;
+  --color-legendary-highlight: #e9d8a6;
+
+  --color-doomed-buttons: #ae2012;
+  --color-doomed-buttons-hover: #9b2226;
+  --color-major-buttons: #bb3e03;
+  --color-major-buttons-hover: #ca6702;
+  --color-minor-buttons: #ca6702;
+  --color-minor-buttons-hover: #ee9b00;
+
+  --color-slider: #ee9b00;
+  --color-slider-track: #ca6702;
+
+  --color-health-healthy: #94d2bd;
+  --color-health-warning: #ee9b00;
+  --color-health-critical: #ae2012;
+}
+
+[data-theme='hero'] {
+
+  --color-background: #000c11;
+  --color-surface: #1f2937;
+  --color-surface-highlight: #374151;
+
+  --color-border: #0000004a;
+
+  --color-text: #ffffff;
+  --color-text-muted: #9ca3af;
+
+  --color-primary: #bb3e03;
+  --color-primary-hover: #e84d05;
+
+  --color-secondary: #005f73;
+  --color-secondary-hover: #00758c;
+
+  --color-destructive: #9b2226;
+  --color-destructive-hover: #9b2226;
+
+  --color-button-muted: #4b5563;
+  --color-button-muted-hover: #6b7280;
+
+  --color-tertiary: #374151;
+  --color-tertiary-hover: #4b5563;
+
+  --color-token-selected: #ee9b00f4;
+
+  --color-hero: #0081A7;
+  --color-companion: #00a151;
+  --color-enemy: #DC2626;
+  --color-legendary: #9333EA;
+  --color-hero-highlight: #0094c1;
+  --color-companion-highlight: #00b95c;
+  --color-enemy-highlight: #ae2012;
+  --color-legendary-highlight: #a855f7;
+
+  --color-doomed-buttons: #ae2012;
+  --color-doomed-buttons-hover: #d02617;
+  --color-major-buttons: #ca6702;
+  --color-major-buttons-hover: #df7002;
+  --color-minor-buttons: #978c6c;
+  --color-minor-buttons-hover: #b6a982;
+
+  --color-slider: #00afb9;
+  --color-slider-track: #0081a7;
+
+  --color-health-healthy: #22c55e;
+  --color-health-warning: #eab308;
+  --color-health-critical: #ef4444;
 }
 
 * {

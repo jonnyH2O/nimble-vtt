@@ -27,6 +27,10 @@ export default function NimbleCombatTracker() {
   useEffect(() => {
     if (currentTheme === 'dracula') {
       document.documentElement.setAttribute('data-theme', 'dracula');
+    } else if (currentTheme === 'retro') {
+      document.documentElement.setAttribute('data-theme', 'retro');
+    } else if (currentTheme === 'hero') {
+      document.documentElement.setAttribute('data-theme', 'hero');
     } else {
       document.documentElement.removeAttribute('data-theme');
     }
