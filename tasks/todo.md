@@ -24,6 +24,22 @@
 - [x] Update standard action button to show `<X />` when used, `<Sword />` when unused. <!-- id: 12 -->
 - [x] Fix code duplication issue introduced during replacement. <!-- id: 13 -->
 
+# Plan: Hero Shield-X Icon
+
+- [x] Import `ShieldX` from `lucide-react`. <!-- id: 14 -->
+- [x] Update logic to show `ShieldX` for hero tokens when action is used AND it's not their active turn. <!-- id: 15 -->
+- [x] Fix syntax error introduced by missing `>` closing tag (line 861). <!-- id: 16 -->
+
+# Plan: Adjust Legendary Action Button Width
+- [x] Reduce width of Legendary Echo action button from `w-24` to `w-20` (approx 20% smaller). <!-- id: 17 -->
+- [x] Make width responsive: `w-12` on mobile, `w-20` on larger screens. <!-- id: 18 -->
+
+# Plan: Preserve Shield Icon when Turn Starts
+- [x] Add state `reactionStates` to `TurnOrderPanel` to track actions used as reactions (off-turn). <!-- id: 19 -->
+- [x] Use `useEffect` to sync `reactionStates` with token actions, updating state when an action is used off-turn. <!-- id: 20 -->
+- [x] Update render logic to display `ShieldX` if the action is in `reactionStates`, even if it is now the active turn. <!-- id: 21 -->
+
 ## Review
-- All action buttons now toggle between a Sword icon (unused) and an X icon (used).
-- Fixed a code duplication error.
+- Implemented state tracking for hero reactions.
+- `ShieldX` icon is preserved when a hero's turn starts if the action was used as a reaction.
+- `ShieldX` reverts to `Sword` if the action is reset (untoggled).

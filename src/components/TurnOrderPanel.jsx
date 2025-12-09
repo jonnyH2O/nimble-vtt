@@ -1,5 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { Trash2, List, Book, RotateCcw, AlertCircle, ExternalLink, Dices, Settings, Upload, Plus, Sword, X } from 'lucide-react';
+import { Trash2, List, Book, RotateCcw, AlertCircle, ExternalLink, Dices, Settings, Upload, Plus, Sword, X, ShieldX } from 'lucide-react';
+
 
 
 import { NotesPanel } from './HUD';
@@ -133,6 +134,42 @@ export default function TurnOrderPanel({
   const fileInputRef = useRef(null);
   const [popoutDragIndex, setPopoutDragIndex] = React.useState(null);
   const [hoveredTurnButton, setHoveredTurnButton] = useState(null);
+  // State to track which actions were used as reactions (off-turn)
+  const [reactionStates, setReactionStates] = useState({});
+
+  // Effect to sync reaction states
+  React.useEffect(() => {
+    if (!tokens) return;
+
+    let updates = {};
+    let hasUpdates = false;
+
+    tokens.forEach(token => {
+      if (token.type === 'hero' && token.actions) {
+        token.actions.forEach((used, index) => {
+          const key = `${token.id}-${index}`;
+          const isStoredReaction = reactionStates[key];
+
+          // If action is cleared, clear reaction state
+          if (!used && isStoredReaction) {
+            updates[key] = false;
+            hasUpdates = true;
+          }
+          // If action is used off-turn, mark as reaction
+          // We don't clear it if used && isActiveTurn (preserve history)
+          else if (used && !token.isActiveTurn && !isStoredReaction) {
+            updates[key] = true;
+            hasUpdates = true;
+          }
+        });
+      }
+    });
+
+    if (hasUpdates) {
+      setReactionStates(prev => ({ ...prev, ...updates }));
+    }
+  }, [tokens]); // Intentionally not including reactionStates to avoid loop, using functional update
+
 
   // Helper function to handle actions - sends to main window if in pop-out, otherwise calls directly
   const handleAction = useCallback((type, payload, directFn) => {
@@ -426,7 +463,7 @@ export default function TurnOrderPanel({
                                   () => tokenManager.toggleAction(item.id, legendaryTurnIndex)
                                 );
                               }}
-                              className={`w-24 h-8 rounded transition-colors flex items-center justify-center ${token.actions[displayTurnOrder
+                              className={`w-12 sm:w-20 h-8 rounded transition-colors flex items-center justify-center ${token.actions[displayTurnOrder
                                 .slice(0, index)
                                 .filter(i => i.id === item.id && i.isLegendaryEcho).length]
                                 ? 'bg-button-muted-hover'
@@ -859,8 +896,18 @@ export default function TurnOrderPanel({
                                         : 'bg-secondary hover:bg-secondary-hover'
                                     }`}
                                 >
-                                  {used ? <X size={14} className="mx-auto" /> : <Sword size={14} className="mx-auto" />}
+                                  {used ? (
+                                    (reactionStates[`${item.id}-${actionIndex}`] || (token.type === 'hero' && !token.isActiveTurn)) ? (
+                                      <ShieldX size={14} className="mx-auto" />
+                                    ) : (
+                                      <X size={14} className="mx-auto" />
+                                    )
+                                  ) : (
+                                    <Sword size={14} className="mx-auto" />
+                                  )}
                                 </button>
+
+
 
 
                               ))}
