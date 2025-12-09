@@ -89,6 +89,8 @@ export default function TurnOrderPanel({
   onPopout = null,         // NEW: Callback to trigger pop-out
   isPopoutWindow = false,  // NEW: Are we rendering in pop-out?
   onAction = null,         // NEW: Send actions from pop-out to main
+  lastActionUserId = null, // NEW: ID of token that last used an action
+  setLastActionUserId = null, // NEW: Function to set last action user
   // Dice Roller props
   showDiceMenu,
   setShowDiceMenu,
@@ -136,6 +138,9 @@ export default function TurnOrderPanel({
   const [hoveredTurnButton, setHoveredTurnButton] = useState(null);
   // State to track which actions were used as reactions (off-turn)
   const [reactionStates, setReactionStates] = useState({});
+  // Refs to track token card positions for the action indicator
+  const tokenCardRefs = useRef({});
+  const [indicatorPosition, setIndicatorPosition] = useState(null);
 
   // Effect to sync reaction states
   React.useEffect(() => {
@@ -169,6 +174,39 @@ export default function TurnOrderPanel({
       setReactionStates(prev => ({ ...prev, ...updates }));
     }
   }, [tokens]); // Intentionally not including reactionStates to avoid loop, using functional update
+
+  // Effect to update indicator position when lastActionUserId changes
+  React.useEffect(() => {
+    if (!lastActionUserId || !tokenCardRefs.current[lastActionUserId]) {
+      setIndicatorPosition(null);
+      return;
+    }
+
+    const updatePosition = () => {
+      const cardElement = tokenCardRefs.current[lastActionUserId];
+      if (cardElement) {
+        const rect = cardElement.getBoundingClientRect();
+        // Get the content area container (has overflow-auto and relative positioning)
+        const containerRect = cardElement.closest('.overflow-auto')?.getBoundingClientRect();
+        if (containerRect) {
+          setIndicatorPosition({
+            top: rect.top - containerRect.top + rect.height / 2,
+          });
+        }
+      }
+    };
+
+    updatePosition();
+    // Update on scroll or resize
+    const container = tokenCardRefs.current[lastActionUserId]?.closest('.overflow-auto');
+    container?.addEventListener('scroll', updatePosition);
+    window.addEventListener('resize', updatePosition);
+
+    return () => {
+      container?.removeEventListener('scroll', updatePosition);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [lastActionUserId, displayTurnOrder]);
 
 
   // Helper function to handle actions - sends to main window if in pop-out, otherwise calls directly
@@ -280,43 +318,67 @@ export default function TurnOrderPanel({
       </div >
 
       {/* Content Area */}
-      < div className="flex-1 overflow-auto p-4" >
+      < div className="flex-1 overflow-auto relative" >
         {sidebarView === 'turnOrder' ? (
           <>
-            {/* Turn Order Header */}
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Turn Order</h2>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    handleAction(
-                      MESSAGE_TYPES.RESET_NON_HERO_ACTIONS,
-                      {},
-                      () => tokenManager.resetNonHeroActions()
-                    );
+            {/* Action Indicator Triangle - positioned at far left of panel */}
+            {indicatorPosition && (
+              <div
+                className="absolute left-0 transition-all duration-300 ease-in-out pointer-events-none z-10"
+                style={{
+                  top: `${indicatorPosition.top}px`,
+                  transform: 'translateY(-50%)',
+                }}
+              >
+                <div
+                  className="border-l-8 border-y-6 border-r-0 border-y-transparent"
+                  style={{
+                    borderLeftColor: 'var(--color-primary)',
+                    width: 0,
+                    height: 0,
+                    borderTopWidth: '6px',
+                    borderBottomWidth: '6px',
+                    borderLeftWidth: '10px',
                   }}
-                  className="bg-primary hover:bg-primary-hover p-2 rounded flex items-center justify-center"
-                  title="Reset all non-hero actions"
-                >
-                  <RotateCcw size={16} />
-                </button>
-                <button
-                  onClick={() => setDeleteMode(!deleteMode)}
-                  className={`p-2 rounded flex items-center justify-center ${deleteMode ? 'bg-destructive hover:bg-destructive-hover' : 'bg-button-muted hover:bg-button-muted-hover'
-                    }`}
-                  title={deleteMode ? 'Done deleting' : 'Delete mode'}
-                >
-                  <Trash2 size={16} />
-                </button>
+                />
               </div>
-            </div>
-            <div className="text-xs text-text-muted mb-3">
-              {deleteMode ? 'Click tokens to remove them' : 'Drag to reorder'}
-            </div>
+            )}
 
-            {/* Token Cards */}
-            <div className="space-y-2">
-              {displayTurnOrder.map((item, index) => {
+            <div className="p-4">
+              {/* Turn Order Header */}
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold">Turn Order</h2>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      handleAction(
+                        MESSAGE_TYPES.RESET_NON_HERO_ACTIONS,
+                        {},
+                        () => tokenManager.resetNonHeroActions()
+                      );
+                    }}
+                    className="bg-primary hover:bg-primary-hover p-2 rounded flex items-center justify-center"
+                    title="Reset all non-hero actions"
+                  >
+                    <RotateCcw size={16} />
+                  </button>
+                  <button
+                    onClick={() => setDeleteMode(!deleteMode)}
+                    className={`p-2 rounded flex items-center justify-center ${deleteMode ? 'bg-destructive hover:bg-destructive-hover' : 'bg-button-muted hover:bg-button-muted-hover'
+                      }`}
+                    title={deleteMode ? 'Done deleting' : 'Delete mode'}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+              <div className="text-xs text-text-muted mb-3">
+                {deleteMode ? 'Click tokens to remove them' : 'Drag to reorder'}
+              </div>
+
+              {/* Token Cards */}
+              <div className="space-y-2">
+                {displayTurnOrder.map((item, index) => {
                 const token = tokens.find(t => t.id === item.id);
                 if (!token) return null;
 
@@ -328,6 +390,21 @@ export default function TurnOrderPanel({
                   <div key={isLegendaryEcho ? `${item.id}-echo-${index}` : isMainLegendary ? `${item.id}-main` : item.id}>
 
                     <div
+                      ref={(el) => {
+                        if (el) {
+                          // Store refs for all cards (including echo cards for legendary actions)
+                          // For legendary echo cards, store with a composite key including the echo index
+                          if (isLegendaryEcho) {
+                            const legendaryTurnIndex = displayTurnOrder
+                              .slice(0, index)
+                              .filter(i => i.id === item.id && i.isLegendaryEcho).length;
+                            tokenCardRefs.current[`${item.id}-echo-${legendaryTurnIndex}`] = el;
+                          } else if (!isMainLegendary) {
+                            // Regular tokens (not main legendary card)
+                            tokenCardRefs.current[item.id] = el;
+                          }
+                        }
+                      }}
                       draggable={!deleteMode && !isLegendaryEcho && !expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`] && !!activeTurnOrderManager}
                       onDragStart={activeTurnOrderManager ? () => !isLegendaryEcho && activeTurnOrderManager.handleTurnDragStart(actualIndex) : undefined}
                       onDragOver={activeTurnOrderManager ? (e) => !isLegendaryEcho && activeTurnOrderManager.handleTurnDragOver(e, actualIndex) : undefined}
@@ -457,6 +534,16 @@ export default function TurnOrderPanel({
                                 const legendaryTurnIndex = displayTurnOrder
                                   .slice(0, index)
                                   .filter(i => i.id === item.id && i.isLegendaryEcho).length;
+
+                                // Track last action user when NOT in popout mode
+                                if (!isPopoutWindow && setLastActionUserId) {
+                                  const willBeUsed = !token.actions[legendaryTurnIndex];
+                                  if (willBeUsed) {
+                                    // For legendary, store with echo index so we point to the right echo card
+                                    setLastActionUserId(`${item.id}-echo-${legendaryTurnIndex}`);
+                                  }
+                                }
+
                                 handleAction(
                                   MESSAGE_TYPES.ACTION_TOGGLE,
                                   { tokenId: item.id, actionIndex: legendaryTurnIndex },
@@ -881,6 +968,17 @@ export default function TurnOrderPanel({
                                   key={actionIndex}
                                   onClick={(e) => {
                                     e.stopPropagation();
+
+                                    // Track last action user (excluding hero reactions) when NOT in popout mode
+                                    if (!isPopoutWindow && setLastActionUserId) {
+                                      const isHeroReaction = token.type === 'hero' && !token.isActiveTurn;
+                                      const willBeUsed = !used; // Toggling to true
+
+                                      if (willBeUsed && !isHeroReaction) {
+                                        setLastActionUserId(item.id);
+                                      }
+                                    }
+
                                     handleAction(
                                       MESSAGE_TYPES.ACTION_TOGGLE,
                                       { tokenId: item.id, actionIndex },
@@ -927,9 +1025,10 @@ export default function TurnOrderPanel({
                 </div>
               )}
             </div>
+            </div>
           </>
         ) : sidebarView === 'dictionary' ? (
-          <>
+          <div className="p-4">
             {/* Dictionary View */}
             <h2 className="text-xl font-bold mb-4">Nimble Dictionary</h2>
 
@@ -1803,9 +1902,9 @@ export default function TurnOrderPanel({
                 </div>
               )}
             </div>
-          </>
+          </div>
         ) : sidebarView === 'dice' ? (
-          <>
+          <div className="p-4">
             {/* Dice Roller View */}
             <h2 className="text-xl font-bold mb-4">Dice Roller</h2>
 
@@ -1926,9 +2025,9 @@ export default function TurnOrderPanel({
                 </div>
               )}
             </div>
-          </>
+          </div>
         ) : sidebarView === 'settings' ? (
-          <>
+          <div className="p-4">
             {/* Settings View */}
             <h2 className="text-xl font-bold mb-4">Settings</h2>
 
@@ -2247,7 +2346,7 @@ export default function TurnOrderPanel({
                 </div>
               </div>
             </div>
-          </>
+          </div>
         ) : null
         }
       </div >

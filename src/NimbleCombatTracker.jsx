@@ -88,6 +88,7 @@ export default function NimbleCombatTracker() {
 
   // Other State
   const [deleteMode, setDeleteMode] = useState(false);
+  const [lastActionUserId, setLastActionUserId] = useState(null);
 
   // Token Dragging State
   const [dragging, setDragging] = useState(null);
@@ -621,6 +622,7 @@ export default function NimbleCombatTracker() {
         sidebarView,
         tokenSize,
         deleteMode,
+        lastActionUserId,
         doomedConditions: CONDITION_CATEGORIES.DOOMED,
         majorConditions: CONDITION_CATEGORIES.MAJOR,
         minorConditions: CONDITION_CATEGORIES.MINOR,
@@ -653,6 +655,7 @@ export default function NimbleCombatTracker() {
     expandedNotes,
     sidebarView,
     deleteMode,
+    lastActionUserId,
     windowSync,
     diceCount,
     showDiceInViewport,
@@ -693,9 +696,24 @@ export default function NimbleCombatTracker() {
         case MESSAGE_TYPES.NOTES_UPDATE:
           tokenManager.updateNotes(payload.tokenId, payload.notes);
           break;
-        case MESSAGE_TYPES.ACTION_TOGGLE:
+        case MESSAGE_TYPES.ACTION_TOGGLE: {
+          const token = tokens.find(t => t.id === payload.tokenId);
+          const willBeUsed = token && !token.actions[payload.actionIndex];
+          const isHeroReaction = token && token.type === 'hero' && !token.isActiveTurn;
+
           tokenManager.toggleAction(payload.tokenId, payload.actionIndex);
+
+          // Track last action user (excluding hero reactions)
+          if (willBeUsed && !isHeroReaction) {
+            // For legendary tokens, track with echo index so arrow points to the right echo card
+            if (token && token.type === 'legendary') {
+              setLastActionUserId(`${payload.tokenId}-echo-${payload.actionIndex}`);
+            } else {
+              setLastActionUserId(payload.tokenId);
+            }
+          }
           break;
+        }
         case MESSAGE_TYPES.WOUNDS_UPDATE:
           tokenManager.updateWounds(payload.tokenId, payload.newWounds);
           break;
@@ -1284,6 +1302,8 @@ export default function NimbleCombatTracker() {
             SIDEBAR_WIDTH={SIDEBAR_WIDTH}
             updateNotes={tokenManager.updateNotes}
             onPopout={handlePopout}
+            lastActionUserId={lastActionUserId}
+            setLastActionUserId={setLastActionUserId}
             // Dice Roller props
             showDiceMenu={showDiceMenu}
             setShowDiceMenu={setShowDiceMenu}

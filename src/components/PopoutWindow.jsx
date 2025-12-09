@@ -154,6 +154,7 @@ export default function PopoutWindow() {
         getTokenIcon={getTokenIcon}
         tokenManager={null} // NOT passed - mutations go through onAction
         turnOrderManager={null} // NOT passed - mutations go through onAction
+        lastActionUserId={syncedState.lastActionUserId}
         // Dice Roller props - send to main window
         showDiceMenu={false}
         setShowDiceMenu={() => { }}
