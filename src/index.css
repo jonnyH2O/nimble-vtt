@@ -162,8 +162,8 @@
 [data-theme='hero'] {
 
   --color-background: #000c11;
-  --color-surface: #1f2937;
-  --color-surface-highlight: #374151;
+  --color-surface: #2d3b50;
+  --color-surface-highlight: #242b36;
 
   --color-border: #0000004a;
 
@@ -187,14 +187,14 @@
 
   --color-token-selected: #ee9b00f4;
 
-  --color-hero: #0081A7;
-  --color-companion: #00a151;
+  --color-hero: #0094c1;
+  --color-companion: #00af57;
   --color-enemy: #DC2626;
-  --color-legendary: #9333EA;
+  --color-legendary: #8138c5;
   --color-hero-highlight: #0094c1;
-  --color-companion-highlight: #00b95c;
+  --color-companion-highlight: #00af57;
   --color-enemy-highlight: #ae2012;
-  --color-legendary-highlight: #a855f7;
+  --color-legendary-highlight: #8138c5;
 
   --color-doomed-buttons: #ae2012;
   --color-doomed-buttons-hover: #d02617;
