@@ -1,5 +1,8 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { Trash2, List, Book, RotateCcw, AlertCircle, ExternalLink, Dices, Settings, Upload, Plus } from 'lucide-react';
+import { Trash2, List, Book, RotateCcw, AlertCircle, ExternalLink, Dices, Settings, Upload, Plus, Sword, X, ShieldX } from 'lucide-react';
+
+
+
 import { NotesPanel } from './HUD';
 import { MESSAGE_TYPES, createMessage } from '../utils/windowMessages';
 import ColorPicker from './ColorPicker';
@@ -131,6 +134,42 @@ export default function TurnOrderPanel({
   const fileInputRef = useRef(null);
   const [popoutDragIndex, setPopoutDragIndex] = React.useState(null);
   const [hoveredTurnButton, setHoveredTurnButton] = useState(null);
+  // State to track which actions were used as reactions (off-turn)
+  const [reactionStates, setReactionStates] = useState({});
+
+  // Effect to sync reaction states
+  React.useEffect(() => {
+    if (!tokens) return;
+
+    let updates = {};
+    let hasUpdates = false;
+
+    tokens.forEach(token => {
+      if (token.type === 'hero' && token.actions) {
+        token.actions.forEach((used, index) => {
+          const key = `${token.id}-${index}`;
+          const isStoredReaction = reactionStates[key];
+
+          // If action is cleared, clear reaction state
+          if (!used && isStoredReaction) {
+            updates[key] = false;
+            hasUpdates = true;
+          }
+          // If action is used off-turn, mark as reaction
+          // We don't clear it if used && isActiveTurn (preserve history)
+          else if (used && !token.isActiveTurn && !isStoredReaction) {
+            updates[key] = true;
+            hasUpdates = true;
+          }
+        });
+      }
+    });
+
+    if (hasUpdates) {
+      setReactionStates(prev => ({ ...prev, ...updates }));
+    }
+  }, [tokens]); // Intentionally not including reactionStates to avoid loop, using functional update
+
 
   // Helper function to handle actions - sends to main window if in pop-out, otherwise calls directly
   const handleAction = useCallback((type, payload, directFn) => {
@@ -287,11 +326,7 @@ export default function TurnOrderPanel({
 
                 return (
                   <div key={isLegendaryEcho ? `${item.id}-echo-${index}` : isMainLegendary ? `${item.id}-main` : item.id}>
-                    {isLegendaryEcho && (
-                      <div className="flex items-center gap-2 py-1 pl-8">
-                        <div className="text-purple-400 text-xs">→ Legendary Turn</div>
-                      </div>
-                    )}
+
                     <div
                       draggable={!deleteMode && !isLegendaryEcho && !expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`] && !!activeTurnOrderManager}
                       onDragStart={activeTurnOrderManager ? () => !isLegendaryEcho && activeTurnOrderManager.handleTurnDragStart(actualIndex) : undefined}
@@ -309,18 +344,18 @@ export default function TurnOrderPanel({
                         } ${deleteMode && !isLegendaryEcho ? 'cursor-pointer hover:bg-destructive' :
                           !isLegendaryEcho && !expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`] && activeTurnOrderManager ? 'cursor-move' : ''
                         } ${selectedToken === item.id && !isLegendaryEcho ? 'ring-2 ring-token-selected' : ''} ${isLegendaryEcho ? 'opacity-75 ml-4' : ''
-                        } ${isMainLegendary ? 'border-2 border-legendary-highlight' : ''}`}
+                        }`}
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2 flex-1">
                           {isMainLegendary && (
-                            <div className="text-sm font-bold text-legendary-highlight w-6">L</div>
+                            <div className="text-sm font-bold text-legendary-highlight w-2">L</div>
                           )}
                           {!isLegendaryEcho && !isMainLegendary && (
-                            <div className="text-sm font-bold text-text-muted w-6">{actualIndex + 1}</div>
+                            <div className="text-sm font-bold text-text-muted w-2">{actualIndex + 1}</div>
                           )}
                           {isLegendaryEcho && (
-                            <div className="text-sm font-bold text-legendary-highlight w-6">→</div>
+                            <div className="text-sm font-bold text-legendary-highlight w-2">→</div>
                           )}
                           {token.image ? (
                             <div className="relative w-10 h-10">
@@ -354,6 +389,7 @@ export default function TurnOrderPanel({
                           <div className="flex-1">
                             <div className="font-bold text-sm">{token.name}</div>
                             <div className="text-xs text-text-muted capitalize">{token.type}</div>
+
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -412,6 +448,39 @@ export default function TurnOrderPanel({
                                 />
                               </div>
                             </div>
+                          )}
+                          {isLegendaryEcho && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Use the index within the display order to track which legendary turn this is
+                                const legendaryTurnIndex = displayTurnOrder
+                                  .slice(0, index)
+                                  .filter(i => i.id === item.id && i.isLegendaryEcho).length;
+                                handleAction(
+                                  MESSAGE_TYPES.ACTION_TOGGLE,
+                                  { tokenId: item.id, actionIndex: legendaryTurnIndex },
+                                  () => tokenManager.toggleAction(item.id, legendaryTurnIndex)
+                                );
+                              }}
+                              className={`w-12 sm:w-20 h-8 rounded transition-colors flex items-center justify-center ${token.actions[displayTurnOrder
+                                .slice(0, index)
+                                .filter(i => i.id === item.id && i.isLegendaryEcho).length]
+                                ? 'bg-button-muted-hover'
+                                : 'bg-secondary hover:bg-secondary-hover'
+                                }`}
+                              title="Complete Legendary Action"
+                            >
+
+                              {token.actions[displayTurnOrder
+                                .slice(0, index)
+                                .filter(i => i.id === item.id && i.isLegendaryEcho).length]
+                                ? <X size={14} className="mx-auto" />
+                                : <Sword size={14} className="mx-auto" />
+                              }
+                            </button>
+
+
                           )}
                           {!isLegendaryEcho && (
                             <button
@@ -827,37 +896,24 @@ export default function TurnOrderPanel({
                                         : 'bg-secondary hover:bg-secondary-hover'
                                     }`}
                                 >
-                                  {token.type === 'hero' ? actionIndex + 1 : '✓'}
+                                  {used ? (
+                                    (reactionStates[`${item.id}-${actionIndex}`] || (token.type === 'hero' && !token.isActiveTurn)) ? (
+                                      <ShieldX size={14} className="mx-auto" />
+                                    ) : (
+                                      <X size={14} className="mx-auto" />
+                                    )
+                                  ) : (
+                                    <Sword size={14} className="mx-auto" />
+                                  )}
                                 </button>
+
+
+
+
                               ))}
                             </div>
                           )}
-                          {isLegendaryEcho && (
-                            <div className="flex gap-1">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  // Use the index within the display order to track which legendary turn this is
-                                  const legendaryTurnIndex = displayTurnOrder
-                                    .slice(0, index)
-                                    .filter(i => i.id === item.id && i.isLegendaryEcho).length;
-                                  handleAction(
-                                    MESSAGE_TYPES.ACTION_TOGGLE,
-                                    { tokenId: item.id, actionIndex: legendaryTurnIndex },
-                                    () => tokenManager.toggleAction(item.id, legendaryTurnIndex)
-                                  );
-                                }}
-                                className={`flex-1 h-8 rounded transition-colors ${token.actions[displayTurnOrder
-                                  .slice(0, index)
-                                  .filter(i => i.id === item.id && i.isLegendaryEcho).length]
-                                  ? 'bg-button-muted-hover'
-                                  : 'bg-secondary hover:bg-secondary-hover'
-                                  }`}
-                              >
-                                ✓
-                              </button>
-                            </div>
-                          )}
+
                         </div>
                       )}
                     </div>
