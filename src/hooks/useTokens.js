@@ -139,7 +139,9 @@ function tokensReducer(state, action) {
       const { tokenId } = action.payload;
       return state.map(t => ({
         ...t,
-        isActiveTurn: t.id === tokenId
+        isActiveTurn: t.id === tokenId,
+        // Reset actions for tokens losing their active turn
+        actions: t.isActiveTurn && t.id !== tokenId ? t.actions.map(() => false) : t.actions
       }));
     }
 
