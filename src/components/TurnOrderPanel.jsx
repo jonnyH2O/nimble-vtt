@@ -185,12 +185,28 @@ export default function TurnOrderPanel({
     const updatePosition = () => {
       const cardElement = tokenCardRefs.current[lastActionUserId];
       if (cardElement) {
-        const rect = cardElement.getBoundingClientRect();
-        // Get the content area container (has overflow-auto and relative positioning)
-        const containerRect = cardElement.closest('.overflow-auto')?.getBoundingClientRect();
-        if (containerRect) {
+        const container = cardElement.closest('.overflow-auto');
+        if (container) {
+          // Calculate position by walking up the DOM tree to get accurate offset
+          let cardTop = 0;
+          let element = cardElement;
+
+          // Walk up the tree until we reach the container
+          while (element && element !== container) {
+            cardTop += element.offsetTop;
+            element = element.offsetParent;
+            // Stop if we've gone past the container
+            if (element && !container.contains(element)) {
+              break;
+            }
+          }
+
+          const cardHeight = cardElement.offsetHeight;
+
+          // Position the arrow at the card's absolute position in the scrollable content
+          // Don't subtract scrollTop - the arrow will scroll naturally with the content
           setIndicatorPosition({
-            top: rect.top - containerRect.top + rect.height / 2,
+            top: cardTop + cardHeight / 2,
           });
         }
       }
@@ -202,11 +218,25 @@ export default function TurnOrderPanel({
     container?.addEventListener('scroll', updatePosition);
     window.addEventListener('resize', updatePosition);
 
+    // Use ResizeObserver to detect when the container's content changes size
+    // (e.g., when info panels expand/collapse)
+    let resizeObserver;
+    if (container) {
+      resizeObserver = new ResizeObserver(() => {
+        // Debounce to avoid too many updates during animations
+        requestAnimationFrame(updatePosition);
+      });
+      resizeObserver.observe(container);
+    }
+
     return () => {
       container?.removeEventListener('scroll', updatePosition);
       window.removeEventListener('resize', updatePosition);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
     };
-  }, [lastActionUserId, displayTurnOrder]);
+  }, [lastActionUserId]);
 
 
   // Helper function to handle actions - sends to main window if in pop-out, otherwise calls directly
