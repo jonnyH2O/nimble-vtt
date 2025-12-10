@@ -131,6 +131,7 @@ export default function TurnOrderPanel({
   currentTheme,
   setCurrentTheme,
   reactionStates,
+  isOverlay = false, // NEW: Whether panel is displayed as an overlay
 }) { // Add reactionStates to props
 
   const { updateWounds, toggleTempHP } = tokenManager || {};
@@ -258,7 +259,7 @@ export default function TurnOrderPanel({
   const activeTurnOrderManager = turnOrderManager || popoutTurnOrderManager;
 
   return (
-    <div className={`bg-surface border-l border-border flex flex-col ${isPopoutWindow ? 'w-full h-full' : ''}`} style={isPopoutWindow ? {} : { width: `${SIDEBAR_WIDTH}px` }}>
+    <div className={`bg-surface flex flex-col ${isPopoutWindow || isOverlay ? 'w-full h-full' : 'border-l border-border'}`} style={isPopoutWindow || isOverlay ? {} : { width: `${SIDEBAR_WIDTH}px` }}>
       {/* Tab Navigation */}
       <div className="bg-surface-highlight border-b border-border p-3 flex items-center justify-between">
         <div className="flex gap-2">

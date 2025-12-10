@@ -15,7 +15,7 @@ import { getHealthColor, getHealthPercent } from '../utils/tokenUtils';
 export function PartyOverview({ tokens }) {
   return (
     <div
-      className="absolute left-4 top-1/4 bg-surface border-2 border-border rounded-lg p-4 shadow-2xl"
+      className="absolute left-4 bottom-4 bg-surface border-2 border-border rounded-lg p-4 shadow-2xl"
       style={{ zIndex: 50, maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}
     >
       <h2 className="text-lg font-bold mb-3 text-center">Party Status</h2>
