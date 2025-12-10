@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback, useReducer } from 'react';
-import { Users, Swords, Heart, Crown } from 'lucide-react';
+import { Users, Swords, Heart, Crown, ShieldX, Sword, X } from 'lucide-react';
 import { HUDDisplay } from './components/HUD';
 import Toolbar from './components/Toolbar';
 import TurnOrderPanel from './components/TurnOrderPanel';
@@ -22,6 +22,8 @@ export default function NimbleCombatTracker() {
   const [backgroundSize, setBackgroundSize] = useState(100);
   const [tokenSize, setTokenSize] = useState(64);
   const [currentTheme, setCurrentTheme] = useState('default');
+
+
 
   // Apply theme to document
   useEffect(() => {
@@ -47,6 +49,42 @@ export default function NimbleCombatTracker() {
   // Token Management (custom hook)
   const tokenManager = useTokens(tokenSize);
   const { tokens, selectedToken, setSelectedToken } = tokenManager;
+
+  // State to track which actions were used as reactions (off-turn)
+  const [reactionStates, setReactionStates] = useState({});
+
+  // Effect to sync reaction states
+  useEffect(() => {
+    if (!tokens) return;
+
+    let updates = {};
+    let hasUpdates = false;
+
+    tokens.forEach(token => {
+      if (token.type === 'hero' && token.actions) {
+        token.actions.forEach((used, index) => {
+          const key = `${token.id}-${index}`;
+          const isStoredReaction = reactionStates[key];
+
+          // If action is cleared, clear reaction state
+          if (!used && isStoredReaction) {
+            updates[key] = false;
+            hasUpdates = true;
+          }
+          // If action is used off-turn, mark as reaction
+          // We don't clear it if used && isActiveTurn (preserve history)
+          else if (used && !token.isActiveTurn && !isStoredReaction) {
+            updates[key] = true;
+            hasUpdates = true;
+          }
+        });
+      }
+    });
+
+    if (hasUpdates) {
+      setReactionStates(prev => ({ ...prev, ...updates }));
+    }
+  }, [tokens, reactionStates]);
 
   // Drawing Management (custom hook)
   const drawingManager = useDrawing(boardRef, viewOffset, zoomLevel);
@@ -640,7 +678,8 @@ export default function NimbleCombatTracker() {
         companionLightRadius,
         darknessIntensity,
         showPartyOverview,
-        currentTheme
+        currentTheme,
+        reactionStates
       }));
     } else {
       console.log('[MainWindow] NOT broadcasting - isPopoutMode:', isPopoutMode, 'hasChannel:', !!windowSync.channel);
@@ -1174,6 +1213,7 @@ export default function NimbleCombatTracker() {
                               bottom: `${currentTokenSize + 10}px`
                             }}
                           >
+                            {/* ... existing popup content ... */}
                             {token.conditions && token.conditions.length > 0 && (
                               <div className="mb-2">
                                 <div className="text-xs font-bold text-gray-300 mb-2">Conditions:</div>
@@ -1221,6 +1261,48 @@ export default function NimbleCombatTracker() {
                                 <div className="text-xs text-gray-300">{token.notes}</div>
                               </div>
                             )}
+                          </div>
+                        )}
+
+                        {/* Action Indicators */}
+                        {token.actions && token.type !== 'legendary' && (
+                          <div
+                            className={`absolute left-1/2 transform -translate-x-1/2 flex justify-center gap-1 bg-surface/90 backdrop-blur-sm p-1 rounded-lg border-2 shadow-lg pointer-events-none ${getTokenBorderColor(token.type)}`}
+                            style={{
+                              bottom: `-${currentTokenSize * 0.22}px`, // Lowered by 20% (0.1 -> 0.3)
+                              zIndex: 15
+                            }}
+                          >
+                            {token.actions.map((used, index) => {
+                              const isReaction = reactionStates[`${token.id}-${index}`] || (token.type === 'hero' && used && !token.isActiveTurn);
+                              const indicatorSize = Math.max(14, currentTokenSize * 0.24);
+
+                              return (
+                                <div
+                                  key={index}
+                                  className={`rounded-full flex items-center justify-center shadow-sm border border-black/50 ${used
+                                    ? 'bg-button-muted-hover'
+                                    : token.isActiveTurn
+                                      ? 'bg-secondary'
+                                      : 'bg-secondary'
+                                    }`}
+                                  style={{
+                                    width: `${indicatorSize}px`,
+                                    height: `${indicatorSize}px`,
+                                  }}
+                                >
+                                  {used ? (
+                                    isReaction ? (
+                                      <ShieldX size={indicatorSize * 0.7} className="text-text" />
+                                    ) : (
+                                      <X size={indicatorSize * 0.7} className="text-text" />
+                                    )
+                                  ) : (
+                                    <Sword size={indicatorSize * 0.7} className="text-text" />
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
                       </div>
@@ -1343,6 +1425,7 @@ export default function NimbleCombatTracker() {
             importBattle={importBattle}
             currentTheme={currentTheme}
             setCurrentTheme={setCurrentTheme}
+            reactionStates={reactionStates}
           />
         )}
       </div>

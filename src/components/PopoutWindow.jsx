@@ -195,6 +195,7 @@ export default function PopoutWindow() {
         handleTokenImageUpload={() => { }} // Stub
         currentTheme={syncedState.currentTheme || 'default'}
         setCurrentTheme={(theme) => sendAction(createMessage(MESSAGE_TYPES.SETTINGS_UPDATE, { currentTheme: theme }))}
+        reactionStates={syncedState.reactionStates || {}}
         exportBattle={() => sendAction(createMessage(MESSAGE_TYPES.EXPORT_BATTLE))}
         importBattle={() => fileInputRef.current?.click()}
       />
