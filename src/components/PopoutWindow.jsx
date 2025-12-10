@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Users, Heart, Swords, Crown } from 'lucide-react';
-import TurnOrderPanel from './TurnOrderPanel';
+import DMTools from './DMTools';
 import { useWindowSync } from '../hooks/useWindowSync';
 import { MESSAGE_TYPES, createMessage } from '../utils/windowMessages';
 import { SIDEBAR_WIDTH } from '../constants';
@@ -126,7 +126,7 @@ export default function PopoutWindow() {
 
   return (
     <div className="h-screen bg-background text-white flex flex-col">
-      <TurnOrderPanel
+      <DMTools
         isPopoutWindow={true}
         onAction={sendAction}
         sidebarView={syncedState.sidebarView}

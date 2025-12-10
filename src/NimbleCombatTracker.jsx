@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback, useReducer } 
 import { Users, Swords, Heart, Crown, ShieldX, Sword, X } from 'lucide-react';
 import { HUDDisplay } from './components/HUD';
 import Toolbar from './components/Toolbar';
-import TurnOrderPanel from './components/TurnOrderPanel';
+import DMTools from './components/DMTools';
 import { TokenEffects, TokenEffectOverlay } from './components/TokenEffects';
 import { PartyOverview } from './components/PartyOverview';
 import DiceRoller from './components/DiceRoller';
@@ -1351,8 +1351,8 @@ export default function NimbleCombatTracker() {
                 onMouseDown={(e) => e.stopPropagation()}
                 onWheel={(e) => e.stopPropagation()}
               >
-                <TurnOrderPanel
-                  isOverlay={true}
+                {/* Sidebar (Turn Order / Dictionary / Dice / Settings) */}
+                <DMTools
                   sidebarView={sidebarView}
                   setSidebarView={setSidebarView}
                   deleteMode={deleteMode}
@@ -1368,19 +1368,19 @@ export default function NimbleCombatTracker() {
                   setExpandedNotes={setExpandedNotes}
                   tokenSize={tokenSize}
                   handleRemoveToken={handleRemoveToken}
-                  getTokenBorderColor={getTokenBorderColor}
-                  getTokenBgColor={getTokenBgColor}
-                  getTokenIcon={getTokenIcon}
-                  tokenManager={tokenManager}
-                  turnOrderManager={turnOrderManager}
                   doomedConditions={doomedConditions}
                   majorConditions={majorConditions}
                   minorConditions={minorConditions}
                   SIDEBAR_WIDTH={SIDEBAR_WIDTH}
                   updateNotes={tokenManager.updateNotes}
                   onPopout={handlePopout}
+                  updateTurnOrder={turnOrderManager.setAllTurnOrder}
+                  getTokenBorderColor={getTokenBorderColor}
+                  getTokenBgColor={getTokenBgColor}
+                  getTokenIconName={getTokenIconName}
+                  tokenManager={tokenManager}
+                  turnOrderManager={turnOrderManager}
                   lastActionUserId={lastActionUserId}
-                  setLastActionUserId={setLastActionUserId}
                   // Dice Roller props
                   showDiceMenu={showDiceMenu}
                   setShowDiceMenu={setShowDiceMenu}
@@ -1392,6 +1392,8 @@ export default function NimbleCombatTracker() {
                   showDiceInViewport={showDiceInViewport}
                   setShowDiceInViewport={setShowDiceInViewport}
                   // Settings props
+                  showSettings={false} // Managed internally by sidebar sidebarView
+                  setShowSettings={() => { }}
                   setTokenSize={setTokenSize}
                   backgroundSize={backgroundSize}
                   setBackgroundSize={setBackgroundSize}
@@ -1409,6 +1411,7 @@ export default function NimbleCombatTracker() {
                   setDarknessIntensity={setDarknessIntensity}
                   showPartyOverview={showPartyOverview}
                   setShowPartyOverview={setShowPartyOverview}
+                  // Add Token props
                   handleBackgroundUpload={handleBackgroundUpload}
                   showAddToken={showAddToken}
                   setShowAddToken={setShowAddToken}
@@ -1416,11 +1419,11 @@ export default function NimbleCombatTracker() {
                   setNewToken={setNewToken}
                   handleAddToken={handleAddToken}
                   handleTokenImageUpload={handleTokenImageUpload}
-                  exportBattle={exportBattle}
-                  importBattle={importBattle}
                   currentTheme={currentTheme}
                   setCurrentTheme={setCurrentTheme}
                   reactionStates={reactionStates}
+                  exportBattle={exportBattle}
+                  importBattle={importBattle}
                 />
               </div>
             )}
