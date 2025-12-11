@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback, useReducer } from 'react';
-import { Users, Swords, Heart, Crown, ShieldX, Sword, X } from 'lucide-react';
+import { Users, Swords, Heart, Crown, ShieldX, Sword, X, ChevronRight, Wrench, MousePointer, Pencil, Eraser } from 'lucide-react';
 import { HUDDisplay } from './components/HUD';
 import Toolbar from './components/Toolbar';
 import DMTools from './components/DMTools';
@@ -139,6 +139,7 @@ export default function NimbleCombatTracker() {
 
   // UI Panels
   const [expandedNotes, setExpandedNotes] = useState({});
+  const [isToolbarCollapsed, setIsToolbarCollapsed] = useState(false);
   const [panningView, setPanningView] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
@@ -940,28 +941,42 @@ export default function NimbleCombatTracker() {
           >
             {/* Floating Toolbar */}
             <div
-              className="toolbar-container absolute top-4 z-50 bg-surface/90 backdrop-blur-sm p-2 rounded-lg border border-border shadow-lg transition-all duration-300"
+              className={`toolbar-container absolute top-4 z-50 bg-surface-highlight p-2 rounded-lg border border-border shadow-lg transition-all duration-300 flex items-center gap-2`}
               style={{ right: isPopoutMode ? '1rem' : `${SIDEBAR_WIDTH + 32}px` }}
             >
-              <Toolbar
-                drawMode={drawMode}
-                setDrawMode={setDrawMode}
-                drawColor={drawColor}
-                setDrawColor={setDrawColor}
-                drawSize={drawSize}
-                setDrawSize={setDrawSize}
-                eraseSize={eraseSize}
-                setEraseSize={setEraseSize}
-                historyStep={historyStep}
-                drawingHistory={drawingHistory}
-                undo={drawingManager.undo}
-                redo={drawingManager.redo}
-                clearDrawings={drawingManager.clearDrawings}
-                zoomLevel={zoomLevel}
-                setZoomLevel={setZoomLevel}
-                viewOffset={viewOffset}
-                setViewOffset={setViewOffset}
-              />
+              {!isToolbarCollapsed && (
+                <Toolbar
+                  drawMode={drawMode}
+                  setDrawMode={setDrawMode}
+                  drawColor={drawColor}
+                  setDrawColor={setDrawColor}
+                  drawSize={drawSize}
+                  setDrawSize={setDrawSize}
+                  eraseSize={eraseSize}
+                  setEraseSize={setEraseSize}
+                  historyStep={historyStep}
+                  drawingHistory={drawingHistory}
+                  undo={drawingManager.undo}
+                  redo={drawingManager.redo}
+                  clearDrawings={drawingManager.clearDrawings}
+                  zoomLevel={zoomLevel}
+                  setZoomLevel={setZoomLevel}
+                  viewOffset={viewOffset}
+                  setViewOffset={setViewOffset}
+                />
+              )}
+              <button
+                onClick={() => setIsToolbarCollapsed(!isToolbarCollapsed)}
+                className="p-1.5 hover:bg-surface rounded text-text-muted hover:text-text transition-colors flex items-center justify-center"
+                title={isToolbarCollapsed ? "Show Tools" : "Hide Tools"}
+              >
+                {isToolbarCollapsed ? (
+                  drawMode === 'select' ? <MousePointer size={20} /> :
+                    drawMode === 'draw' ? <Pencil size={20} /> :
+                      drawMode === 'erase' ? <Eraser size={20} /> :
+                        <Wrench size={20} />
+                ) : <ChevronRight size={20} />}
+              </button>
             </div>
             <div
               className="absolute"
