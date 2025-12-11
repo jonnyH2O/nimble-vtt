@@ -354,6 +354,17 @@ export default function NimbleCombatTracker() {
     }
   }, [drawMode, zoomLevel, viewOffset]);
 
+  // Add non-passive wheel event listener to support preventing default behavior (zooming)
+  useEffect(() => {
+    const node = boardRef.current;
+    if (node) {
+      node.addEventListener('wheel', handleWheel, { passive: false });
+      return () => {
+        node.removeEventListener('wheel', handleWheel);
+      };
+    }
+  }, [handleWheel]);
+
   const handlePopout = useCallback(() => {
     // Prevent multiple pop-outs
     if (isPopoutMode && popoutWindow && !popoutWindow.closed) {
@@ -922,7 +933,7 @@ export default function NimbleCombatTracker() {
             onMouseLeave={handleMouseLeave}
             onMouseDown={handleBoardMouseDown}
             onContextMenu={(e) => e.preventDefault()}
-            onWheel={handleWheel}
+
           >
             {/* Floating Toolbar */}
             <div
