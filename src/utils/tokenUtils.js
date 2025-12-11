@@ -34,22 +34,22 @@ export const getResourcePercent = (current, max) => {
  */
 export const TOKEN_STYLES = {
     hero: {
-        border: 'border-hero-highlight',
+        border: 'border-hero',
         bg: 'bg-hero',
         icon: 'Users'
     },
     enemy: {
-        border: 'border-enemy-highlight',
+        border: 'border-enemy',
         bg: 'bg-enemy',
         icon: 'Swords'
     },
     companion: {
-        border: 'border-companion-highlight',
+        border: 'border-companion',
         bg: 'bg-companion',
         icon: 'Heart'
     },
     legendary: {
-        border: 'border-legendary-highlight',
+        border: 'border-legendary',
         bg: 'bg-legendary',
         icon: 'Crown'
     }

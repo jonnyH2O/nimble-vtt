@@ -1281,9 +1281,9 @@ export default function NimbleCombatTracker() {
                         {/* Action Indicators - only show when no token is selected */}
                         {token.actions && token.type !== 'legendary' && !selectedToken && (
                           <div
-                            className={`absolute left-1/2 transform -translate-x-1/2 flex justify-center gap-1 bg-surface/90 backdrop-blur-sm p-1 rounded-lg border-2 shadow-lg pointer-events-none ${getTokenBorderColor(token.type)}`}
+                            className="absolute left-1/2 transform -translate-x-1/2 flex justify-center gap-1 pointer-events-none"
                             style={{
-                              bottom: `-${currentTokenSize * 0.22}px`, // Lowered by 20% (0.1 -> 0.3)
+                              bottom: `-${currentTokenSize * 0.10}px`, // Lowered by 20% (0.1 -> 0.3)
                               zIndex: 15
                             }}
                           >
@@ -1294,15 +1294,16 @@ export default function NimbleCombatTracker() {
                               return (
                                 <div
                                   key={index}
-                                  className={`rounded-full flex items-center justify-center shadow-sm border border-black/50 ${used
+                                  className={`rounded-full flex items-center justify-center shadow-sm ${used
                                     ? 'bg-button-muted-hover'
-                                    : token.isActiveTurn
-                                      ? 'bg-secondary'
-                                      : 'bg-secondary'
+                                    : getTokenBgColor(token.type)
                                     }`}
                                   style={{
                                     width: `${indicatorSize}px`,
                                     height: `${indicatorSize}px`,
+                                    transform: (token.actions.length === 3 && (index === 0 || index === 2))
+                                      ? `translateY(-${currentTokenSize * 0.1}px)`
+                                      : 'none'
                                   }}
                                 >
                                   {used ? (
