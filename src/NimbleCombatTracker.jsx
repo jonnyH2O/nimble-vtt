@@ -588,10 +588,8 @@ export default function NimbleCombatTracker() {
 
       // Spacebar Tool Toggle (press to Select, release to revert)
       if (e.code === 'Space') {
-        // Prevent scrolling
-        if (e.target === document.body) {
-          e.preventDefault();
-        }
+        // Prevent scrolling and focused button activation
+        e.preventDefault();
 
         if (!e.repeat && previousDrawModeRef.current === null) {
           previousDrawModeRef.current = drawMode;
