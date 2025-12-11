@@ -1269,8 +1269,8 @@ export default function NimbleCombatTracker() {
                           </div>
                         )}
 
-                        {/* Action Indicators */}
-                        {token.actions && token.type !== 'legendary' && (
+                        {/* Action Indicators - only show when no token is selected */}
+                        {token.actions && token.type !== 'legendary' && !selectedToken && (
                           <div
                             className={`absolute left-1/2 transform -translate-x-1/2 flex justify-center gap-1 bg-surface/90 backdrop-blur-sm p-1 rounded-lg border-2 shadow-lg pointer-events-none ${getTokenBorderColor(token.type)}`}
                             style={{
