@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback, useReducer } from 'react';
-import { Users, Swords, Heart, Crown } from 'lucide-react';
+import { Users, Swords, Heart, Crown, ShieldX, Sword, X } from 'lucide-react';
 import { HUDDisplay } from './components/HUD';
 import Toolbar from './components/Toolbar';
-import TurnOrderPanel from './components/TurnOrderPanel';
+import DMTools from './components/DMTools';
 import { TokenEffects, TokenEffectOverlay } from './components/TokenEffects';
 import { PartyOverview } from './components/PartyOverview';
 import DiceRoller from './components/DiceRoller';
@@ -22,6 +22,8 @@ export default function NimbleCombatTracker() {
   const [backgroundSize, setBackgroundSize] = useState(100);
   const [tokenSize, setTokenSize] = useState(64);
   const [currentTheme, setCurrentTheme] = useState('default');
+
+
 
   // Apply theme to document
   useEffect(() => {
@@ -47,6 +49,42 @@ export default function NimbleCombatTracker() {
   // Token Management (custom hook)
   const tokenManager = useTokens(tokenSize);
   const { tokens, selectedToken, setSelectedToken } = tokenManager;
+
+  // State to track which actions were used as reactions (off-turn)
+  const [reactionStates, setReactionStates] = useState({});
+
+  // Effect to sync reaction states
+  useEffect(() => {
+    if (!tokens) return;
+
+    let updates = {};
+    let hasUpdates = false;
+
+    tokens.forEach(token => {
+      if (token.type === 'hero' && token.actions) {
+        token.actions.forEach((used, index) => {
+          const key = `${token.id}-${index}`;
+          const isStoredReaction = reactionStates[key];
+
+          // If action is cleared, clear reaction state
+          if (!used && isStoredReaction) {
+            updates[key] = false;
+            hasUpdates = true;
+          }
+          // If action is used off-turn, mark as reaction
+          // We don't clear it if used && isActiveTurn (preserve history)
+          else if (used && !token.isActiveTurn && !isStoredReaction) {
+            updates[key] = true;
+            hasUpdates = true;
+          }
+        });
+      }
+    });
+
+    if (hasUpdates) {
+      setReactionStates(prev => ({ ...prev, ...updates }));
+    }
+  }, [tokens, reactionStates]);
 
   // Drawing Management (custom hook)
   const drawingManager = useDrawing(boardRef, viewOffset, zoomLevel);
@@ -640,7 +678,8 @@ export default function NimbleCombatTracker() {
         companionLightRadius,
         darknessIntensity,
         showPartyOverview,
-        currentTheme
+        currentTheme,
+        reactionStates
       }));
     } else {
       console.log('[MainWindow] NOT broadcasting - isPopoutMode:', isPopoutMode, 'hasChannel:', !!windowSync.channel);
@@ -884,7 +923,10 @@ export default function NimbleCombatTracker() {
             onWheel={handleWheel}
           >
             {/* Floating Toolbar */}
-            <div className="absolute top-4 right-4 z-50 bg-surface/90 backdrop-blur-sm p-2 rounded-lg border border-border shadow-lg">
+            <div
+              className="absolute top-4 z-50 bg-surface/90 backdrop-blur-sm p-2 rounded-lg border border-border shadow-lg transition-all duration-300"
+              style={{ right: isPopoutMode ? '1rem' : `${SIDEBAR_WIDTH + 32}px` }}
+            >
               <Toolbar
                 drawMode={drawMode}
                 setDrawMode={setDrawMode}
@@ -1174,6 +1216,7 @@ export default function NimbleCombatTracker() {
                               bottom: `${currentTokenSize + 10}px`
                             }}
                           >
+                            {/* ... existing popup content ... */}
                             {token.conditions && token.conditions.length > 0 && (
                               <div className="mb-2">
                                 <div className="text-xs font-bold text-gray-300 mb-2">Conditions:</div>
@@ -1223,6 +1266,48 @@ export default function NimbleCombatTracker() {
                             )}
                           </div>
                         )}
+
+                        {/* Action Indicators */}
+                        {token.actions && token.type !== 'legendary' && (
+                          <div
+                            className={`absolute left-1/2 transform -translate-x-1/2 flex justify-center gap-1 bg-surface/90 backdrop-blur-sm p-1 rounded-lg border-2 shadow-lg pointer-events-none ${getTokenBorderColor(token.type)}`}
+                            style={{
+                              bottom: `-${currentTokenSize * 0.22}px`, // Lowered by 20% (0.1 -> 0.3)
+                              zIndex: 15
+                            }}
+                          >
+                            {token.actions.map((used, index) => {
+                              const isReaction = reactionStates[`${token.id}-${index}`] || (token.type === 'hero' && used && !token.isActiveTurn);
+                              const indicatorSize = Math.max(14, currentTokenSize * 0.24);
+
+                              return (
+                                <div
+                                  key={index}
+                                  className={`rounded-full flex items-center justify-center shadow-sm border border-black/50 ${used
+                                    ? 'bg-button-muted-hover'
+                                    : token.isActiveTurn
+                                      ? 'bg-secondary'
+                                      : 'bg-secondary'
+                                    }`}
+                                  style={{
+                                    width: `${indicatorSize}px`,
+                                    height: `${indicatorSize}px`,
+                                  }}
+                                >
+                                  {used ? (
+                                    isReaction ? (
+                                      <ShieldX size={indicatorSize * 0.7} className="text-text" />
+                                    ) : (
+                                      <X size={indicatorSize * 0.7} className="text-text" />
+                                    )
+                                  ) : (
+                                    <Sword size={indicatorSize * 0.7} className="text-text" />
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     </TokenEffects>
                   </div>
@@ -1257,6 +1342,91 @@ export default function NimbleCombatTracker() {
                 tokens={tokens.filter(t => t.type === 'hero' || t.type === 'companion')}
               />
             )}
+
+            {/* Turn Order Overlay */}
+            {!isPopoutMode && (
+              <div
+                className="absolute right-4 top-4 bottom-4 z-40 bg-surface border-2 border-border rounded-lg shadow-2xl overflow-hidden flex flex-col pointer-events-auto"
+                style={{ width: `${SIDEBAR_WIDTH}px` }}
+                onMouseDown={(e) => e.stopPropagation()}
+                onWheel={(e) => e.stopPropagation()}
+              >
+                {/* Sidebar (Turn Order / Dictionary / Dice / Settings) */}
+                <DMTools
+                  sidebarView={sidebarView}
+                  setSidebarView={setSidebarView}
+                  deleteMode={deleteMode}
+                  setDeleteMode={setDeleteMode}
+                  displayTurnOrder={displayTurnOrder}
+                  tokens={tokens}
+                  turnOrder={turnOrder}
+                  selectedToken={selectedToken}
+                  setSelectedToken={setSelectedToken}
+                  expandedConditions={expandedConditions}
+                  setExpandedConditions={setExpandedConditions}
+                  expandedNotes={expandedNotes}
+                  setExpandedNotes={setExpandedNotes}
+                  tokenSize={tokenSize}
+                  handleRemoveToken={handleRemoveToken}
+                  doomedConditions={doomedConditions}
+                  majorConditions={majorConditions}
+                  minorConditions={minorConditions}
+                  SIDEBAR_WIDTH={SIDEBAR_WIDTH}
+                  updateNotes={tokenManager.updateNotes}
+                  onPopout={handlePopout}
+                  updateTurnOrder={turnOrderManager.setAllTurnOrder}
+                  getTokenBorderColor={getTokenBorderColor}
+                  getTokenBgColor={getTokenBgColor}
+                  getTokenIconName={getTokenIconName}
+                  tokenManager={tokenManager}
+                  turnOrderManager={turnOrderManager}
+                  lastActionUserId={lastActionUserId}
+                  // Dice Roller props
+                  showDiceMenu={showDiceMenu}
+                  setShowDiceMenu={setShowDiceMenu}
+                  diceCount={diceCount}
+                  setDiceCount={setDiceCount}
+                  rollDice={rollDice}
+                  rollingDice={rollingDice}
+                  diceRolls={diceRolls}
+                  showDiceInViewport={showDiceInViewport}
+                  setShowDiceInViewport={setShowDiceInViewport}
+                  // Settings props
+                  showSettings={false} // Managed internally by sidebar sidebarView
+                  setShowSettings={() => { }}
+                  setTokenSize={setTokenSize}
+                  backgroundSize={backgroundSize}
+                  setBackgroundSize={setBackgroundSize}
+                  showGrid={showGrid}
+                  setShowGrid={setShowGrid}
+                  gridSize={gridSize}
+                  setGridSize={setGridSize}
+                  darknessMode={darknessMode}
+                  setDarknessMode={setDarknessMode}
+                  heroLightRadius={heroLightRadius}
+                  setHeroLightRadius={setHeroLightRadius}
+                  companionLightRadius={companionLightRadius}
+                  setCompanionLightRadius={setCompanionLightRadius}
+                  darknessIntensity={darknessIntensity}
+                  setDarknessIntensity={setDarknessIntensity}
+                  showPartyOverview={showPartyOverview}
+                  setShowPartyOverview={setShowPartyOverview}
+                  // Add Token props
+                  handleBackgroundUpload={handleBackgroundUpload}
+                  showAddToken={showAddToken}
+                  setShowAddToken={setShowAddToken}
+                  newToken={newToken}
+                  setNewToken={setNewToken}
+                  handleAddToken={handleAddToken}
+                  handleTokenImageUpload={handleTokenImageUpload}
+                  currentTheme={currentTheme}
+                  setCurrentTheme={setCurrentTheme}
+                  reactionStates={reactionStates}
+                  exportBattle={exportBattle}
+                  importBattle={importBattle}
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -1274,77 +1444,7 @@ export default function NimbleCombatTracker() {
           />
         )}
 
-        {!isPopoutMode && (
-          <TurnOrderPanel
-            sidebarView={sidebarView}
-            setSidebarView={setSidebarView}
-            deleteMode={deleteMode}
-            setDeleteMode={setDeleteMode}
-            displayTurnOrder={displayTurnOrder}
-            tokens={tokens}
-            turnOrder={turnOrder}
-            selectedToken={selectedToken}
-            setSelectedToken={setSelectedToken}
-            expandedConditions={expandedConditions}
-            setExpandedConditions={setExpandedConditions}
-            expandedNotes={expandedNotes}
-            setExpandedNotes={setExpandedNotes}
-            tokenSize={tokenSize}
-            handleRemoveToken={handleRemoveToken}
-            getTokenBorderColor={getTokenBorderColor}
-            getTokenBgColor={getTokenBgColor}
-            getTokenIcon={getTokenIcon}
-            tokenManager={tokenManager}
-            turnOrderManager={turnOrderManager}
-            doomedConditions={doomedConditions}
-            majorConditions={majorConditions}
-            minorConditions={minorConditions}
-            SIDEBAR_WIDTH={SIDEBAR_WIDTH}
-            updateNotes={tokenManager.updateNotes}
-            onPopout={handlePopout}
-            lastActionUserId={lastActionUserId}
-            setLastActionUserId={setLastActionUserId}
-            // Dice Roller props
-            showDiceMenu={showDiceMenu}
-            setShowDiceMenu={setShowDiceMenu}
-            diceCount={diceCount}
-            setDiceCount={setDiceCount}
-            rollDice={rollDice}
-            rollingDice={rollingDice}
-            diceRolls={diceRolls}
-            showDiceInViewport={showDiceInViewport}
-            setShowDiceInViewport={setShowDiceInViewport}
-            // Settings props
-            setTokenSize={setTokenSize}
-            backgroundSize={backgroundSize}
-            setBackgroundSize={setBackgroundSize}
-            showGrid={showGrid}
-            setShowGrid={setShowGrid}
-            gridSize={gridSize}
-            setGridSize={setGridSize}
-            darknessMode={darknessMode}
-            setDarknessMode={setDarknessMode}
-            heroLightRadius={heroLightRadius}
-            setHeroLightRadius={setHeroLightRadius}
-            companionLightRadius={companionLightRadius}
-            setCompanionLightRadius={setCompanionLightRadius}
-            darknessIntensity={darknessIntensity}
-            setDarknessIntensity={setDarknessIntensity}
-            showPartyOverview={showPartyOverview}
-            setShowPartyOverview={setShowPartyOverview}
-            handleBackgroundUpload={handleBackgroundUpload}
-            showAddToken={showAddToken}
-            setShowAddToken={setShowAddToken}
-            newToken={newToken}
-            setNewToken={setNewToken}
-            handleAddToken={handleAddToken}
-            handleTokenImageUpload={handleTokenImageUpload}
-            exportBattle={exportBattle}
-            importBattle={importBattle}
-            currentTheme={currentTheme}
-            setCurrentTheme={setCurrentTheme}
-          />
-        )}
+
       </div>
     </div >
   );
