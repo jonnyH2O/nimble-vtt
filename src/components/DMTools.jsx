@@ -262,9 +262,9 @@ export default function DMTools({
   const activeTurnOrderManager = turnOrderManager || popoutTurnOrderManager;
 
   return (
-    <div className={`bg-surface flex flex-col ${isPopoutWindow || isOverlay ? 'w-full h-full' : 'border-l border-border'}`} style={isPopoutWindow || isOverlay ? {} : { width: `${SIDEBAR_WIDTH}px` }}>
+    <div className={`bg-surface flex flex-col h-full ${isPopoutWindow || isOverlay ? 'w-full' : 'border-l border-border'}`} style={isPopoutWindow || isOverlay ? {} : { width: `${SIDEBAR_WIDTH}px` }}>
       {/* Tab Navigation */}
-      <div className="bg-surface-highlight border-b border-border p-3 flex items-center justify-between">
+      <div className="bg-surface-highlight border-b border-border p-3 flex items-center justify-between flex-shrink-0">
         <div className="flex gap-2">
           <button
             onClick={() => setSidebarView('turnOrder')}
@@ -378,7 +378,7 @@ export default function DMTools({
 
               {/* Token Cards */}
               <div className="space-y-2">
-                {displayTurnOrder.map((item, index) => {
+                {displayTurnOrder && tokens && turnOrder && displayTurnOrder.map((item, index) => {
                   const token = tokens.find(t => t.id === item.id);
                   if (!token) return null;
 
@@ -1019,7 +1019,7 @@ export default function DMTools({
                   );
                 })}
 
-                {turnOrder.length === 0 && (
+                {(!turnOrder || turnOrder.length === 0) && (
                   <div className="text-text-muted text-center py-8 text-sm">
                     No tokens added yet. Click "Add Token" to get started.
                   </div>
@@ -1081,7 +1081,8 @@ export default function DMTools({
         }
       </div >
 
-      <div className={isPopoutWindow ? 'mt-auto border-t border-border flex-shrink-0' : ''}>
+      {/* NotesPanel - anchored at bottom for all views */}
+      <div className="mt-auto border-t border-border flex-shrink-0">
         <NotesPanel
           selectedToken={selectedToken}
           tokens={tokens}

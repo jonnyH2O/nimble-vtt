@@ -1377,7 +1377,7 @@ export default function NimbleCombatTracker() {
                   updateTurnOrder={turnOrderManager.setAllTurnOrder}
                   getTokenBorderColor={getTokenBorderColor}
                   getTokenBgColor={getTokenBgColor}
-                  getTokenIconName={getTokenIconName}
+                  getTokenIcon={getTokenIcon}
                   tokenManager={tokenManager}
                   turnOrderManager={turnOrderManager}
                   lastActionUserId={lastActionUserId}
