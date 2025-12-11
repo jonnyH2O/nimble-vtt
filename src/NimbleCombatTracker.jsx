@@ -694,8 +694,6 @@ export default function NimbleCombatTracker() {
         currentTheme,
         reactionStates
       }));
-    } else {
-      console.log('[MainWindow] NOT broadcasting - isPopoutMode:', isPopoutMode, 'hasChannel:', !!windowSync.channel);
     }
   }, [
     isPopoutMode,
