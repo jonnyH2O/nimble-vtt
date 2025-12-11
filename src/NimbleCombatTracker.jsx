@@ -462,6 +462,7 @@ export default function NimbleCombatTracker() {
       heroLightRadius: heroLightRadius,
       companionLightRadius: companionLightRadius,
       darknessIntensity: darknessIntensity,
+      currentTheme: currentTheme,
       exportedAt: new Date().toISOString()
     };
 
@@ -499,6 +500,7 @@ export default function NimbleCombatTracker() {
       if (battleState.heroLightRadius !== undefined) setHeroLightRadius(battleState.heroLightRadius);
       if (battleState.companionLightRadius !== undefined) setCompanionLightRadius(battleState.companionLightRadius);
       if (battleState.darknessIntensity !== undefined) setDarknessIntensity(battleState.darknessIntensity);
+      if (battleState.currentTheme !== undefined) setCurrentTheme(battleState.currentTheme);
 
       // Restore drawings
       if (battleState.drawings) {
