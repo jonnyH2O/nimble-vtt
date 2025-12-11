@@ -1381,6 +1381,7 @@ export default function NimbleCombatTracker() {
                   tokenManager={tokenManager}
                   turnOrderManager={turnOrderManager}
                   lastActionUserId={lastActionUserId}
+                  setLastActionUserId={setLastActionUserId}
                   // Dice Roller props
                   showDiceMenu={showDiceMenu}
                   setShowDiceMenu={setShowDiceMenu}
