@@ -335,6 +335,11 @@ export default function NimbleCombatTracker() {
   }, [drawMode, tokens, viewOffset, zoomLevel]);
 
   const handleWheel = useCallback((e) => {
+    // Prevent zooming if hovering over the DMTools sidebar, Dice Roller, or Toolbar
+    if (e.target.closest('.dm-tools-container') ||
+      e.target.closest('.dice-roller-container') ||
+      e.target.closest('.toolbar-container')) return;
+
     if (drawMode === 'select') {
       e.preventDefault();
       const delta = e.deltaY > 0 ? -0.1 : 0.1;
@@ -935,7 +940,7 @@ export default function NimbleCombatTracker() {
           >
             {/* Floating Toolbar */}
             <div
-              className="absolute top-4 z-50 bg-surface/90 backdrop-blur-sm p-2 rounded-lg border border-border shadow-lg transition-all duration-300"
+              className="toolbar-container absolute top-4 z-50 bg-surface/90 backdrop-blur-sm p-2 rounded-lg border border-border shadow-lg transition-all duration-300"
               style={{ right: isPopoutMode ? '1rem' : `${SIDEBAR_WIDTH + 32}px` }}
             >
               <Toolbar
@@ -1358,7 +1363,7 @@ export default function NimbleCombatTracker() {
             {/* Turn Order Overlay */}
             {!isPopoutMode && (
               <div
-                className="absolute right-4 top-4 bottom-4 z-40 bg-surface border-2 border-border rounded-lg shadow-2xl overflow-hidden flex flex-col pointer-events-auto"
+                className="dm-tools-container absolute right-4 top-4 bottom-4 z-40 bg-surface border-2 border-border rounded-lg shadow-2xl overflow-hidden flex flex-col pointer-events-auto"
                 style={{ width: `${SIDEBAR_WIDTH}px` }}
                 onMouseDown={(e) => e.stopPropagation()}
                 onWheel={(e) => e.stopPropagation()}
