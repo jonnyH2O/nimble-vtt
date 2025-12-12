@@ -81,7 +81,7 @@ export default function DiceRoller({
 
       {/* Dice Menu Popup */}
       {showDiceMenu && (
-        <div className="absolute right-80 top-12 bg-surface border border-border rounded-lg p-4 shadow-lg z-[100] w-64">
+        <div className="dice-roller-container absolute right-80 top-12 bg-surface border border-border rounded-lg p-4 shadow-lg z-[100] w-64">
           <h3 className="text-sm font-bold mb-3">Roll Dice</h3>
 
           <div className="mb-4">

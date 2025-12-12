@@ -136,12 +136,14 @@ export default function Toolbar({
           </Tooltip>
 
           {/* Clear All Button */}
-          <button
-            onClick={clearDrawings}
-            className="bg-destructive hover:bg-destructive-hover px-3 py-1.5 rounded flex items-center gap-2 text-sm"
-          >
-            <Trash2 size={16} />
-          </button>
+          <Tooltip text="Erase all">
+            <button
+              onClick={clearDrawings}
+              className="bg-destructive hover:bg-destructive-hover px-3 py-1.5 rounded flex items-center gap-2 text-sm"
+            >
+              <Trash2 size={16} />
+            </button>
+          </Tooltip>
         </>
       )}
 

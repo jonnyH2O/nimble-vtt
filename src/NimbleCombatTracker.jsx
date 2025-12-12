@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback, useReducer } from 'react';
-import { Users, Swords, Heart, Crown, ShieldX, Sword, X } from 'lucide-react';
+import { Users, Swords, Heart, Crown, ShieldX, Sword, X, ChevronRight, Wrench, MousePointer, Pencil, Eraser } from 'lucide-react';
 import { HUDDisplay } from './components/HUD';
 import Toolbar from './components/Toolbar';
 import DMTools from './components/DMTools';
@@ -139,6 +139,7 @@ export default function NimbleCombatTracker() {
 
   // UI Panels
   const [expandedNotes, setExpandedNotes] = useState({});
+  const [isToolbarCollapsed, setIsToolbarCollapsed] = useState(false);
   const [panningView, setPanningView] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
@@ -335,6 +336,11 @@ export default function NimbleCombatTracker() {
   }, [drawMode, tokens, viewOffset, zoomLevel]);
 
   const handleWheel = useCallback((e) => {
+    // Prevent zooming if hovering over the DMTools sidebar, Dice Roller, or Toolbar
+    if (e.target.closest('.dm-tools-container') ||
+      e.target.closest('.dice-roller-container') ||
+      e.target.closest('.toolbar-container')) return;
+
     if (drawMode === 'select') {
       e.preventDefault();
       const delta = e.deltaY > 0 ? -0.1 : 0.1;
@@ -353,6 +359,17 @@ export default function NimbleCombatTracker() {
       setZoomLevel(newZoom);
     }
   }, [drawMode, zoomLevel, viewOffset]);
+
+  // Add non-passive wheel event listener to support preventing default behavior (zooming)
+  useEffect(() => {
+    const node = boardRef.current;
+    if (node) {
+      node.addEventListener('wheel', handleWheel, { passive: false });
+      return () => {
+        node.removeEventListener('wheel', handleWheel);
+      };
+    }
+  }, [handleWheel]);
 
   const handlePopout = useCallback(() => {
     // Prevent multiple pop-outs
@@ -571,10 +588,8 @@ export default function NimbleCombatTracker() {
 
       // Spacebar Tool Toggle (press to Select, release to revert)
       if (e.code === 'Space') {
-        // Prevent scrolling
-        if (e.target === document.body) {
-          e.preventDefault();
-        }
+        // Prevent scrolling and focused button activation
+        e.preventDefault();
 
         if (!e.repeat && previousDrawModeRef.current === null) {
           previousDrawModeRef.current = drawMode;
@@ -683,8 +698,6 @@ export default function NimbleCombatTracker() {
         currentTheme,
         reactionStates
       }));
-    } else {
-      console.log('[MainWindow] NOT broadcasting - isPopoutMode:', isPopoutMode, 'hasChannel:', !!windowSync.channel);
     }
   }, [
     isPopoutMode,
@@ -922,32 +935,46 @@ export default function NimbleCombatTracker() {
             onMouseLeave={handleMouseLeave}
             onMouseDown={handleBoardMouseDown}
             onContextMenu={(e) => e.preventDefault()}
-            onWheel={handleWheel}
+
           >
             {/* Floating Toolbar */}
             <div
-              className="absolute top-4 z-50 bg-surface/90 backdrop-blur-sm p-2 rounded-lg border border-border shadow-lg transition-all duration-300"
+              className={`toolbar-container absolute top-4 z-50 bg-surface-highlight p-2 rounded-lg border border-border shadow-lg transition-all duration-300 flex items-center gap-2`}
               style={{ right: isPopoutMode ? '1rem' : `${SIDEBAR_WIDTH + 32}px` }}
             >
-              <Toolbar
-                drawMode={drawMode}
-                setDrawMode={setDrawMode}
-                drawColor={drawColor}
-                setDrawColor={setDrawColor}
-                drawSize={drawSize}
-                setDrawSize={setDrawSize}
-                eraseSize={eraseSize}
-                setEraseSize={setEraseSize}
-                historyStep={historyStep}
-                drawingHistory={drawingHistory}
-                undo={drawingManager.undo}
-                redo={drawingManager.redo}
-                clearDrawings={drawingManager.clearDrawings}
-                zoomLevel={zoomLevel}
-                setZoomLevel={setZoomLevel}
-                viewOffset={viewOffset}
-                setViewOffset={setViewOffset}
-              />
+              {!isToolbarCollapsed && (
+                <Toolbar
+                  drawMode={drawMode}
+                  setDrawMode={setDrawMode}
+                  drawColor={drawColor}
+                  setDrawColor={setDrawColor}
+                  drawSize={drawSize}
+                  setDrawSize={setDrawSize}
+                  eraseSize={eraseSize}
+                  setEraseSize={setEraseSize}
+                  historyStep={historyStep}
+                  drawingHistory={drawingHistory}
+                  undo={drawingManager.undo}
+                  redo={drawingManager.redo}
+                  clearDrawings={drawingManager.clearDrawings}
+                  zoomLevel={zoomLevel}
+                  setZoomLevel={setZoomLevel}
+                  viewOffset={viewOffset}
+                  setViewOffset={setViewOffset}
+                />
+              )}
+              <button
+                onClick={() => setIsToolbarCollapsed(!isToolbarCollapsed)}
+                className="p-1.5 hover:bg-surface rounded text-text-muted hover:text-text transition-colors flex items-center justify-center"
+                title={isToolbarCollapsed ? "Show Tools" : "Hide Tools"}
+              >
+                {isToolbarCollapsed ? (
+                  drawMode === 'select' ? <MousePointer size={20} /> :
+                    drawMode === 'draw' ? <Pencil size={20} /> :
+                      drawMode === 'erase' ? <Eraser size={20} /> :
+                        <Wrench size={20} />
+                ) : <ChevronRight size={20} />}
+              </button>
             </div>
             <div
               className="absolute"
@@ -1272,9 +1299,9 @@ export default function NimbleCombatTracker() {
                         {/* Action Indicators - only show when no token is selected */}
                         {token.actions && token.type !== 'legendary' && !selectedToken && (
                           <div
-                            className={`absolute left-1/2 transform -translate-x-1/2 flex justify-center gap-1 bg-surface/90 backdrop-blur-sm p-1 rounded-lg border-2 shadow-lg pointer-events-none ${getTokenBorderColor(token.type)}`}
+                            className="absolute left-1/2 transform -translate-x-1/2 flex justify-center gap-1 pointer-events-none"
                             style={{
-                              bottom: `-${currentTokenSize * 0.22}px`, // Lowered by 20% (0.1 -> 0.3)
+                              bottom: `-${currentTokenSize * 0.10}px`, // Lowered by 20% (0.1 -> 0.3)
                               zIndex: 15
                             }}
                           >
@@ -1285,15 +1312,16 @@ export default function NimbleCombatTracker() {
                               return (
                                 <div
                                   key={index}
-                                  className={`rounded-full flex items-center justify-center shadow-sm border border-black/50 ${used
+                                  className={`rounded-full flex items-center justify-center shadow-sm ${used
                                     ? 'bg-button-muted-hover'
-                                    : token.isActiveTurn
-                                      ? 'bg-secondary'
-                                      : 'bg-secondary'
+                                    : getTokenBgColor(token.type)
                                     }`}
                                   style={{
                                     width: `${indicatorSize}px`,
                                     height: `${indicatorSize}px`,
+                                    transform: (token.actions.length === 3 && (index === 0 || index === 2))
+                                      ? `translateY(-${currentTokenSize * 0.1}px)`
+                                      : 'none'
                                   }}
                                 >
                                   {used ? (
@@ -1348,7 +1376,7 @@ export default function NimbleCombatTracker() {
             {/* Turn Order Overlay */}
             {!isPopoutMode && (
               <div
-                className="absolute right-4 top-4 bottom-4 z-40 bg-surface border-2 border-border rounded-lg shadow-2xl overflow-hidden flex flex-col pointer-events-auto"
+                className="dm-tools-container absolute right-4 top-4 bottom-4 z-40 bg-surface border-2 border-border rounded-lg shadow-2xl overflow-hidden flex flex-col pointer-events-auto"
                 style={{ width: `${SIDEBAR_WIDTH}px` }}
                 onMouseDown={(e) => e.stopPropagation()}
                 onWheel={(e) => e.stopPropagation()}
