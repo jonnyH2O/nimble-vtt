@@ -211,6 +211,110 @@
   --color-health-critical: #ef4444;
 }
 
+[data-theme='aethus'] {
+
+  --color-background: #23222F;
+  --color-surface: #16161e;
+  --color-surface-highlight: #312f41;
+
+  --color-border: #23222F;
+
+  --color-text: #f5f2f2;
+  --color-text-muted: #868686;
+
+  --color-primary: #883330;
+  --color-primary-hover: #a33e3a;
+
+  --color-secondary: #F6BA13;
+  --color-secondary-hover: #dca716;
+
+  --color-destructive: #883330;
+  --color-destructive-hover: #a33e3a;
+
+  --color-button-muted: #475569;
+  --color-button-muted-hover: #64748b;
+
+  --color-tertiary: #334155;
+  --color-tertiary-hover: #475569;
+
+  --color-token-selected: #F6BA13;
+
+  --color-hero: #9a3a37;
+  --color-companion: #FCA65F;
+  --color-enemy: #6b716d;
+  --color-legendary: #363448;
+  --color-hero-highlight: #883330;
+  --color-companion-highlight: #ed9a57;
+  --color-enemy-highlight: #808782;
+  --color-legendary-highlight: #23222F;
+
+  --color-doomed-buttons: #e11d48;
+  --color-doomed-buttons-hover: #f43f5e;
+  --color-major-buttons: #f97316;
+  --color-major-buttons-hover: #fb923c;
+  --color-minor-buttons: #eab308;
+  --color-minor-buttons-hover: #fbbf24;
+
+  --color-slider: #8f8494;
+  --color-slider-track: #A69CAC;
+
+  --color-health-healthy: #10b981;
+  --color-health-warning: #f59e0b;
+  --color-health-critical: #ef4444;
+}
+
+[data-theme='bricklin'] {
+
+  --color-background: #202f2f;
+  --color-surface: #BD4B4B;
+  --color-surface-highlight: #313131;
+
+  --color-border: #714431;
+
+  --color-text: #e8eaed;
+  --color-text-muted: #a0aec0;
+
+  --color-primary: #d97706;
+  --color-primary-hover: #f59e0b;
+
+  --color-secondary: #059669;
+  --color-secondary-hover: #10b981;
+
+  --color-destructive: #dc2626;
+  --color-destructive-hover: #ef4444;
+
+  --color-button-muted: #4b5563;
+  --color-button-muted-hover: #6b7280;
+
+  --color-tertiary: #374151;
+  --color-tertiary-hover: #4b5563;
+
+  --color-token-selected: #f7bb24;
+
+  --color-hero: #3265dd;
+  --color-companion: #d25757;
+  --color-enemy: #7AB6AA;
+  --color-legendary: #dea81e;
+  --color-hero-highlight: #2B5AC7;
+  --color-companion-highlight: #BD4B4B;
+  --color-enemy-highlight: #6fa49a;
+  --color-legendary-highlight: #fbbf24;
+
+  --color-doomed-buttons: #b91c1c;
+  --color-doomed-buttons-hover: #dc2626;
+  --color-major-buttons: #d97706;
+  --color-major-buttons-hover: #f59e0b;
+  --color-minor-buttons: #ca8a04;
+  --color-minor-buttons-hover: #eab308;
+
+  --color-slider: #f59e0b;
+  --color-slider-track: #d97706;
+
+  --color-health-healthy: #22c55e;
+  --color-health-warning: #fbbf24;
+  --color-health-critical: #ef4444;
+}
+
 * {
   margin: 0;
   padding: 0;

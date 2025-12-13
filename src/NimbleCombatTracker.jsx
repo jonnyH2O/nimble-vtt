@@ -33,6 +33,10 @@ export default function NimbleCombatTracker() {
       document.documentElement.setAttribute('data-theme', 'retro');
     } else if (currentTheme === 'hero') {
       document.documentElement.setAttribute('data-theme', 'hero');
+    } else if (currentTheme === 'aethus') {
+      document.documentElement.setAttribute('data-theme', 'aethus');
+    } else if (currentTheme === 'bricklin') {
+      document.documentElement.setAttribute('data-theme', 'bricklin');
     } else {
       document.documentElement.removeAttribute('data-theme');
     }
@@ -432,16 +436,18 @@ export default function NimbleCombatTracker() {
       return;
     }
 
-    if (dragging) {
+    // Handle token dragging (both during pickup animation and after)
+    if (dragging || pickingUp) {
+      const activeTokenId = dragging || pickingUp;
       const rect = boardRef.current.getBoundingClientRect();
       const cursorX = (e.clientX - rect.left - viewOffset.x) / zoomLevel;
       const cursorY = (e.clientY - rect.top - viewOffset.y) / zoomLevel;
       const x = cursorX - dragOffset.x;
       const y = cursorY - dragOffset.y;
-      tokenManager.updateTokenPosition(dragging, x, y);
+      tokenManager.updateTokenPosition(activeTokenId, x, y);
 
       // Calculate distance moved from original position for ghost token fade-in
-      if (ghostTokenPosition && ghostTokenPosition.tokenId === dragging) {
+      if (ghostTokenPosition && ghostTokenPosition.tokenId === activeTokenId) {
         const dx = x - ghostTokenPosition.x;
         const dy = y - ghostTokenPosition.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -1224,7 +1230,7 @@ export default function NimbleCombatTracker() {
                         : 'inherit',
                       zIndex: isActive ? 1000 : 'auto', // Bring to front when picking up or dragging
                       filter: isActive ? 'drop-shadow(0 10px 8px rgba(0, 0, 0, 0.6))' : 'none', // Drop shadow when active
-                      transition: isPickingUp ? 'all 0.10s ease-in' : (isDragging ? 'none' : 'all 0.15s ease-out'), // Ease-in for pickup, none for dragging, ease-out for dropping
+                      transition: isPickingUp ? 'filter 0.10s ease-in, transform 0.10s ease-in' : (isDragging ? 'none' : 'filter 0.15s ease-out, transform 0.15s ease-out'), // Only transition visual effects, not position
                       transform: isActive ? 'scale(1.05)' : 'scale(1)', // Scale transform for smooth effect
                       transformOrigin: 'center center'
                     }}

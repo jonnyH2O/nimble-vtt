@@ -88,6 +88,10 @@ export default function PopoutWindow() {
       document.documentElement.setAttribute('data-theme', 'retro');
     } else if (theme === 'hero') {
       document.documentElement.setAttribute('data-theme', 'hero');
+    } else if (theme === 'aethus') {
+      document.documentElement.setAttribute('data-theme', 'aethus');
+    } else if (theme === 'bricklin') {
+      document.documentElement.setAttribute('data-theme', 'bricklin');
     } else {
       document.documentElement.removeAttribute('data-theme');
     }

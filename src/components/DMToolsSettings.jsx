@@ -316,6 +316,8 @@ export function DMToolsSettings({
                             <option value="dracula">Dracula</option>
                             <option value="retro">Retro</option>
                             <option value="hero">Hero</option>
+                            <option value="aethus">Aethus</option>
+                            <option value="bricklin">Bricklin</option>
                         </select>
                     </div>
                 </div>
