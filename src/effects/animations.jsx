@@ -75,6 +75,22 @@ export const ANIMATIONS = {
         filter: brightness(1.3);
       }
     }
+  `,
+
+  smolderRise: `
+    @keyframes smolderRise {
+      0% {
+        transform: translateY(0) translateX(0) scale(1);
+        opacity: 0;
+      }
+      10% {
+        opacity: 0.9;
+      }
+      100% {
+        transform: translateY(var(--rise-distance, -80px)) translateX(var(--drift-x)) scale(0.2);
+        opacity: 0;
+      }
+    }
   `
 };
 

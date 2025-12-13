@@ -133,6 +133,7 @@ export default function NimbleCombatTracker() {
   const [pickingUp, setPickingUp] = useState(null); // Track brief pickup animation
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [ghostTokenPosition, setGhostTokenPosition] = useState(null); // { x, y, tokenId, distanceMoved }
+  const pickupTimeoutRef = useRef(null); // Track timeout to clear on mouse up
 
   // Add Token Dialog State
   const [showAddToken, setShowAddToken] = useState(false);
@@ -332,11 +333,17 @@ export default function NimbleCombatTracker() {
       });
     }
 
+    // Clear any existing timeout
+    if (pickupTimeoutRef.current) {
+      clearTimeout(pickupTimeoutRef.current);
+    }
+
     // Start with pickup animation, then transition to dragging
     setPickingUp(tokenId);
-    setTimeout(() => {
+    pickupTimeoutRef.current = setTimeout(() => {
       setPickingUp(null);
       setDragging(tokenId);
+      pickupTimeoutRef.current = null;
     }, 150); // Brief pickup animation duration
     setSelectedToken(tokenId);
   }, [drawMode, tokens, viewOffset, zoomLevel]);
@@ -451,6 +458,13 @@ export default function NimbleCombatTracker() {
 
   const handleMouseUp = () => {
     drawingManager.handleDrawEnd();
+
+    // Clear the pickup timeout to prevent delayed dragging
+    if (pickupTimeoutRef.current) {
+      clearTimeout(pickupTimeoutRef.current);
+      pickupTimeoutRef.current = null;
+    }
+
     setDragging(null);
     setPickingUp(null);
     setDragOffset({ x: 0, y: 0 });
@@ -461,6 +475,13 @@ export default function NimbleCombatTracker() {
   const handleMouseLeave = () => {
     drawingManager.handleDrawEnd();
     drawingManager.clearCursorPos();
+
+    // Clear the pickup timeout to prevent delayed dragging
+    if (pickupTimeoutRef.current) {
+      clearTimeout(pickupTimeoutRef.current);
+      pickupTimeoutRef.current = null;
+    }
+
     setDragging(null);
     setPickingUp(null);
     setDragOffset({ x: 0, y: 0 });
@@ -1209,7 +1230,7 @@ export default function NimbleCombatTracker() {
                     }}
                     onMouseDown={(e) => handleMouseDown(e, token.id)}
                   >
-                    <TokenEffects token={token} context="token">
+                    <TokenEffects token={token} context="token" tokenSize={currentTokenSize}>
                       <div className="relative">
                         {token.image ? (
                           <div className="relative">
@@ -1229,7 +1250,7 @@ export default function NimbleCombatTracker() {
                                 alt={token.name}
                                 className="rounded-full object-cover w-full h-full"
                               />
-                              <TokenEffectOverlay token={token} context="token" />
+                              <TokenEffectOverlay token={token} context="token" tokenSize={currentTokenSize} />
                             </div>
                           </div>
                         ) : (
@@ -1250,7 +1271,7 @@ export default function NimbleCombatTracker() {
                               >
                                 {getTokenIcon(token.type)}
                               </div>
-                              <TokenEffectOverlay token={token} context="token" />
+                              <TokenEffectOverlay token={token} context="token" tokenSize={currentTokenSize} />
                             </div>
                           </div>
                         )}

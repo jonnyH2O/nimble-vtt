@@ -106,7 +106,14 @@ export const CONDITION_EFFECTS = {
   'Slowed': { emoji: '🐌', category: 'MAJOR' },
   'Prone': { emoji: '⬇️', category: 'MAJOR' },
   'Hampered': { emoji: '🚧', category: 'MAJOR' },
-  'Smoldering': { emoji: '💨', category: 'MINOR' },
+  'Smoldering': {
+    tokenOverlay: {
+      type: 'particles',
+      component: 'SmolderingParticles'
+    },
+    emoji: '💨',
+    category: 'MINOR'
+  },
   'Charged': { emoji: '⚡', category: 'MINOR' },
   'Distracted': { emoji: '💭', category: 'MINOR' }
 };
