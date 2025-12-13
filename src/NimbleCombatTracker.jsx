@@ -130,6 +130,7 @@ export default function NimbleCombatTracker() {
 
   // Token Dragging State
   const [dragging, setDragging] = useState(null);
+  const [pickingUp, setPickingUp] = useState(null); // Track brief pickup animation
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [ghostTokenPosition, setGhostTokenPosition] = useState(null); // { x, y, tokenId, distanceMoved }
 
@@ -331,7 +332,12 @@ export default function NimbleCombatTracker() {
       });
     }
 
-    setDragging(tokenId);
+    // Start with pickup animation, then transition to dragging
+    setPickingUp(tokenId);
+    setTimeout(() => {
+      setPickingUp(null);
+      setDragging(tokenId);
+    }, 150); // Brief pickup animation duration
     setSelectedToken(tokenId);
   }, [drawMode, tokens, viewOffset, zoomLevel]);
 
@@ -446,6 +452,7 @@ export default function NimbleCombatTracker() {
   const handleMouseUp = () => {
     drawingManager.handleDrawEnd();
     setDragging(null);
+    setPickingUp(null);
     setDragOffset({ x: 0, y: 0 });
     setGhostTokenPosition(null);
     setPanningView(false);
@@ -455,6 +462,7 @@ export default function NimbleCombatTracker() {
     drawingManager.handleDrawEnd();
     drawingManager.clearCursorPos();
     setDragging(null);
+    setPickingUp(null);
     setDragOffset({ x: 0, y: 0 });
     setGhostTokenPosition(null);
     setPanningView(false);
@@ -1174,6 +1182,11 @@ export default function NimbleCombatTracker() {
               {tokens.map((token) => {
                 const currentTokenSize = token.customSize || tokenSize;
 
+                // Drag effect calculations
+                const isPickingUp = pickingUp === token.id;
+                const isDragging = dragging === token.id;
+                const isActive = isPickingUp || isDragging;
+
                 // Use memoized visibility calculation
                 const isInDarkness = darknessMode && (token.type === 'enemy' || token.type === 'legendary');
                 const shouldShowToken = !isInDarkness || (tokenVisibility[token.id] ?? true);
@@ -1187,7 +1200,12 @@ export default function NimbleCombatTracker() {
                       top: token.y,
                       cursor: drawMode === 'select'
                         ? `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(1px 1px 1px black);"><path d="M5 9l-3 3 3 3"/><path d="M9 5l3-3 3 3"/><path d="M19 9l3 3-3 3"/><path d="M15 19l-3 3-3-3"/><path d="M2 12h20"/><path d="M12 2v20"/></svg>') 12 12, move`
-                        : 'inherit'
+                        : 'inherit',
+                      zIndex: isActive ? 1000 : 'auto', // Bring to front when picking up or dragging
+                      filter: isActive ? 'drop-shadow(0 10px 8px rgba(0, 0, 0, 0.6))' : 'none', // Drop shadow when active
+                      transition: isPickingUp ? 'all 0.10s ease-in' : (isDragging ? 'none' : 'all 0.15s ease-out'), // Ease-in for pickup, none for dragging, ease-out for dropping
+                      transform: isActive ? 'scale(1.05)' : 'scale(1)', // Scale transform for smooth effect
+                      transformOrigin: 'center center'
                     }}
                     onMouseDown={(e) => handleMouseDown(e, token.id)}
                   >
