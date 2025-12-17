@@ -12,7 +12,7 @@ import { useTurnOrder } from './hooks/useTurnOrder';
 import { useDiceRoller } from './hooks/useDiceRoller';
 import { useWindowSync } from './hooks/useWindowSync';
 import { MESSAGE_TYPES, createMessage } from './utils/windowMessages';
-import { VIRTUAL_CANVAS_SIZE, SIDEBAR_WIDTH, HUD_Z_INDEX } from './constants';
+import { DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT, MAX_CANVAS_DIMENSION, SIDEBAR_WIDTH, HUD_Z_INDEX } from './constants';
 import { getTokenBorderColor, getTokenBgColor, getTokenIconName } from './utils/tokenUtils';
 import { CONDITION_CATEGORIES } from './effects/conditionEffects';
 
@@ -22,6 +22,10 @@ export default function NimbleCombatTracker() {
   const [backgroundSize, setBackgroundSize] = useState(100);
   const [tokenSize, setTokenSize] = useState(64);
   const [currentTheme, setCurrentTheme] = useState('default');
+
+  // Canvas Dimensions (dynamic based on background image)
+  const [canvasWidth, setCanvasWidth] = useState(DEFAULT_CANVAS_WIDTH);
+  const [canvasHeight, setCanvasHeight] = useState(DEFAULT_CANVAS_HEIGHT);
 
 
 
@@ -171,7 +175,34 @@ export default function NimbleCombatTracker() {
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        setBackground(event.target.result);
+        const img = new Image();
+        img.onload = () => {
+          // Smart scaling: Calculate canvas dimensions based on image aspect ratio
+          // while respecting MAX_CANVAS_DIMENSION
+          const imageWidth = img.width;
+          const imageHeight = img.height;
+          const aspectRatio = imageWidth / imageHeight;
+
+          let newCanvasWidth, newCanvasHeight;
+
+          if (imageWidth > imageHeight) {
+            // Wide image
+            newCanvasWidth = Math.min(imageWidth, MAX_CANVAS_DIMENSION);
+            newCanvasHeight = Math.round(newCanvasWidth / aspectRatio);
+          } else {
+            // Tall or square image
+            newCanvasHeight = Math.min(imageHeight, MAX_CANVAS_DIMENSION);
+            newCanvasWidth = Math.round(newCanvasHeight * aspectRatio);
+          }
+
+          // Set canvas dimensions
+          setCanvasWidth(newCanvasWidth);
+          setCanvasHeight(newCanvasHeight);
+
+          // Set background image
+          setBackground(event.target.result);
+        };
+        img.src = event.target.result;
       };
       reader.readAsDataURL(file);
     }
@@ -499,7 +530,7 @@ export default function NimbleCombatTracker() {
     const drawingData = drawingManager.getDrawingData();
 
     const battleState = {
-      version: '1.2',
+      version: '1.3', // Increment version for canvas dimensions support
       tokens: tokens, // This already includes conditions as they're part of token objects
       turnOrder: turnOrder,
       background: background,
@@ -515,6 +546,8 @@ export default function NimbleCombatTracker() {
       companionLightRadius: companionLightRadius,
       darknessIntensity: darknessIntensity,
       currentTheme: currentTheme,
+      canvasWidth: canvasWidth, // Store canvas dimensions
+      canvasHeight: canvasHeight,
       exportedAt: new Date().toISOString()
     };
 
@@ -535,6 +568,10 @@ export default function NimbleCombatTracker() {
 
   const loadBattleState = (battleState) => {
     try {
+      // Restore canvas dimensions first (for v1.3+)
+      if (battleState.canvasWidth !== undefined) setCanvasWidth(battleState.canvasWidth);
+      if (battleState.canvasHeight !== undefined) setCanvasHeight(battleState.canvasHeight);
+
       // Restore all state (conditions are included in tokens)
       if (battleState.tokens) tokenManager.setAllTokens(battleState.tokens);
       if (battleState.turnOrder) turnOrderManager.setAllTurnOrder(battleState.turnOrder);
@@ -593,9 +630,9 @@ export default function NimbleCombatTracker() {
         // Save current canvas content before resizing
         const imageData = canvas.toDataURL();
 
-        // Use fixed virtual canvas size
-        canvas.width = VIRTUAL_CANVAS_SIZE;
-        canvas.height = VIRTUAL_CANVAS_SIZE;
+        // Use dynamic canvas size based on background
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
 
         // Restore canvas content after resize
         if (imageData && imageData !== 'data:,') {
@@ -608,7 +645,7 @@ export default function NimbleCombatTracker() {
       }
     };
     updateCanvasSize();
-  }, []);
+  }, [canvasWidth, canvasHeight]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -1014,8 +1051,8 @@ export default function NimbleCombatTracker() {
             <div
               className="absolute"
               style={{
-                width: '2000px',
-                height: '2000px',
+                width: `${canvasWidth}px`,
+                height: `${canvasHeight}px`,
                 transform: `translate(${viewOffset.x}px, ${viewOffset.y}px) scale(${zoomLevel})`,
                 transformOrigin: '0 0',
                 transition: panningView ? 'none' : 'transform 0.1s'
@@ -1037,8 +1074,8 @@ export default function NimbleCombatTracker() {
                 ref={drawCanvasRef}
                 className={`absolute ${drawMode === 'select' ? 'pointer-events-none' : ''}`}
                 style={{
-                  width: '2000px',
-                  height: '2000px',
+                  width: `${canvasWidth}px`,
+                  height: `${canvasHeight}px`,
                   top: 0,
                   left: 0,
                   zIndex: 5,
