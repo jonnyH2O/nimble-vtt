@@ -98,6 +98,22 @@ export function DMToolsSettings({
                             </select>
                         </div>
 
+                        {/* Armor Option - Only for Enemy or Legendary */}
+                        {(newToken.type === 'enemy' || newToken.type === 'legendary') && (
+                            <div>
+                                <label className="block text-xs mb-1">Armor</label>
+                                <select
+                                    value={newToken.armor || 'none'}
+                                    onChange={(e) => setNewToken({ ...newToken, armor: e.target.value })}
+                                    className="w-full bg-surface px-3 py-2 rounded text-sm"
+                                >
+                                    <option value="none">None</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="heavy">Heavy</option>
+                                </select>
+                            </div>
+                        )}
+
                         <div>
                             <label className="flex items-center gap-2 cursor-pointer">
                                 <input

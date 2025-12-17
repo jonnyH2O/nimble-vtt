@@ -230,7 +230,8 @@ export function useTokens(tokenSize) {
       resourceColor: tokenData.resourceColor || '#3b82f6',
       currentResource: tokenData.currentResource || 0,
       maxResource: tokenData.maxResource || 0,
-      showHealthInViewport: tokenData.type === 'hero' || tokenData.type === 'companion' // Off by default for enemy/legendary
+      showHealthInViewport: tokenData.type === 'hero' || tokenData.type === 'companion', // Off by default for enemy/legendary
+      armor: tokenData.armor || 'none' // Armor type: 'none', 'medium', or 'heavy'
     };
     dispatchTokens({ type: 'ADD_TOKEN', payload: token });
     return token.id;

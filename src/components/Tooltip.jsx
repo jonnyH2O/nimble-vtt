@@ -2,18 +2,20 @@ import React, { useState } from 'react';
 
 /**
  * Tooltip Component
- * 
+ *
  * Displays a hover tooltip with text and an optional keyboard shortcut.
- * Matches the visual style of the provided design: dark background, white text, 
+ * Matches the visual style of the provided design: dark background, white text,
  * and a distinct box for the shortcut key.
- * 
+ *
  * @param {Object} props
  * @param {string} props.text - The main text to display
  * @param {string} props.shortcut - The keyboard shortcut key (e.g., 'V', 'D')
  * @param {React.ReactNode} props.children - The element to wrap (trigger)
  * @param {string} props.position - 'top', 'bottom', 'left', 'right' (default: 'bottom')
+ * @param {boolean} props.wrap - Allow text wrapping (default: false for backward compatibility)
+ * @param {string} props.maxWidth - Maximum width for wrapping tooltips (default: '200px')
  */
-export default function Tooltip({ text, shortcut, children, position = 'bottom' }) {
+export default function Tooltip({ text, shortcut, children, position = 'bottom', wrap = false, maxWidth = '200px' }) {
     const [isVisible, setIsVisible] = useState(false);
 
     // Position classes
@@ -41,7 +43,7 @@ export default function Tooltip({ text, shortcut, children, position = 'bottom' 
             {children}
 
             {isVisible && (
-                <div className={`absolute z-50 whitespace-nowrap ${positionClasses[position]}`}>
+                <div className={`absolute z-50 ${wrap ? '' : 'whitespace-nowrap'} ${positionClasses[position]}`} style={wrap ? { maxWidth } : {}}>
                     <div className="bg-gray-800 text-white text-xs px-2 py-1.5 rounded shadow-lg flex items-center gap-2 border border-gray-700">
                         <span className="font-medium">{text}</span>
                         {shortcut && (

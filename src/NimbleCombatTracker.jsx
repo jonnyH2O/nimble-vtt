@@ -141,7 +141,7 @@ export default function NimbleCombatTracker() {
 
   // Add Token Dialog State
   const [showAddToken, setShowAddToken] = useState(false);
-  const [newToken, setNewToken] = useState({ name: '', type: 'hero', image: null, hasResource: false, resourceName: '', resourceColor: '#3b82f6', currentResource: 5, maxResource: 5 });
+  const [newToken, setNewToken] = useState({ name: '', type: 'hero', image: null, hasResource: false, resourceName: '', resourceColor: '#3b82f6', currentResource: 5, maxResource: 5, armor: 'none' });
 
   // UI Panels
   const [expandedNotes, setExpandedNotes] = useState({});
@@ -215,7 +215,7 @@ export default function NimbleCombatTracker() {
         y: startY
       });
       turnOrderManager.addToTurnOrder(tokenId);
-      setNewToken({ name: '', type: 'hero', image: null, hasResource: false, resourceName: '', resourceColor: '#3b82f6', currentResource: 5, maxResource: 5 });
+      setNewToken({ name: '', type: 'hero', image: null, hasResource: false, resourceName: '', resourceColor: '#3b82f6', currentResource: 5, maxResource: 5, armor: 'none' });
       setShowAddToken(false);
     }
   };

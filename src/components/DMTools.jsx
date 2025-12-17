@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { Trash2, List, Book, RotateCcw, AlertCircle, ExternalLink, Dices, Settings, Upload, Plus, Sword, X, ShieldX } from 'lucide-react';
+import { Trash2, List, Book, RotateCcw, AlertCircle, ExternalLink, Dices, Settings, Upload, Plus, Sword, X, ShieldX, Shield } from 'lucide-react';
 
 
 
@@ -10,6 +10,7 @@ import { getTokenBorderColor } from '../utils/tokenUtils';
 import { DMToolsDictionary } from './DMToolsDictionary';
 import { DMToolsDice } from './DMToolsDice';
 import { DMToolsSettings } from './DMToolsSettings';
+import Tooltip from './Tooltip';
 
 /**
  * BloodiedVignette - Reusable component for bloodied condition visual effect
@@ -464,7 +465,29 @@ export default function DMTools({
                               </div>
                             )}
                             <div className="flex-1">
-                              <div className="font-bold text-sm">{token.name}</div>
+                              <div className="flex items-center gap-1.5">
+                                <div className="font-bold text-sm">{token.name}</div>
+                                {/* Armor Icon */}
+                                {token.armor && token.armor !== 'none' && (
+                                  <Tooltip
+                                    text={
+                                      token.armor === 'medium'
+                                        ? 'Medium Armor: ignore all damage modifiers from stats and other effects, taking damage from the sum of the dice only.'
+                                        : 'Heavy Armor: ignore damage modifiers and take half the sum of the dice (rounding up).'
+                                    }
+                                    position="top"
+                                    wrap={true}
+                                    maxWidth="220px"
+                                  >
+                                    <div className="relative flex items-center justify-center">
+                                      <Shield size={16} className="text-text-muted" />
+                                      <span className="absolute text-[10px] font-bold" style={{ marginTop: '1px' }}>
+                                        {token.armor === 'medium' ? 'M' : 'H'}
+                                      </span>
+                                    </div>
+                                  </Tooltip>
+                                )}
+                              </div>
                               <div className="text-xs text-text-muted capitalize">{token.type}</div>
 
                             </div>
