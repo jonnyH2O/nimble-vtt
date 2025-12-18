@@ -1,18 +1,45 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { CONDITION_EMOJIS } from '../effects/conditionEffects';
 import { getHealthColor, getHealthPercent, getResourcePercent, getTokenBorderColor } from '../utils/tokenUtils';
+import Tooltip from './Tooltip';
 
 
 /**
  * PartyOverview Component
  *
- * Modern, minimalist party status UI with slanted bars and circular portraits.
- * Shows all hero/companion status when no token is selected in DM View.
+ * Vertical stack of character status boxes on center-left side.
+ * Shows all hero/companion status in Strategy Mode.
  *
  * @param {Object} props
  * @param {Array} props.tokens - Array of hero/companion tokens to display
  */
 export function PartyOverview({ tokens }) {
+  const [conditionIndexes, setConditionIndexes] = useState({});
+
+  // Rotate through conditions every second and reset invalid indexes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setConditionIndexes(prev => {
+        const next = { ...prev };
+        tokens.forEach(token => {
+          if (token.conditions && token.conditions.length > 0) {
+            const currentIndex = prev[token.id] || 0;
+            // Reset index if it's out of bounds
+            const validIndex = currentIndex >= token.conditions.length ? 0 : currentIndex;
+
+            if (token.conditions.length > 1) {
+              next[token.id] = (validIndex + 1) % token.conditions.length;
+            } else {
+              next[token.id] = 0;
+            }
+          }
+        });
+        return next;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [tokens]);
   // Separate and sort tokens: companions first, then heroes
   const sortedTokens = [...tokens].sort((a, b) => {
     if (a.type === 'companion' && b.type !== 'companion') return -1;
@@ -22,7 +49,7 @@ export function PartyOverview({ tokens }) {
 
   return (
     <div
-      className="absolute left-4 bottom-4"
+      className="absolute left-4 top-1/2 transform -translate-y-1/2"
       style={{ zIndex: 50 }}
     >
       {/* Vertical stack of character cards */}
@@ -39,29 +66,44 @@ export function PartyOverview({ tokens }) {
           // Limit conditions to 6 max
           const conditions = (token.conditions || []).slice(0, 6);
 
-          // Scale factor: companions are 70% size of heroes
+          // Scale factor: companions are smaller than heroes
           const isCompanion = token.type === 'companion';
-          const scale = isCompanion ? 0.5 : 0.75;
+          const scale = isCompanion ? 1 : 1;
+
+          // Build tooltip text
+          const tooltipLines = [];
+          tooltipLines.push(`${token.name}`);
+          tooltipLines.push(`Health: ${token.health}/${token.maxHealth}`);
+          if (token.hasResource) {
+            const resourceName = token.resourceName || 'Resource';
+            tooltipLines.push(`${resourceName}: ${token.currentResource}/${token.maxResource}`);
+          }
+          tooltipLines.push(`Wounds: ${token.wounds || 0}/${token.maxWounds || 6}`);
+          if (conditions.length > 0) {
+            tooltipLines.push(`Conditions: ${conditions.join(', ')}`);
+          }
+          const tooltipText = tooltipLines.join('\n');
 
           return (
-            <div
-              key={token.id}
-              className="relative flex items-center"
-              style={{
-                height: `${150 * scale}px`,
-                transform: `scale(${scale})`,
-                transformOrigin: 'left center',
-                width: `${100 / scale}%`,
-              }}
-            >
-              {/* Character Portrait - Large circle on the LEFT */}
-              <div className="relative flex-shrink-0" style={{ zIndex: 2 }}>
+            <Tooltip key={token.id} text={tooltipText} position="right" wrap={true} maxWidth="250px">
+              <div
+                className="bg-surface border-2 border-border rounded-lg flex flex-col items-center gap-1.5"
+                style={{
+                  width: '70px',
+                  padding: '8px',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
+                  transform: `scale(${scale})`,
+                  transformOrigin: 'left center',
+                }}
+              >
+              {/* Circular Portrait */}
+              <div className="relative flex-shrink-0">
                 <div
-                  className={`rounded-full overflow-hidden border-4 ${getTokenBorderColor(token.type)}`}
+                  className={`rounded-full overflow-hidden border-2 ${getTokenBorderColor(token.type)}`}
                   style={{
-                    width: '140px',
-                    height: '140px',
-                    boxShadow: '0 8px 20px rgba(0, 0, 0, 0.6)',
+                    width: '50px',
+                    height: '50px',
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.4)',
                   }}
                 >
                   {token.image ? (
@@ -81,167 +123,104 @@ export function PartyOverview({ tokens }) {
                     </div>
                   ) : (
                     <div
-                      className="w-full h-full flex items-center justify-center text-4xl font-bold"
+                      className="w-full h-full flex items-center justify-center text-lg font-bold"
                       style={{ backgroundColor: 'var(--color-surface)' }}
                     >
                       {token.name.charAt(0)}
                     </div>
                   )}
                 </div>
+
+                {/* Status Conditions - Single rotating circle at top-right of portrait */}
+                {conditions.length > 0 && (() => {
+                  const currentIndex = conditionIndexes[token.id] || 0;
+                  const validIndex = currentIndex >= conditions.length ? 0 : currentIndex;
+                  const currentCondition = conditions[validIndex];
+
+                  return (
+                    <div
+                      className="absolute flex items-center justify-center rounded-full transition-opacity duration-300"
+                      style={{
+                        right: '-2px',
+                        top: '0px',
+                        width: '16px',
+                        height: '16px',
+                        backgroundColor: '#fbbf24',
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.4)',
+                        fontSize: '9px',
+                      }}
+                      title={conditions.join(', ')}
+                    >
+                      {CONDITION_EMOJIS[currentCondition] || '❓'}
+                    </div>
+                  );
+                })()}
               </div>
 
-              {/* Bars and Stats Container - Everything to the RIGHT of portrait */}
-              <div className="relative ml-[-60px] mt-[70px]" style={{ zIndex: 1, minWidth: '280px' }}>
-                {/* HP BAR with slant */}
-                <div className="relative mb-1" style={{ zIndex: 2 }}>
-                  {/* HP Number - LARGE, to the left of bar */}
+              {/* Health Bar */}
+              <div className="flex flex-col gap-0.5" style={{ width: '50px' }}>
+                <div
+                  className="w-full relative overflow-hidden rounded-full"
+                  style={{
+                    height: '6px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                  }}
+                >
                   <div
-                    className="absolute font-bold"
+                    className={`h-full transition-all duration-300 ${healthColorClass}`}
                     style={{
-                      fontSize: '46px',
-                      color: 'var(--color-text)',
-                      textShadow: '2px 2px 6px rgba(0, 0, 0, 0.8)',
-                      left: '-10px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      zIndex: 3,
+                      width: `${healthPercent}%`,
+                      borderRadius: '9999px',
+                      boxShadow: 'inset 0 1px 2px rgba(255, 255, 255, 0.3)',
                     }}
-                  >
-                    {token.health}
-                  </div>
+                  />
+                </div>
 
-                  {/* HP Bar Container - Slanted */}
+                {/* Resource Bar (if token has resource) */}
+                {token.hasResource && (
                   <div
-                    className="relative overflow-hidden"
+                    className="w-full relative overflow-hidden rounded-full"
                     style={{
-                      width: '240px',
-                      height: '36px',
+                      height: '5px',
                       backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                      border: '2px solid rgba(255, 255, 255, 0.3)',
-                      transform: 'skewY(8deg)',
-                      marginLeft: '50px',
-                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.4)',
-                      zIndex: 2,
-                      borderRadius: '0 50px 50px 0',
+                      border: '1px solid rgba(255, 255, 255, 0.3)',
                     }}
                   >
-                    {/* HP Fill */}
                     <div
-                      className={`h-full transition-all duration-300 ${healthColorClass}`}
+                      className="h-full transition-all duration-300"
                       style={{
-                        width: `${healthPercent}%`,
-                        borderRadius: '0 50px 50px 0',
-                        boxShadow: 'inset 0 2px 4px rgba(255, 255, 255, 0.3), inset 0 -2px 4px rgba(0, 0, 0, 0.3)',
+                        width: `${resourcePercent}%`,
+                        backgroundColor: token.resourceColor || '#3b82f6',
+                        borderRadius: '9999px',
+                        boxShadow: 'inset 0 1px 2px rgba(255, 255, 255, 0.3)',
                       }}
                     />
                   </div>
-                </div>
-
-                {/* RESOURCE BAR (if token has resource) */}
-                {token.hasResource && (
-                  <div className="relative" style={{ marginTop: '-10px' }}>
-                    {/* Resource Number - Smaller, to the left of bar */}
-                    <div
-                      className="absolute font-bold"
-                      style={{
-                        fontSize: '24px',
-                        color: 'var(--color-text)',
-                        textShadow: '1px 1px 4px rgba(0, 0, 0, 0.8)',
-                        left: '8px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        zIndex: 0,
-                      }}
-                    >
-                      {token.currentResource}
-                    </div>
-
-                    {/* Resource Bar Container - Slanted, thinner, shorter */}
-                    <div
-                      className="relative overflow-hidden"
-                      style={{
-                        width: '200px',
-                        height: '15px',
-                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                        border: '2px solid rgba(255, 255, 255, 0.3)',
-                        transform: 'skewY(8deg)',
-                        marginLeft: '50px',
-                        boxShadow: '0 2px 6px rgba(0, 0, 0, 0.4)',
-                        borderRadius: '0 50px 50px 0',
-                      }}
-                    >
-                      {/* Resource Fill */}
-                      <div
-                        className="h-full transition-all duration-300"
-                        style={{
-                          width: `${resourcePercent}%`,
-                          backgroundColor: token.resourceColor || '#3b82f6',
-                          borderRadius: '0 50px 50px 0',
-                          boxShadow: 'inset 0 2px 4px rgba(255, 255, 255, 0.3), inset 0 -2px 4px rgba(0, 0, 0, 0.3)',
-                        }}
-                      />
-                    </div>
-                  </div>
                 )}
+              </div>
 
-                {/* STATUS CONDITIONS - Yellow circles to the RIGHT and UP */}
-                {conditions.length > 0 && (
-                  <div
-                    className="absolute flex gap-1.5"
-                    style={{
-                      right: '0px',
-                      top: '-10px',
-                      transform: 'skewY(8deg)',
-                    }}
-                  >
-                    {conditions.map((condition, index) => (
-                      <div
-                        key={`${condition}-${index}`}
-                        className="flex items-center justify-center rounded-full"
-                        style={{
-                          width: '25px',
-                          height: '25px',
-                          backgroundColor: '#fbbf24',
-                          boxShadow: '0 2px 6px rgba(0, 0, 0, 0.4)',
-                          fontSize: '11px',
-                        }}
-                        title={condition}
-                      >
-                        {CONDITION_EMOJIS[condition] || '❓'}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* WOUNDS - Dots BELOW resource bar */}
-                <div
-                  className="flex gap-1"
-                  style={{
-                    marginLeft: '50px',
-                    marginTop: '8px',
-                    transform: 'skewY(8deg)',
-                    minHeight: '14px',
-                  }}
-                >
-                  {Array.from({ length: token.maxWounds || 6 }, (_, i) => i + 1).map(woundNum => {
-                    const hasWound = (token.wounds || 0) >= woundNum;
-                    return (
-                      <div
-                        key={woundNum}
-                        className="rounded-full transition-all duration-200"
-                        style={{
-                          width: '14px',
-                          height: '14px',
-                          border: '2px dotted rgba(255, 255, 255, 0.5)',
-                          backgroundColor: hasWound ? '#ef4444' : 'transparent',
-                          boxShadow: hasWound ? '0 0 4px rgba(239, 68, 68, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.3)' : 'none',
-                        }}
-                      />
-                    );
-                  })}
-                </div>
+              {/* Wounds - Small circles */}
+              <div className="flex gap-0.5 justify-center flex-wrap" style={{ minHeight: '8px', maxWidth: '50px' }}>
+                {Array.from({ length: token.maxWounds || 6 }, (_, i) => i + 1).map(woundNum => {
+                  const hasWound = (token.wounds || 0) >= woundNum;
+                  return (
+                    <div
+                      key={woundNum}
+                      className="rounded-full transition-all duration-200"
+                      style={{
+                        width: '6px',
+                        height: '6px',
+                        border: '1px dotted rgba(255, 255, 255, 0.5)',
+                        backgroundColor: hasWound ? '#ef4444' : 'transparent',
+                        boxShadow: hasWound ? '0 0 2px rgba(239, 68, 68, 0.6)' : 'none',
+                      }}
+                    />
+                  );
+                })}
               </div>
             </div>
+            </Tooltip>
           );
         })}
       </div>

@@ -211,10 +211,10 @@ export function DMToolsSettings({
                     </div>
                 </div>
 
-                {/* Party Overview Toggle */}
+                {/* Strategy Mode Toggle */}
                 <div className="border-t border-border pt-4">
                     <div className="flex items-center justify-between">
-                        <label className="text-sm font-bold">Show Party Overview</label>
+                        <label className="text-sm font-bold">Strategy Mode (TAB)</label>
                         <button
                             onClick={() => setShowPartyOverview(!showPartyOverview)}
                             className={`px-3 py-1 rounded text-sm ${showPartyOverview ? 'bg-secondary hover:bg-secondary-hover' : 'bg-tertiary hover:bg-tertiary-hover'

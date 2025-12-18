@@ -670,6 +670,13 @@ export default function NimbleCombatTracker() {
         return;
       }
 
+      // Tab - Toggle Party Overview
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        setShowPartyOverview(prev => !prev);
+        return;
+      }
+
       // Token Selection Shortcuts (1-9)
       if (e.key >= '1' && e.key <= '9') {
         const index = parseInt(e.key) - 1;
@@ -733,7 +740,7 @@ export default function NimbleCombatTracker() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [historyStep, drawingHistory, selectedToken, drawMode]);
+  }, [historyStep, drawingHistory, selectedToken, drawMode, setShowPartyOverview]);
 
   // Broadcast state to pop-out window
   useEffect(() => {
@@ -1378,8 +1385,8 @@ export default function NimbleCombatTracker() {
                           </div>
                         )}
 
-                        {/* Action Indicators - only show when no token is selected */}
-                        {token.actions && token.type !== 'legendary' && !selectedToken && (
+                        {/* Action Indicators - only show in Strategy Mode (party overview enabled) */}
+                        {token.actions && token.type !== 'legendary' && showPartyOverview && (
                           <div
                             className="absolute left-1/2 transform -translate-x-1/2 flex justify-center gap-1 pointer-events-none"
                             style={{
@@ -1448,8 +1455,8 @@ export default function NimbleCombatTracker() {
               HUD_Z_INDEX={HUD_Z_INDEX}
             />
 
-            {/* Party Overview - Show when no token selected and feature is enabled */}
-            {showPartyOverview && !selectedToken && (
+            {/* Strategy Mode: Party Overview - Show when Strategy Mode enabled */}
+            {showPartyOverview && (
               <PartyOverview
                 tokens={tokens.filter(t => t.type === 'hero' || t.type === 'companion')}
               />
