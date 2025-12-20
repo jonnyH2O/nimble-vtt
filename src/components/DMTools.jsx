@@ -127,6 +127,9 @@ export default function DMTools({
   showPartyOverview,
   setShowPartyOverview,
   handleBackgroundUpload,
+  handleAppBackgroundUpload,
+  handleBackgroundUrlSubmit,
+  handleAppBackgroundUrlSubmit,
   showAddToken,
   setShowAddToken,
   newToken,
@@ -1105,6 +1108,12 @@ export default function DMTools({
             importBattle={importBattle}
             exportBattle={exportBattle}
             handleBackgroundUpload={handleBackgroundUpload}
+            handleAppBackgroundUpload={handleAppBackgroundUpload}
+            handleBackgroundUrlSubmit={handleBackgroundUrlSubmit}
+            handleAppBackgroundUrlSubmit={handleAppBackgroundUrlSubmit}
+            selectedTokenId={selectedToken}
+            tokens={tokens}
+            updateTokenData={tokenManager ? tokenManager.updateTokenData : null}
           />
         ) : null
         }

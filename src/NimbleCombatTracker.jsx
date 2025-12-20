@@ -17,9 +17,13 @@ import { DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT, MAX_CANVAS_DIMENSION, SIDE
 import { getTokenBorderColor, getTokenBgColor, getTokenIconName } from './utils/tokenUtils';
 import { CONDITION_CATEGORIES } from './effects/conditionEffects';
 
+const GRAB_CURSOR_SVG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(1px 1px 1px black);"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>`;
+const GRABBING_CURSOR_SVG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(1px 1px 1px black);"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/><path d="M7 15c1.49 1.48 3.2 2.34 6 2.34h2a8 8 0 0 0 8-8V8"/></svg>`;
+
 export default function NimbleCombatTracker() {
   // UI State
   const [background, setBackground] = useState(null);
+  const [appBackground, setAppBackground] = useState(null);
   const [backgroundSize, setBackgroundSize] = useState(100);
   const [tokenSize, setTokenSize] = useState(64);
   const [currentTheme, setCurrentTheme] = useState('default');
@@ -174,41 +178,72 @@ export default function NimbleCombatTracker() {
   const [popoutWindow, setPopoutWindow] = useState(null);
   const windowSync = useWindowSync(true); // true = main window
 
+  const updateMapBackground = (imageUrl) => {
+    const img = new Image();
+    img.onload = () => {
+      // Smart scaling: Calculate canvas dimensions based on image aspect ratio
+      // while respecting MAX_CANVAS_DIMENSION
+      const imageWidth = img.width;
+      const imageHeight = img.height;
+      const aspectRatio = imageWidth / imageHeight;
+
+      let newCanvasWidth, newCanvasHeight;
+
+      if (imageWidth > imageHeight) {
+        // Wide image
+        newCanvasWidth = Math.min(imageWidth, MAX_CANVAS_DIMENSION);
+        newCanvasHeight = Math.round(newCanvasWidth / aspectRatio);
+      } else {
+        // Tall or square image
+        newCanvasHeight = Math.min(imageHeight, MAX_CANVAS_DIMENSION);
+        newCanvasWidth = Math.round(newCanvasHeight * aspectRatio);
+      }
+
+      // Set canvas dimensions
+      setCanvasWidth(newCanvasWidth);
+      setCanvasHeight(newCanvasHeight);
+
+      // Set background image
+      setBackground(imageUrl);
+    };
+    img.src = imageUrl;
+  };
+
   const handleBackgroundUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          // Smart scaling: Calculate canvas dimensions based on image aspect ratio
-          // while respecting MAX_CANVAS_DIMENSION
-          const imageWidth = img.width;
-          const imageHeight = img.height;
-          const aspectRatio = imageWidth / imageHeight;
-
-          let newCanvasWidth, newCanvasHeight;
-
-          if (imageWidth > imageHeight) {
-            // Wide image
-            newCanvasWidth = Math.min(imageWidth, MAX_CANVAS_DIMENSION);
-            newCanvasHeight = Math.round(newCanvasWidth / aspectRatio);
-          } else {
-            // Tall or square image
-            newCanvasHeight = Math.min(imageHeight, MAX_CANVAS_DIMENSION);
-            newCanvasWidth = Math.round(newCanvasHeight * aspectRatio);
-          }
-
-          // Set canvas dimensions
-          setCanvasWidth(newCanvasWidth);
-          setCanvasHeight(newCanvasHeight);
-
-          // Set background image
-          setBackground(event.target.result);
-        };
-        img.src = event.target.result;
+        updateMapBackground(event.target.result);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleBackgroundUrlSubmit = (url) => {
+    if (url) {
+      updateMapBackground(url);
+    }
+  };
+
+  const updateAppBackground = (imageUrl) => {
+    setAppBackground(imageUrl);
+  };
+
+  const handleAppBackgroundUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        updateAppBackground(event.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAppBackgroundUrlSubmit = (url) => {
+    if (url) {
+      updateAppBackground(url);
     }
   };
 
@@ -538,6 +573,7 @@ export default function NimbleCombatTracker() {
       tokens: tokens, // This already includes conditions as they're part of token objects
       turnOrder: turnOrder,
       background: background,
+      appBackground: appBackground,
       backgroundSize: backgroundSize,
       tokenSize: tokenSize,
       drawings: drawingData,
@@ -580,6 +616,7 @@ export default function NimbleCombatTracker() {
       if (battleState.tokens) tokenManager.setAllTokens(battleState.tokens);
       if (battleState.turnOrder) turnOrderManager.setAllTurnOrder(battleState.turnOrder);
       if (battleState.background) setBackground(battleState.background);
+      if (battleState.appBackground) setAppBackground(battleState.appBackground);
       if (battleState.backgroundSize) setBackgroundSize(battleState.backgroundSize);
       if (battleState.tokenSize) setTokenSize(battleState.tokenSize);
 
@@ -1005,20 +1042,25 @@ export default function NimbleCombatTracker() {
     }
   };
 
+  const containerStyle = useMemo(() => ({
+    backgroundImage: appBackground ? `url(${appBackground})` : 'none',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    cursor: drawMode === 'select'
+      ? panningView
+        ? `url('${GRABBING_CURSOR_SVG}') 12 12, grabbing`
+        : `url('${GRAB_CURSOR_SVG}') 12 12, grab`
+      : 'default'
+  }), [appBackground, drawMode, panningView]);
+
   return (
     <div className="h-screen bg-background text-text flex flex-col">
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 p-4 overflow-hidden">
           <div
             ref={boardRef}
-            className={`relative bg-surface-highlight rounded w-full h-full min-h-[600px] overflow-hidden`}
-            style={{
-              cursor: drawMode === 'select'
-                ? panningView
-                  ? `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(1px 1px 1px black);"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/><path d="M7 15c1.49 1.48 3.2 2.34 6 2.34h2a8 8 0 0 0 8-8V8"/></svg>') 12 12, grabbing`
-                  : `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(1px 1px 1px black);"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>') 12 12, grab`
-                : 'default'
-            }}
+            className={`bg-image relative bg-surface-highlight rounded w-full h-full min-h-[600px] overflow-hidden`}
+            style={containerStyle}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseLeave}
@@ -1548,6 +1590,9 @@ export default function NimbleCombatTracker() {
                   setShowPartyOverview={setShowPartyOverview}
                   // Add Token props
                   handleBackgroundUpload={handleBackgroundUpload}
+                  handleAppBackgroundUpload={handleAppBackgroundUpload}
+                  handleBackgroundUrlSubmit={handleBackgroundUrlSubmit}
+                  handleAppBackgroundUrlSubmit={handleAppBackgroundUrlSubmit}
                   showAddToken={showAddToken}
                   setShowAddToken={setShowAddToken}
                   newToken={newToken}
