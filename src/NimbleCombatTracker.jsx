@@ -134,6 +134,7 @@ export default function NimbleCombatTracker() {
     setDiceNotation,
     notationError,
     diceRolls,
+    viewportRolls,
     rollingDice,
     rollDice,
     addOrIncrementDie,
@@ -1622,7 +1623,7 @@ export default function NimbleCombatTracker() {
             addOrIncrementDie={addOrIncrementDie}
             clearNotation={clearNotation}
             rollingDice={rollingDice}
-            diceRolls={diceRolls}
+            diceRolls={viewportRolls}
             hideButton={true}
           />
         )}

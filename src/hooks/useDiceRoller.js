@@ -11,7 +11,8 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 export function useDiceRoller() {
   const [showDiceMenu, setShowDiceMenu] = useState(false);
   const [diceNotation, setDiceNotation] = useState('');
-  const [diceRolls, setDiceRolls] = useState([]);
+  const [diceRolls, setDiceRolls] = useState([]); // For sidebar - persistent, max 5
+  const [viewportRolls, setViewportRolls] = useState([]); // For viewport - auto-fade
   const [rollingDice, setRollingDice] = useState([]);
   const [notationError, setNotationError] = useState('');
   const diceTimeoutsRef = useRef([]);
@@ -146,23 +147,24 @@ export function useDiceRoller() {
         timestamp: Date.now()
       };
 
+      // Add to sidebar rolls (persistent, max 5)
       setDiceRolls(prev => {
         const updated = [newRoll, ...prev];
-        // Keep only last 5 rolls in sidebar (no fading there)
         return updated.slice(0, 5);
       });
 
+      // Add to viewport rolls (will auto-fade)
+      setViewportRolls(prev => [newRoll, ...prev]);
+
       // For viewport display only: start fading after 5 seconds
       const timeout2 = setTimeout(() => {
-        // Note: This fading is only used in viewport, not in sidebar
-        setDiceRolls(prev => prev.map(r =>
+        setViewportRolls(prev => prev.map(r =>
           r.id === rollId ? { ...r, fading: true } : r
         ));
 
-        // Remove completely after fade (3 more seconds) - viewport only
+        // Remove completely from viewport after fade (3 more seconds)
         const timeout3 = setTimeout(() => {
-          // This won't affect sidebar since we already limited to 5 items
-          setDiceRolls(prev => prev.filter(r => r.id !== rollId));
+          setViewportRolls(prev => prev.filter(r => r.id !== rollId));
         }, 3000);
 
         viewportTimeoutsRef.current.push(timeout3);
@@ -199,6 +201,7 @@ export function useDiceRoller() {
     setDiceNotation,
     notationError,
     diceRolls,
+    viewportRolls,
     rollingDice,
     rollDice,
     addOrIncrementDie,
