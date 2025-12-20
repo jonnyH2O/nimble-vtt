@@ -4,6 +4,7 @@ import { HUDDisplay } from './components/HUD';
 import Toolbar from './components/Toolbar';
 import DMTools from './components/DMTools';
 import { TokenEffects, TokenEffectOverlay } from './components/TokenEffects';
+import { TurnStartRing } from './effects/TurnStartRing';
 import { PartyOverview } from './components/PartyOverview';
 import DiceRoller from './components/DiceRoller';
 import { useTokens } from './hooks/useTokens';
@@ -1301,6 +1302,7 @@ export default function NimbleCombatTracker() {
                                 className="rounded-full object-cover w-full h-full"
                               />
                               <TokenEffectOverlay token={token} context="token" tokenSize={currentTokenSize} />
+                              {token.isActiveTurn && <TurnStartRing tokenSize={currentTokenSize} tokenBorderWidth={Math.max(2, Math.round(currentTokenSize / 16))} />}
                             </div>
                           </div>
                         ) : (
@@ -1322,6 +1324,7 @@ export default function NimbleCombatTracker() {
                                 {getTokenIcon(token.type)}
                               </div>
                               <TokenEffectOverlay token={token} context="token" tokenSize={currentTokenSize} />
+                              {token.isActiveTurn && <TurnStartRing tokenSize={currentTokenSize} tokenBorderWidth={Math.max(2, Math.round(currentTokenSize / 16))} />}
                             </div>
                           </div>
                         )}

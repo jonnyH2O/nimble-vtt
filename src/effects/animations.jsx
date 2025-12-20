@@ -91,6 +91,28 @@ export const ANIMATIONS = {
         opacity: 0;
       }
     }
+  `,
+
+  turnRingRotate: `
+    @keyframes turnRingRotate {
+      0% {
+        transform: translate(-50%, -50%) rotate(0deg);
+      }
+      100% {
+        transform: translate(-50%, -50%) rotate(360deg);
+      }
+    }
+  `,
+
+  turnDotRotate: `
+    @keyframes turnDotRotate {
+      0% {
+        transform: rotate(45deg);
+      }
+      100% {
+        transform: rotate(405deg);
+      }
+    }
   `
 };
 
