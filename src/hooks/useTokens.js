@@ -302,6 +302,10 @@ export function useTokens(tokenSize) {
     dispatchTokens({ type: 'UPDATE_TOKEN', payload: { id: tokenId, updates } });
   }, []);
 
+  const updateTokenData = useCallback((tokenId, updates) => {
+    dispatchTokens({ type: 'UPDATE_TOKEN', payload: { id: tokenId, updates } });
+  }, []);
+
   const setAllTokens = useCallback((newTokens) => {
     dispatchTokens({ type: 'SET_ALL_TOKENS', payload: newTokens });
   }, []);
@@ -331,6 +335,7 @@ export function useTokens(tokenSize) {
     resetNonHeroActions,
     updateTokenPosition,
     updateTokenResource,
+    updateTokenData,
     setAllTokens,
     toggleHealthInViewport
   };

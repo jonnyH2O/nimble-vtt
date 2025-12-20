@@ -1111,6 +1111,9 @@ export default function DMTools({
             handleAppBackgroundUpload={handleAppBackgroundUpload}
             handleBackgroundUrlSubmit={handleBackgroundUrlSubmit}
             handleAppBackgroundUrlSubmit={handleAppBackgroundUrlSubmit}
+            selectedTokenId={selectedToken}
+            tokens={tokens}
+            updateTokenData={tokenManager ? tokenManager.updateTokenData : null}
           />
         ) : null
         }

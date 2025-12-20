@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, Plus, Link, X } from 'lucide-react';
+import { Upload, Plus, Link, X, Pencil } from 'lucide-react';
 import ColorPicker from './ColorPicker';
 
 const ImageInputForm = ({ label, onUpload, onUrlSubmit }) => {
@@ -93,10 +93,14 @@ export function DMToolsSettings({
     handleBackgroundUpload,
     handleAppBackgroundUpload,
     handleBackgroundUrlSubmit,
-    handleAppBackgroundUrlSubmit
+    handleAppBackgroundUrlSubmit,
+    selectedTokenId,
+    tokens,
+    updateTokenData
 }) {
     const fileInputRef = useRef(null);
-    const [activeSettingsForm, setActiveSettingsForm] = useState('none'); // 'none', 'wallpaper', 'map', 'token'
+    const [activeSettingsForm, setActiveSettingsForm] = useState('none'); // 'none', 'wallpaper', 'map', 'token', 'editToken'
+    const [editTokenData, setEditTokenData] = useState(null);
 
     // Sync external showAddToken prop with internal state
     React.useEffect(() => {
@@ -107,11 +111,29 @@ export function DMToolsSettings({
         }
     }, [showAddToken]);
 
+    // Handle initial edit token data population
+    React.useEffect(() => {
+        if (activeSettingsForm === 'editToken' && selectedTokenId && tokens) {
+            const token = tokens.find(t => t.id === selectedTokenId);
+            if (token) {
+                setEditTokenData({ ...token });
+            }
+        }
+    }, [activeSettingsForm, selectedTokenId, tokens]);
+
     const handleFormToggle = (formName) => {
         if (activeSettingsForm === formName) {
             setActiveSettingsForm('none');
             if (formName === 'token') setShowAddToken(false);
         } else {
+            // Pre-populate if switching to edit mode
+            if (formName === 'editToken') {
+                if (!selectedTokenId) return; // Should be disabled anyway
+                const token = tokens.find(t => t.id === selectedTokenId);
+                if (token) {
+                    setEditTokenData({ ...token });
+                }
+            }
             setActiveSettingsForm(formName);
             if (formName === 'token') {
                 setShowAddToken(true);
@@ -121,14 +143,46 @@ export function DMToolsSettings({
         }
     };
 
+    const handleEditTokenImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                setEditTokenData({ ...editTokenData, image: event.target.result });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleSaveToken = () => {
+        if (editTokenData && selectedTokenId) {
+            updateTokenData(selectedTokenId, {
+                name: editTokenData.name,
+                type: editTokenData.type,
+                armor: editTokenData.armor,
+                hasResource: editTokenData.hasResource,
+                resourceName: editTokenData.resourceName,
+                resourceColor: editTokenData.resourceColor,
+                image: editTokenData.image,
+                // Only update max/current if they changed, need to be careful not to overwrite current values if not editing them directly?
+                // Actually the form edits state directly, so we pass back what we have.
+                // However, things like health/wounds aren't in this form, so we use the spread updates.
+                // But wait, the reducer does a shallow merge of updates.
+                // So we only need to send the fields that can change in this form.
+                maxResource: editTokenData.maxResource,
+                currentResource: editTokenData.currentResource
+            });
+            setActiveSettingsForm('none');
+        }
+    };
+
     return (
         <div className="p-4">
             {/* Settings View */}
             <h2 className="text-xl font-bold mb-4">Settings</h2>
 
             <div className="space-y-4">
-                {/* Background, Battle Map, and Add Token Buttons */}
-                {/* Background, Battle Map, and Add Token Buttons */}
+                {/* Background and Map Buttons */}
                 <div className="flex gap-2">
                     <button
                         className={`flex-1 px-3 py-2 rounded flex items-center justify-center gap-2 text-sm ${isPopoutWindow
@@ -156,6 +210,10 @@ export function DMToolsSettings({
                         <Upload size={16} />
                         Map
                     </button>
+                </div>
+
+                {/* Token Buttons (Add & Edit) */}
+                <div className="flex gap-2">
                     <button
                         onClick={() => !isPopoutWindow && handleFormToggle('token')}
                         disabled={isPopoutWindow}
@@ -167,7 +225,21 @@ export function DMToolsSettings({
                             }`}
                     >
                         <Plus size={16} />
-                        {activeSettingsForm === 'token' ? 'Cancel' : 'Token'}
+                        {activeSettingsForm === 'token' ? 'Cancel' : 'Add Token'}
+                    </button>
+                    <button
+                        onClick={() => !isPopoutWindow && selectedTokenId && handleFormToggle('editToken')}
+                        disabled={isPopoutWindow || !selectedTokenId}
+                        className={`flex-1 px-3 py-2 rounded flex items-center justify-center gap-2 text-sm ${isPopoutWindow || !selectedTokenId
+                            ? 'bg-button-muted text-text-muted cursor-not-allowed opacity-50'
+                            : activeSettingsForm === 'editToken'
+                                ? 'bg-tertiary hover:bg-tertiary-hover'
+                                : 'bg-secondary hover:bg-secondary-hover'
+                            }`}
+                        title={!selectedTokenId ? "Select a token to edit" : "Edit Token"}
+                    >
+                        <Pencil size={16} />
+                        {activeSettingsForm === 'editToken' ? 'Cancel' : 'Edit Token'}
                     </button>
                 </div>
 
@@ -306,6 +378,132 @@ export function DMToolsSettings({
                             className="w-full bg-secondary hover:bg-secondary-hover px-3 py-2 rounded text-sm font-bold mt-2"
                         >
                             Add Token
+                        </button>
+                    </div>
+                )}
+
+                {/* Edit Token Form - Inline */}
+                {activeSettingsForm === 'editToken' && editTokenData && (
+                    <div className="bg-surface-highlight border border-border rounded-lg p-4 space-y-3">
+                        <h3 className="text-sm font-bold mb-2">Edit Token</h3>
+
+                        <div>
+                            <label className="block text-xs mb-1">Name</label>
+                            <input
+                                type="text"
+                                value={editTokenData.name}
+                                onChange={(e) => setEditTokenData({ ...editTokenData, name: e.target.value })}
+                                className="w-full bg-surface px-3 py-2 rounded text-sm"
+                                placeholder="Token name"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-xs mb-1">Type</label>
+                            <select
+                                value={editTokenData.type}
+                                onChange={(e) => setEditTokenData({ ...editTokenData, type: e.target.value })}
+                                className="w-full bg-surface px-3 py-2 rounded text-sm"
+                            >
+                                <option value="hero">Hero</option>
+                                <option value="companion">Companion</option>
+                                <option value="enemy">Enemy</option>
+                                <option value="legendary">Legendary</option>
+                            </select>
+                        </div>
+
+                        {/* Armor Option - Only for Enemy or Legendary */}
+                        {(editTokenData.type === 'enemy' || editTokenData.type === 'legendary') && (
+                            <div>
+                                <label className="block text-xs mb-1">Armor</label>
+                                <select
+                                    value={editTokenData.armor || 'none'}
+                                    onChange={(e) => setEditTokenData({ ...editTokenData, armor: e.target.value })}
+                                    className="w-full bg-surface px-3 py-2 rounded text-sm"
+                                >
+                                    <option value="none">None</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="heavy">Heavy</option>
+                                </select>
+                            </div>
+                        )}
+
+                        <div>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={editTokenData.hasResource}
+                                    onChange={(e) => setEditTokenData({ ...editTokenData, hasResource: e.target.checked })}
+                                    className="w-4 h-4"
+                                />
+                                <span className="text-xs font-bold">Has Resource?</span>
+                            </label>
+
+                            {editTokenData.hasResource && (
+                                <div className="mt-2 space-y-2 pl-6">
+                                    <div className="flex gap-2 items-end">
+                                        <div className="flex-1">
+                                            <label className="block text-xs mb-1">Resource Name</label>
+                                            <input
+                                                type="text"
+                                                value={editTokenData.resourceName}
+                                                onChange={(e) => setEditTokenData({ ...editTokenData, resourceName: e.target.value })}
+                                                className="w-full bg-surface px-3 py-2 rounded text-sm"
+                                                placeholder="e.g., Mana, Focus, Rage"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs mb-1">Color</label>
+                                            <ColorPicker
+                                                color={editTokenData.resourceColor}
+                                                onChange={(color) => setEditTokenData({ ...editTokenData, resourceColor: color })}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <div className="flex-1">
+                                            <label className="block text-xs mb-1">Max Resource</label>
+                                            <input
+                                                type="number"
+                                                value={editTokenData.maxResource || 0}
+                                                onChange={(e) => setEditTokenData({ ...editTokenData, maxResource: parseInt(e.target.value) || 0 })}
+                                                className="w-full bg-surface px-3 py-2 rounded text-sm"
+                                            />
+                                        </div>
+                                        <div className="flex-1">
+                                            <label className="block text-xs mb-1">Current Resource</label>
+                                            <input
+                                                type="number"
+                                                value={editTokenData.currentResource || 0}
+                                                onChange={(e) => setEditTokenData({ ...editTokenData, currentResource: parseInt(e.target.value) || 0 })}
+                                                className="w-full bg-surface px-3 py-2 rounded text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div>
+                            <label className="block text-xs mb-1">Image (Optional)</label>
+                            <label className="w-full bg-primary hover:bg-primary-hover px-3 py-2 rounded cursor-pointer text-sm flex items-center justify-center gap-2">
+                                <Upload size={16} />
+                                {editTokenData.image ? 'Change Image' : 'Upload Image'}
+                                <input type="file" accept="image/*" onChange={handleEditTokenImageUpload} className="hidden" />
+                            </label>
+                            {editTokenData.image && (
+                                <div className="mt-2 flex items-center gap-2">
+                                    <img src={editTokenData.image} alt="Preview" className="w-10 h-10 rounded-full object-cover" />
+                                    <span className="text-xs text-text-muted">Image uploaded</span>
+                                </div>
+                            )}
+                        </div>
+
+                        <button
+                            onClick={handleSaveToken}
+                            className="w-full bg-secondary hover:bg-secondary-hover px-3 py-2 rounded text-sm font-bold mt-2"
+                        >
+                            Save Changes
                         </button>
                     </div>
                 )}
