@@ -126,11 +126,14 @@ export default function NimbleCombatTracker() {
   const {
     showDiceMenu,
     setShowDiceMenu,
-    diceCount,
-    setDiceCount,
+    diceNotation,
+    setDiceNotation,
+    notationError,
     diceRolls,
     rollingDice,
-    rollDice
+    rollDice,
+    addOrIncrementDie,
+    clearNotation
   } = diceRollerManager;
 
   // Other State
@@ -762,7 +765,8 @@ export default function NimbleCombatTracker() {
         majorConditions: CONDITION_CATEGORIES.MAJOR,
         minorConditions: CONDITION_CATEGORIES.MINOR,
         // Dice state
-        diceCount,
+        diceNotation,
+        notationError,
         showDiceInViewport,
         rollingDice,
         diceRolls,
@@ -791,7 +795,8 @@ export default function NimbleCombatTracker() {
     deleteMode,
     lastActionUserId,
     windowSync,
-    diceCount,
+    diceNotation,
+    notationError,
     showDiceInViewport,
     rollingDice,
     diceRolls,
@@ -894,10 +899,13 @@ export default function NimbleCombatTracker() {
           tokenManager.resetNonHeroActions();
           break;
         case MESSAGE_TYPES.DICE_ROLL:
-          rollDice(payload.diceType);
+          rollDice();
           break;
-        case MESSAGE_TYPES.DICE_COUNT_UPDATE:
-          setDiceCount(payload.count);
+        case MESSAGE_TYPES.DICE_NOTATION_UPDATE:
+          setDiceNotation(payload.notation);
+          break;
+        case MESSAGE_TYPES.DICE_INCREMENT:
+          addOrIncrementDie(payload.sides, payload.delta);
           break;
         case MESSAGE_TYPES.SETTINGS_UPDATE:
           if (payload.tokenSize !== undefined) setTokenSize(payload.tokenSize);
@@ -955,7 +963,8 @@ export default function NimbleCombatTracker() {
     setExpandedNotes,
     handleRemoveToken,
     rollDice,
-    setDiceCount,
+    setDiceNotation,
+    addOrIncrementDie,
     setTokenSize,
     setBackgroundSize,
     setShowGrid,
@@ -1507,9 +1516,12 @@ export default function NimbleCombatTracker() {
                   // Dice Roller props
                   showDiceMenu={showDiceMenu}
                   setShowDiceMenu={setShowDiceMenu}
-                  diceCount={diceCount}
-                  setDiceCount={setDiceCount}
+                  diceNotation={diceNotation}
+                  setDiceNotation={setDiceNotation}
+                  notationError={notationError}
                   rollDice={rollDice}
+                  addOrIncrementDie={addOrIncrementDie}
+                  clearNotation={clearNotation}
                   rollingDice={rollingDice}
                   diceRolls={diceRolls}
                   showDiceInViewport={showDiceInViewport}
@@ -1558,9 +1570,12 @@ export default function NimbleCombatTracker() {
           <DiceRoller
             showDiceMenu={false}
             setShowDiceMenu={() => { }}
-            diceCount={diceCount}
-            setDiceCount={setDiceCount}
+            diceNotation={diceNotation}
+            setDiceNotation={setDiceNotation}
+            notationError={notationError}
             rollDice={rollDice}
+            addOrIncrementDie={addOrIncrementDie}
+            clearNotation={clearNotation}
             rollingDice={rollingDice}
             diceRolls={diceRolls}
             hideButton={true}

@@ -162,9 +162,16 @@ export default function PopoutWindow() {
         // Dice Roller props - send to main window
         showDiceMenu={false}
         setShowDiceMenu={() => { }}
-        diceCount={syncedState.diceCount || 1}
-        setDiceCount={(count) => sendAction(createMessage(MESSAGE_TYPES.DICE_COUNT_UPDATE, { count }))}
-        rollDice={(diceType) => sendAction(createMessage(MESSAGE_TYPES.DICE_ROLL, { diceType }))}
+        diceNotation={syncedState.diceNotation || ''}
+        setDiceNotation={(notation) => sendAction(createMessage(MESSAGE_TYPES.DICE_NOTATION_UPDATE, { notation }))}
+        notationError={syncedState.notationError || ''}
+        rollDice={() => sendAction(createMessage(MESSAGE_TYPES.DICE_ROLL, {}))}
+        addOrIncrementDie={(sides, delta) => {
+          // This needs to be handled by the main window's hook
+          // For now, we'll just send a message to update notation
+          sendAction(createMessage(MESSAGE_TYPES.DICE_INCREMENT, { sides, delta }));
+        }}
+        clearNotation={() => sendAction(createMessage(MESSAGE_TYPES.DICE_NOTATION_UPDATE, { notation: '' }))}
         rollingDice={syncedState.rollingDice || []}
         diceRolls={syncedState.diceRolls || []}
         showDiceInViewport={syncedState.showDiceInViewport !== undefined ? syncedState.showDiceInViewport : true}

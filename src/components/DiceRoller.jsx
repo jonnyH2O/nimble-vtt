@@ -1,5 +1,4 @@
-import React from 'react';
-import { Dices } from 'lucide-react';
+import { Dices, X } from 'lucide-react';
 
 /**
  * DiceRoller Component
@@ -9,22 +8,40 @@ import { Dices } from 'lucide-react';
  * @param {Object} props
  * @param {boolean} props.showDiceMenu - Controls visibility of the dice menu popup
  * @param {Function} props.setShowDiceMenu - Toggles the dice menu visibility
- * @param {number} props.diceCount - Number of dice to roll (1-20)
- * @param {Function} props.setDiceCount - Sets the number of dice to roll
- * @param {Function} props.rollDice - Function to roll dice, takes dice type (4, 6, 8, 10, 12, 20)
+ * @param {string} props.diceNotation - Dice notation string (e.g., "1d6, 2d8")
+ * @param {Function} props.setDiceNotation - Sets the dice notation
+ * @param {string} props.notationError - Error message for invalid notation
+ * @param {Function} props.rollDice - Function to roll dice based on notation
+ * @param {Function} props.addOrIncrementDie - Function to add/increment dice in notation
+ * @param {Function} props.clearNotation - Function to clear the notation field
  * @param {Array} props.rollingDice - Array of currently rolling dice animations
  * @param {Array} props.diceRolls - Array of dice roll results to display
  */
 export default function DiceRoller({
   showDiceMenu,
   setShowDiceMenu,
-  diceCount,
-  setDiceCount,
+  diceNotation,
+  setDiceNotation,
+  notationError,
   rollDice,
+  addOrIncrementDie,
+  clearNotation,
   rollingDice,
   diceRolls,
   hideButton = false // New prop to hide the toggle button
 }) {
+  const handleDiceButtonClick = (sides, event) => {
+    event.preventDefault();
+
+    if (event.button === 0) {
+      // Left click - increment
+      addOrIncrementDie(sides, 1);
+    } else if (event.button === 2) {
+      // Right click - decrement
+      addOrIncrementDie(sides, -1);
+    }
+  };
+
   return (
     <>
       {/* CSS Keyframe Animations */}
@@ -85,55 +102,88 @@ export default function DiceRoller({
           <h3 className="text-sm font-bold mb-3">Roll Dice</h3>
 
           <div className="mb-4">
-            <label className="text-sm block mb-2">Number of Dice</label>
-            <input
-              type="number"
-              min="1"
-              max="20"
-              value={diceCount}
-              onChange={(e) => setDiceCount(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
-              className="w-full bg-surface-highlight px-3 py-2 rounded text-center"
-            />
+            <label className="text-sm block mb-2">Dice Notation</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={diceNotation}
+                onChange={(e) => setDiceNotation(e.target.value)}
+                placeholder="Ex: 1d6, 2d8, 1d20"
+                className="flex-1 bg-surface-highlight px-3 py-2 rounded text-sm"
+              />
+              <button
+                onClick={clearNotation}
+                className="bg-button-muted hover:bg-button-muted-hover px-2 rounded"
+                title="Clear notation"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            {notationError && (
+              <div className="text-xs text-destructive mt-1">{notationError}</div>
+            )}
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2 mb-2">
             <button
-              onClick={() => rollDice(4)}
-              className="bg-primary hover:bg-primary-hover px-4 py-2 rounded font-bold"
+              onClick={(e) => handleDiceButtonClick(4, e)}
+              onContextMenu={(e) => { e.preventDefault(); handleDiceButtonClick(4, { button: 2, preventDefault: () => {} }); }}
+              className="bg-primary hover:bg-primary-hover px-4 py-2 rounded font-bold border-2 border-primary-hover"
             >
               d4
             </button>
             <button
-              onClick={() => rollDice(6)}
-              className="bg-primary hover:bg-primary-hover px-4 py-2 rounded font-bold"
+              onClick={(e) => handleDiceButtonClick(6, e)}
+              onContextMenu={(e) => { e.preventDefault(); handleDiceButtonClick(6, { button: 2, preventDefault: () => {} }); }}
+              className="bg-primary hover:bg-primary-hover px-4 py-2 rounded font-bold border-2 border-primary-hover"
             >
               d6
             </button>
             <button
-              onClick={() => rollDice(8)}
-              className="bg-primary hover:bg-primary-hover px-4 py-2 rounded font-bold"
+              onClick={(e) => handleDiceButtonClick(8, e)}
+              onContextMenu={(e) => { e.preventDefault(); handleDiceButtonClick(8, { button: 2, preventDefault: () => {} }); }}
+              className="bg-primary hover:bg-primary-hover px-4 py-2 rounded font-bold border-2 border-primary-hover"
             >
               d8
             </button>
             <button
-              onClick={() => rollDice(10)}
-              className="bg-primary hover:bg-primary-hover px-4 py-2 rounded font-bold"
+              onClick={(e) => handleDiceButtonClick(10, e)}
+              onContextMenu={(e) => { e.preventDefault(); handleDiceButtonClick(10, { button: 2, preventDefault: () => {} }); }}
+              className="bg-primary hover:bg-primary-hover px-4 py-2 rounded font-bold border-2 border-primary-hover"
             >
               d10
             </button>
             <button
-              onClick={() => rollDice(12)}
-              className="bg-primary hover:bg-primary-hover px-4 py-2 rounded font-bold"
+              onClick={(e) => handleDiceButtonClick(12, e)}
+              onContextMenu={(e) => { e.preventDefault(); handleDiceButtonClick(12, { button: 2, preventDefault: () => {} }); }}
+              className="bg-primary hover:bg-primary-hover px-4 py-2 rounded font-bold border-2 border-primary-hover"
             >
               d12
             </button>
             <button
-              onClick={() => rollDice(20)}
-              className="bg-primary hover:bg-primary-hover px-4 py-2 rounded font-bold"
+              onClick={(e) => handleDiceButtonClick(20, e)}
+              onContextMenu={(e) => { e.preventDefault(); handleDiceButtonClick(20, { button: 2, preventDefault: () => {} }); }}
+              className="bg-primary hover:bg-primary-hover px-4 py-2 rounded font-bold border-2 border-primary-hover"
             >
               d20
             </button>
           </div>
+
+          <button
+            onClick={(e) => handleDiceButtonClick(100, e)}
+            onContextMenu={(e) => { e.preventDefault(); handleDiceButtonClick(100, { button: 2, preventDefault: () => {} }); }}
+            className="w-full bg-primary hover:bg-primary-hover px-4 py-3 rounded font-bold text-lg border-2 border-primary-hover mb-2"
+          >
+            d100
+          </button>
+
+          <button
+            onClick={rollDice}
+            disabled={!diceNotation.trim()}
+            className="w-full bg-secondary hover:bg-secondary-hover px-4 py-2 rounded font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Roll Dice
+          </button>
         </div>
       )}
 
@@ -146,7 +196,7 @@ export default function DiceRoller({
               item.type === 'rolling' ? (
                 <div
                   key={`rolling-${item.id}`}
-                  className="bg-primary text-text px-8 py-6 rounded-lg shadow-2xl border-4 border-purple-400 transition-all duration-300"
+                  className="bg-primary text-text px-8 py-6 rounded-lg shadow-2xl border-4 border-primary-hover transition-all duration-300"
                 >
                   <div key={item.id} className="text-center dice-spin">
                     <div className="text-6xl">🎲</div>
@@ -155,15 +205,19 @@ export default function DiceRoller({
               ) : (
                 <div
                   key={`result-${item.id}`}
-                  className={`bg-green-600 text-text px-6 py-4 rounded-lg shadow-2xl border-4 border-green-400 transition-all duration-300 ${item.fading ? 'dice-fade' : 'dice-pop'
+                  className={`bg-secondary text-text px-6 py-4 rounded-lg shadow-2xl border-4 border-secondary-hover transition-all duration-300 ${item.fading ? 'dice-fade' : 'dice-pop'
                     }`}
                 >
                   <div className="text-center">
                     <div className="text-sm font-bold mb-1">{item.dice}</div>
                     <div className="text-3xl font-bold">{item.total}</div>
-                    {item.rolls.length > 1 && (
-                      <div className="text-xs mt-1 opacity-80">
-                        [{item.rolls.join(', ')}]
+                    {item.rollResults && item.rollResults.length > 0 && (
+                      <div className="text-xs mt-2 space-y-1">
+                        {item.rollResults.map((result, idx) => (
+                          <div key={idx} className="opacity-80">
+                            {result.notation}: {result.subtotal} [{result.rolls.join(', ')}]
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>

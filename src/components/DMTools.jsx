@@ -98,9 +98,12 @@ export default function DMTools({
   // Dice Roller props
   showDiceMenu,
   setShowDiceMenu,
-  diceCount,
-  setDiceCount,
+  diceNotation,
+  setDiceNotation,
+  notationError,
   rollDice,
+  addOrIncrementDie,
+  clearNotation,
   rollingDice,
   diceRolls,
   showDiceInViewport,
@@ -1057,9 +1060,12 @@ export default function DMTools({
           />
         ) : sidebarView === 'dice' ? (
           <DMToolsDice
-            diceCount={diceCount}
-            setDiceCount={setDiceCount}
+            diceNotation={diceNotation}
+            setDiceNotation={setDiceNotation}
+            notationError={notationError}
             rollDice={rollDice}
+            addOrIncrementDie={addOrIncrementDie}
+            clearNotation={clearNotation}
             rollingDice={rollingDice}
             diceRolls={diceRolls}
             showDiceInViewport={showDiceInViewport}

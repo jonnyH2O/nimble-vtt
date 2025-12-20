@@ -38,7 +38,8 @@ export const MESSAGE_TYPES = {
 
   // Pop-out → Main: Dice roller actions
   DICE_ROLL: 'DICE_ROLL',
-  DICE_COUNT_UPDATE: 'DICE_COUNT_UPDATE',
+  DICE_NOTATION_UPDATE: 'DICE_NOTATION_UPDATE',
+  DICE_INCREMENT: 'DICE_INCREMENT',
 
   // Pop-out → Main: Settings updates
   SETTINGS_UPDATE: 'SETTINGS_UPDATE',
