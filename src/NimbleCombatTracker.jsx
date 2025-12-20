@@ -163,6 +163,10 @@ export default function NimbleCombatTracker() {
 
   const [showGrid, setShowGrid] = useState(false);
   const [gridSize, setGridSize] = useState(50);
+  const [gridColor, setGridColor] = useState('#ffffff');
+  const [gridOpacity, setGridOpacity] = useState(0.66);
+  const [gridType, setGridType] = useState('solid'); // 'solid', 'dashed', 'dotted'
+  const [gridStrokeWidth, setGridStrokeWidth] = useState(1.5);
   const [expandedConditions, setExpandedConditions] = useState({});
   const [shiftHeld, setShiftHeld] = useState(false);
   const [sidebarView, setSidebarView] = useState('turnOrder'); // 'turnOrder' or 'dictionary'
@@ -581,6 +585,10 @@ export default function NimbleCombatTracker() {
       viewOffset: viewOffset,
       gridSize: gridSize,
       showGrid: showGrid,
+      gridColor: gridColor,
+      gridOpacity: gridOpacity,
+      gridStrokeWidth: gridStrokeWidth,
+      gridType: gridType,
       darknessMode: darknessMode,
       heroLightRadius: heroLightRadius,
       companionLightRadius: companionLightRadius,
@@ -626,6 +634,10 @@ export default function NimbleCombatTracker() {
 
       if (battleState.gridSize !== undefined) setGridSize(battleState.gridSize);
       if (battleState.showGrid !== undefined) setShowGrid(battleState.showGrid);
+      if (battleState.gridColor !== undefined) setGridColor(battleState.gridColor);
+      if (battleState.gridOpacity !== undefined) setGridOpacity(battleState.gridOpacity);
+      if (battleState.gridStrokeWidth !== undefined) setGridStrokeWidth(battleState.gridStrokeWidth);
+      if (battleState.gridType !== undefined) setGridType(battleState.gridType);
       if (battleState.darknessMode !== undefined) setDarknessMode(battleState.darknessMode);
       if (battleState.heroLightRadius !== undefined) setHeroLightRadius(battleState.heroLightRadius);
       if (battleState.companionLightRadius !== undefined) setCompanionLightRadius(battleState.companionLightRadius);
@@ -811,6 +823,10 @@ export default function NimbleCombatTracker() {
         backgroundSize,
         showGrid,
         gridSize,
+        gridColor,
+        gridOpacity,
+        gridStrokeWidth,
+        gridType,
         darknessMode,
         heroLightRadius,
         companionLightRadius,
@@ -840,6 +856,10 @@ export default function NimbleCombatTracker() {
     backgroundSize,
     showGrid,
     gridSize,
+    gridColor,
+    gridOpacity,
+    gridStrokeWidth,
+    gridType,
     darknessMode,
     heroLightRadius,
     companionLightRadius,
@@ -949,6 +969,10 @@ export default function NimbleCombatTracker() {
           if (payload.backgroundSize !== undefined) setBackgroundSize(payload.backgroundSize);
           if (payload.showGrid !== undefined) setShowGrid(payload.showGrid);
           if (payload.gridSize !== undefined) setGridSize(payload.gridSize);
+          if (payload.gridColor !== undefined) setGridColor(payload.gridColor);
+          if (payload.gridOpacity !== undefined) setGridOpacity(payload.gridOpacity);
+          if (payload.gridStrokeWidth !== undefined) setGridStrokeWidth(payload.gridStrokeWidth);
+          if (payload.gridType !== undefined) setGridType(payload.gridType);
           if (payload.darknessMode !== undefined) setDarknessMode(payload.darknessMode);
           if (payload.heroLightRadius !== undefined) setHeroLightRadius(payload.heroLightRadius);
           if (payload.companionLightRadius !== undefined) setCompanionLightRadius(payload.companionLightRadius);
@@ -1006,6 +1030,10 @@ export default function NimbleCombatTracker() {
     setBackgroundSize,
     setShowGrid,
     setGridSize,
+    setGridColor,
+    setGridOpacity,
+    setGridType,
+    setGridStrokeWidth,
     setDarknessMode,
     setHeroLightRadius,
     setCompanionLightRadius,
@@ -1052,6 +1080,23 @@ export default function NimbleCombatTracker() {
         : `url('${GRAB_CURSOR_SVG}') 12 12, grab`
       : 'default'
   }), [appBackground, drawMode, panningView]);
+
+  const getStrokeDashArray = () => {
+    switch (gridType) {
+      case 'dashed': return '10, 5';
+      case 'dotted': return '2, 5';
+      default: return 'none';
+    }
+  };
+
+  const getGridColorWithOpacity = () => {
+    // Convert hex to rgb
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(gridColor);
+    const r = result ? parseInt(result[1], 16) : 255;
+    const g = result ? parseInt(result[2], 16) : 255;
+    const b = result ? parseInt(result[3], 16) : 255;
+    return `rgba(${r}, ${g}, ${b}, ${gridOpacity})`;
+  };
 
   return (
     <div className="h-screen bg-background text-text flex flex-col">
@@ -1152,7 +1197,13 @@ export default function NimbleCombatTracker() {
                 <svg className="absolute inset-0 pointer-events-none" style={{ width: '100%', height: '100%' }}>
                   <defs>
                     <pattern id="grid" width={gridSize} height={gridSize} patternUnits="userSpaceOnUse">
-                      <path d={`M ${gridSize} 0 L 0 0 0 ${gridSize}`} fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                      <path
+                        d={`M ${gridSize} 0 L 0 0 0 ${gridSize}`}
+                        fill="none"
+                        stroke={getGridColorWithOpacity()}
+                        strokeWidth={gridStrokeWidth}
+                        strokeDasharray={getStrokeDashArray()}
+                      />
                     </pattern>
                   </defs>
                   <rect width="100%" height="100%" fill="url(#grid)" />
@@ -1578,6 +1629,14 @@ export default function NimbleCombatTracker() {
                   setShowGrid={setShowGrid}
                   gridSize={gridSize}
                   setGridSize={setGridSize}
+                  gridColor={gridColor}
+                  setGridColor={setGridColor}
+                  gridOpacity={gridOpacity}
+                  setGridOpacity={setGridOpacity}
+                  gridType={gridType}
+                  setGridType={setGridType}
+                  gridStrokeWidth={gridStrokeWidth}
+                  setGridStrokeWidth={setGridStrokeWidth}
                   darknessMode={darknessMode}
                   setDarknessMode={setDarknessMode}
                   heroLightRadius={heroLightRadius}

@@ -115,7 +115,16 @@ export default function DMTools({
   showGrid,
   setShowGrid,
   gridSize,
+
   setGridSize,
+  gridColor,
+  setGridColor,
+  gridOpacity,
+  setGridOpacity,
+  gridType,
+  setGridType,
+  gridStrokeWidth,
+  setGridStrokeWidth,
   darknessMode,
   setDarknessMode,
   heroLightRadius,
@@ -1095,6 +1104,14 @@ export default function DMTools({
             setShowGrid={setShowGrid}
             gridSize={gridSize}
             setGridSize={setGridSize}
+            gridColor={gridColor}
+            setGridColor={setGridColor}
+            gridOpacity={gridOpacity}
+            setGridOpacity={setGridOpacity}
+            gridType={gridType}
+            setGridType={setGridType}
+            gridStrokeWidth={gridStrokeWidth}
+            setGridStrokeWidth={setGridStrokeWidth}
             darknessMode={darknessMode}
             setDarknessMode={setDarknessMode}
             heroLightRadius={heroLightRadius}

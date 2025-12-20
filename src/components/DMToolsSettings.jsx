@@ -77,7 +77,16 @@ export function DMToolsSettings({
     showGrid,
     setShowGrid,
     gridSize,
+
     setGridSize,
+    gridColor,
+    setGridColor,
+    gridOpacity,
+    setGridOpacity,
+    gridType,
+    setGridType,
+    gridStrokeWidth,
+    setGridStrokeWidth,
     darknessMode,
     setDarknessMode,
     heroLightRadius,
@@ -569,19 +578,83 @@ export function DMToolsSettings({
                         </button>
                     </div>
                     {showGrid && (
-                        <div>
-                            <label className="text-sm block mb-2">Grid Size</label>
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="range"
-                                    min="20"
-                                    max="150"
-                                    step="5"
-                                    value={gridSize}
-                                    onChange={(e) => setGridSize(parseInt(e.target.value))}
-                                    className="flex-1"
-                                />
-                                <span className="text-sm w-12 text-right">{gridSize}px</span>
+
+                        <div className="space-y-4 mt-2">
+                            {/* Size */}
+                            <div>
+                                <label className="text-sm block mb-2">Grid Size</label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="range"
+                                        min="20"
+                                        max="150"
+                                        step="5"
+                                        value={gridSize}
+                                        onChange={(e) => setGridSize(parseInt(e.target.value))}
+                                        className="flex-1"
+                                    />
+                                    <span className="text-sm w-12 text-right">{gridSize}px</span>
+                                </div>
+                            </div>
+
+                            {/* Color & Opacity */}
+                            <div className="flex gap-4">
+                                <div>
+                                    <label className="text-sm block mb-2">Color</label>
+                                    <div className="h-[38px] flex items-center">
+                                        <input
+                                            type="color"
+                                            value={gridColor}
+                                            onChange={(e) => setGridColor(e.target.value)}
+                                            className="w-full h-full rounded cursor-pointer bg-transparent"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex-1">
+                                    <label className="text-sm block mb-2">Opacity</label>
+                                    <div className="flex items-center gap-2 h-[38px]">
+                                        <input
+                                            type="range"
+                                            min="0.1"
+                                            max="1"
+                                            step="0.05"
+                                            value={gridOpacity}
+                                            onChange={(e) => setGridOpacity(parseFloat(e.target.value))}
+                                            className="flex-1"
+                                        />
+                                        <span className="text-sm w-8 text-right">{Math.round(gridOpacity * 100)}%</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Style & Thickness */}
+                            <div className="flex gap-4">
+                                <div className="flex-1">
+                                    <label className="text-sm block mb-2">Structure</label>
+                                    <select
+                                        value={gridType}
+                                        onChange={(e) => setGridType(e.target.value)}
+                                        className="w-full bg-surface px-3 py-2 rounded text-sm h-[38px]"
+                                    >
+                                        <option value="solid">Solid</option>
+                                        <option value="dashed">Dashed</option>
+                                        <option value="dotted">Dotted</option>
+                                    </select>
+                                </div>
+                                <div className="w-1/3">
+                                    <label className="text-sm block mb-2">Thickness</label>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max="5"
+                                            step="0.5"
+                                            value={gridStrokeWidth}
+                                            onChange={(e) => setGridStrokeWidth(parseFloat(e.target.value))}
+                                            className="w-full bg-surface px-3 py-2 rounded text-sm h-[38px]"
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}
