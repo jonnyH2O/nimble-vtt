@@ -1,6 +1,63 @@
-import React, { useRef } from 'react';
-import { Upload, Plus } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Upload, Plus, Link, X } from 'lucide-react';
 import ColorPicker from './ColorPicker';
+
+const ImageInputForm = ({ label, onUpload, onUrlSubmit }) => {
+    const [inputType, setInputType] = useState('upload'); // 'upload' or 'url'
+    const [tempUrl, setTempUrl] = useState('');
+
+    return (
+        <div className="bg-surface-highlight border border-border rounded-lg p-4 space-y-3 mb-4">
+            <h3 className="text-sm font-bold mb-2">Set {label}</h3>
+
+            <div className="flex gap-4 mb-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                        type="radio"
+                        checked={inputType === 'upload'}
+                        onChange={() => setInputType('upload')}
+                        className="bg-primary"
+                    />
+                    <span className="text-sm">Upload</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                        type="radio"
+                        checked={inputType === 'url'}
+                        onChange={() => setInputType('url')}
+                        className="bg-primary"
+                    />
+                    <span className="text-sm">URL</span>
+                </label>
+            </div>
+
+            {inputType === 'upload' ? (
+                <label className="w-full bg-primary hover:bg-primary-hover px-3 py-2 rounded cursor-pointer text-sm flex items-center justify-center gap-2">
+                    <Upload size={16} />
+                    Upload Image
+                    <input type="file" accept="image/*" onChange={onUpload} className="hidden" />
+                </label>
+            ) : (
+                <div className="flex gap-2">
+                    <input
+                        type="url"
+                        value={tempUrl}
+                        onChange={(e) => setTempUrl(e.target.value)}
+                        placeholder="https://example.com/image.jpg"
+                        className="flex-1 bg-surface px-3 py-2 rounded text-sm min-w-0"
+                    />
+                    <button
+                        onClick={() => onUrlSubmit(tempUrl)}
+                        disabled={!tempUrl}
+                        className="bg-primary hover:bg-primary-hover px-3 py-2 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Set
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+};
 
 export function DMToolsSettings({
     isPopoutWindow,
@@ -33,9 +90,36 @@ export function DMToolsSettings({
     setCurrentTheme,
     importBattle,
     exportBattle,
-    handleBackgroundUpload
+    handleBackgroundUpload,
+    handleAppBackgroundUpload,
+    handleBackgroundUrlSubmit,
+    handleAppBackgroundUrlSubmit
 }) {
     const fileInputRef = useRef(null);
+    const [activeSettingsForm, setActiveSettingsForm] = useState('none'); // 'none', 'wallpaper', 'map', 'token'
+
+    // Sync external showAddToken prop with internal state
+    React.useEffect(() => {
+        if (showAddToken) {
+            setActiveSettingsForm('token');
+        } else if (activeSettingsForm === 'token') {
+            setActiveSettingsForm('none');
+        }
+    }, [showAddToken]);
+
+    const handleFormToggle = (formName) => {
+        if (activeSettingsForm === formName) {
+            setActiveSettingsForm('none');
+            if (formName === 'token') setShowAddToken(false);
+        } else {
+            setActiveSettingsForm(formName);
+            if (formName === 'token') {
+                setShowAddToken(true);
+            } else {
+                setShowAddToken(false);
+            }
+        }
+    };
 
     return (
         <div className="p-4">
@@ -43,33 +127,81 @@ export function DMToolsSettings({
             <h2 className="text-xl font-bold mb-4">Settings</h2>
 
             <div className="space-y-4">
-                {/* Background and Add Token Buttons */}
+                {/* Background, Battle Map, and Add Token Buttons */}
+                {/* Background, Battle Map, and Add Token Buttons */}
                 <div className="flex gap-2">
-                    <label className={`flex-1 px-3 py-2 rounded flex items-center justify-center gap-2 text-sm ${isPopoutWindow
-                        ? 'bg-button-muted text-text-muted cursor-not-allowed'
-                        : 'bg-primary hover:bg-primary-hover cursor-pointer'
-                        }`}>
-                        <Upload size={16} />
-                        Background
-                        {!isPopoutWindow && <input type="file" accept="image/*" onChange={handleBackgroundUpload} className="hidden" />}
-                    </label>
                     <button
-                        onClick={() => !isPopoutWindow && setShowAddToken(!showAddToken)}
-                        disabled={isPopoutWindow}
                         className={`flex-1 px-3 py-2 rounded flex items-center justify-center gap-2 text-sm ${isPopoutWindow
                             ? 'bg-button-muted text-text-muted cursor-not-allowed'
-                            : showAddToken
+                            : activeSettingsForm === 'wallpaper'
                                 ? 'bg-tertiary hover:bg-tertiary-hover'
                                 : 'bg-secondary hover:bg-secondary-hover'
                             }`}
+                        onClick={() => !isPopoutWindow && handleFormToggle('wallpaper')}
+                        disabled={isPopoutWindow}
+                    >
+                        <Upload size={16} />
+                        Wallpaper
+                    </button>
+                    <button
+                        className={`flex-1 px-3 py-2 rounded flex items-center justify-center gap-2 text-sm ${isPopoutWindow
+                            ? 'bg-button-muted text-text-muted cursor-not-allowed'
+                            : activeSettingsForm === 'map'
+                                ? 'bg-tertiary hover:bg-tertiary-hover'
+                                : 'bg-secondary hover:bg-secondary-hover'
+                            }`}
+                        onClick={() => !isPopoutWindow && handleFormToggle('map')}
+                        disabled={isPopoutWindow}
+                    >
+                        <Upload size={16} />
+                        Map
+                    </button>
+                    <button
+                        onClick={() => !isPopoutWindow && handleFormToggle('token')}
+                        disabled={isPopoutWindow}
+                        className={`flex-1 px-3 py-2 rounded flex items-center justify-center gap-2 text-sm ${isPopoutWindow
+                            ? 'bg-button-muted text-text-muted cursor-not-allowed'
+                            : activeSettingsForm === 'token'
+                                ? 'bg-tertiary hover:bg-tertiary-hover'
+                                : 'bg-primary hover:bg-primary-hover'
+                            }`}
                     >
                         <Plus size={16} />
-                        {showAddToken ? 'Cancel' : 'Add Token'}
+                        {activeSettingsForm === 'token' ? 'Cancel' : 'Token'}
                     </button>
                 </div>
 
+                {/* Inline Forms */}
+                {activeSettingsForm === 'wallpaper' && (
+                    <ImageInputForm
+                        label="Wallpaper"
+                        onUpload={(e) => {
+                            handleAppBackgroundUpload(e);
+                            setActiveSettingsForm('none');
+                        }}
+                        onUrlSubmit={(url) => {
+                            handleAppBackgroundUrlSubmit(url);
+                            setActiveSettingsForm('none');
+                        }}
+                    />
+                )}
+
+                {activeSettingsForm === 'map' && (
+                    <ImageInputForm
+                        label="Battle Map"
+                        onUpload={(e) => {
+                            handleBackgroundUpload(e);
+                            setActiveSettingsForm('none');
+                        }}
+                        onUrlSubmit={(url) => {
+                            handleBackgroundUrlSubmit(url);
+                            setActiveSettingsForm('none');
+                        }}
+                    />
+                )}
+
                 {/* Add Token Form - Inline */}
-                {showAddToken && (
+                {activeSettingsForm === 'token' && (
                     <div className="bg-surface-highlight border border-border rounded-lg p-4 space-y-3">
                         <h3 className="text-sm font-bold mb-2">Add New Token</h3>
 
@@ -168,6 +300,7 @@ export function DMToolsSettings({
                         <button
                             onClick={() => {
                                 handleAddToken();
+                                setActiveSettingsForm('none');
                                 setShowAddToken(false);
                             }}
                             className="w-full bg-secondary hover:bg-secondary-hover px-3 py-2 rounded text-sm font-bold mt-2"
