@@ -343,11 +343,11 @@ export default function DMTools({
   return (
     <div className={`bg-surface flex flex-col h-full ${isPopoutWindow || isOverlay ? 'w-full' : 'border-l border-border'}`} style={isPopoutWindow || isOverlay ? {} : { width: `${SIDEBAR_WIDTH}px` }}>
       {/* Tab Navigation */}
-      <div className="bg-surface-highlight border-b border-border p-3 flex items-center justify-between flex-shrink-0">
-        <div className="flex gap-2">
+      <div className="bg-surface-highlight border-b border-border px-3 pt-3 pb-0 flex items-end justify-between flex-shrink-0">
+        <div className="flex gap-1">
           <button
             onClick={() => setSidebarView('turnOrder')}
-            className={`p-2 rounded flex items-center justify-center ${sidebarView === 'turnOrder' ? 'bg-primary' : 'bg-tertiary hover:bg-tertiary-hover'
+            className={`px-4 py-2 rounded-t-lg flex items-center justify-center transition-all ${sidebarView === 'turnOrder' ? 'bg-surface text-primary -mb-px border-t-2 border-primary pb-2.5' : 'text-text-muted hover:text-text hover:bg-surface/20'
               }`}
             title="Turn Order"
           >
@@ -355,7 +355,7 @@ export default function DMTools({
           </button >
           <button
             onClick={() => setSidebarView('dictionary')}
-            className={`p-2 rounded flex items-center justify-center ${sidebarView === 'dictionary' ? 'bg-primary' : 'bg-tertiary hover:bg-tertiary-hover'
+            className={`px-4 py-2 rounded-t-lg flex items-center justify-center transition-all ${sidebarView === 'dictionary' ? 'bg-surface text-primary -mb-px border-t-2 border-primary pb-2.5' : 'text-text-muted hover:text-text hover:bg-surface/20'
               }`}
             title="Nimble Dictionary"
           >
@@ -363,7 +363,7 @@ export default function DMTools({
           </button>
           <button
             onClick={() => setSidebarView('dice')}
-            className={`p-2 rounded flex items-center justify-center ${sidebarView === 'dice' ? 'bg-primary' : 'bg-tertiary hover:bg-tertiary-hover'
+            className={`px-4 py-2 rounded-t-lg flex items-center justify-center transition-all ${sidebarView === 'dice' ? 'bg-surface text-primary -mb-px border-t-2 border-primary pb-2.5' : 'text-text-muted hover:text-text hover:bg-surface/20'
               }`}
             title="Dice Roller"
           >
@@ -371,7 +371,7 @@ export default function DMTools({
           </button>
           <button
             onClick={() => setSidebarView('settings')}
-            className={`p-2 rounded flex items-center justify-center ${sidebarView === 'settings' ? 'bg-primary' : 'bg-tertiary hover:bg-tertiary-hover'
+            className={`px-4 py-2 rounded-t-lg flex items-center justify-center transition-all ${sidebarView === 'settings' ? 'bg-surface text-primary -mb-px border-t-2 border-primary pb-2.5' : 'text-text-muted hover:text-text hover:bg-surface/20'
               }`}
             title="Settings"
           >
@@ -380,13 +380,13 @@ export default function DMTools({
         </div >
 
         {/* Action buttons */}
-        < div className="flex gap-2" >
+        < div className="flex gap-2 pb-2" >
           {/* Pop-out button - only in main window */}
           {
             !isPopoutWindow && onPopout && (
               <button
                 onClick={onPopout}
-                className="p-2 rounded bg-tertiary hover:bg-tertiary-hover"
+                className="p-2 rounded bg-tertiary hover:bg-tertiary-hover text-text-muted hover:text-text"
                 title="Pop Out Sidebar"
               >
                 <ExternalLink size={16} />
