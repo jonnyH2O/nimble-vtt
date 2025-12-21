@@ -158,7 +158,7 @@ export default function NimbleCombatTracker() {
 
   // UI Panels
   const [expandedNotes, setExpandedNotes] = useState({});
-  const [isToolbarCollapsed, setIsToolbarCollapsed] = useState(false);
+  const [isToolbarCollapsed, setIsToolbarCollapsed] = useState(true);
   const [panningView, setPanningView] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
@@ -946,6 +946,32 @@ export default function NimbleCombatTracker() {
           break;
         case MESSAGE_TYPES.REMOVE_TOKEN:
           handleRemoveToken(payload.tokenId);
+          break;
+        case MESSAGE_TYPES.ADD_TOKEN: {
+          // Calculate center position similar to handleAddToken
+          let startX = 100;
+          let startY = 100;
+
+          if (boardRef.current) {
+            const boardWidth = boardRef.current.offsetWidth;
+            const topPadding = 50;
+
+            // Equation: x * zoom + viewOffset = centerScreen
+            const centerScreenX = boardWidth / 2;
+            startX = (centerScreenX - viewOffset.x) / zoomLevel - (tokenSize / 2);
+            startY = (topPadding - viewOffset.y) / zoomLevel;
+          }
+
+          const tokenId = tokenManager.addToken({
+            ...payload.tokenData,
+            x: startX,
+            y: startY
+          });
+          turnOrderManager.addToTurnOrder(tokenId);
+          break;
+        }
+        case MESSAGE_TYPES.UPDATE_TOKEN_DATA:
+          tokenManager.updateTokenData(payload.tokenId, payload.updates);
           break;
         case MESSAGE_TYPES.START_TURN:
           tokenManager.startTurn(payload.tokenId);

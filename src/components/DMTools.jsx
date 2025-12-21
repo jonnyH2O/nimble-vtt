@@ -184,18 +184,35 @@ export default function DMTools({
   };
 
   const handleSaveToken = () => {
-    if (editTokenData && selectedToken && tokenManager) {
-      tokenManager.updateTokenData(selectedToken, {
-        name: editTokenData.name,
-        type: editTokenData.type,
-        armor: editTokenData.armor,
-        hasResource: editTokenData.hasResource,
-        resourceName: editTokenData.resourceName,
-        resourceColor: editTokenData.resourceColor,
-        image: editTokenData.image,
-        maxResource: editTokenData.maxResource,
-        currentResource: editTokenData.currentResource
-      });
+    if (editTokenData && selectedToken) {
+      if (tokenManager) {
+        tokenManager.updateTokenData(selectedToken, {
+          name: editTokenData.name,
+          type: editTokenData.type,
+          armor: editTokenData.armor,
+          hasResource: editTokenData.hasResource,
+          resourceName: editTokenData.resourceName,
+          resourceColor: editTokenData.resourceColor,
+          image: editTokenData.image,
+          maxResource: editTokenData.maxResource,
+          currentResource: editTokenData.currentResource
+        });
+      } else if (onAction) {
+        onAction(createMessage(MESSAGE_TYPES.UPDATE_TOKEN_DATA, {
+          tokenId: selectedToken,
+          updates: {
+            name: editTokenData.name,
+            type: editTokenData.type,
+            armor: editTokenData.armor,
+            hasResource: editTokenData.hasResource,
+            resourceName: editTokenData.resourceName,
+            resourceColor: editTokenData.resourceColor,
+            image: editTokenData.image,
+            maxResource: editTokenData.maxResource,
+            currentResource: editTokenData.currentResource
+          }
+        }));
+      }
       if (setShowEditToken) setShowEditToken(false);
     }
   };
@@ -413,27 +430,25 @@ export default function DMTools({
                 <div className="flex gap-2">
                   <button
                     onClick={() => {
-                      if (!isPopoutWindow && setShowAddToken) {
+                      if (setShowAddToken) {
                         setShowAddToken(!showAddToken);
                         if (showEditToken) setShowEditToken(false);
                       }
                     }}
-                    disabled={isPopoutWindow}
-                    className={`p-2 rounded flex items-center justify-center ${isPopoutWindow ? 'bg-button-muted text-text-muted cursor-not-allowed' : 'bg-secondary hover:bg-secondary-hover'
-                      }`}
+                    className={`p-2 rounded flex items-center justify-center bg-secondary hover:bg-secondary-hover`}
                     title="Add Token"
                   >
                     <Plus size={16} />
                   </button>
                   <button
                     onClick={() => {
-                      if (selectedToken && !isPopoutWindow && setShowEditToken) {
+                      if (selectedToken && setShowEditToken) {
                         setShowEditToken(!showEditToken);
                         if (showAddToken) setShowAddToken(false);
                       }
                     }}
-                    disabled={isPopoutWindow || !selectedToken}
-                    className={`p-2 rounded flex items-center justify-center ${isPopoutWindow || !selectedToken
+                    disabled={!selectedToken}
+                    className={`p-2 rounded flex items-center justify-center ${!selectedToken
                       ? 'bg-button-muted text-text-muted cursor-not-allowed'
                       : 'bg-secondary hover:bg-secondary-hover'
                       }`}

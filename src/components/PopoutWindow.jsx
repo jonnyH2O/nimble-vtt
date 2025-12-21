@@ -17,6 +17,37 @@ export default function PopoutWindow() {
   const windowSync = useWindowSync(false); // false = pop-out window
   const fileInputRef = useRef(null);
 
+  // Local state for token forms
+  const [showAddToken, setShowAddToken] = useState(false);
+  const [showEditToken, setShowEditToken] = useState(false);
+  const [newToken, setNewToken] = useState({ name: '', type: 'hero', image: null, hasResource: false, resourceName: '', resourceColor: '#3b82f6', currentResource: 5, maxResource: 5, armor: 'none' });
+
+  // Update edit/add visibility when selection changes (mirroring main window behavior)
+  useEffect(() => {
+    if (!syncedState?.selectedToken) {
+      if (showEditToken) setShowEditToken(false);
+    }
+  }, [syncedState?.selectedToken]);
+
+  const handleTokenImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setNewToken({ ...newToken, image: event.target.result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAddToken = () => {
+    if (newToken.name) {
+      windowSync.broadcast(createMessage(MESSAGE_TYPES.ADD_TOKEN, { tokenData: newToken }));
+      setNewToken({ name: '', type: 'hero', image: null, hasResource: false, resourceName: '', resourceColor: '#3b82f6', currentResource: 5, maxResource: 5, armor: 'none' });
+      setShowAddToken(false);
+    }
+  };
+
   const handleFileImport = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -196,14 +227,22 @@ export default function PopoutWindow() {
         setDarknessIntensity={(darknessIntensity) => sendAction(createMessage(MESSAGE_TYPES.SETTINGS_UPDATE, { darknessIntensity }))}
         showPartyOverview={syncedState.showPartyOverview !== undefined ? syncedState.showPartyOverview : true}
         setShowPartyOverview={(showPartyOverview) => sendAction(createMessage(MESSAGE_TYPES.SETTINGS_UPDATE, { showPartyOverview }))}
-        // Add Token props - buttons are disabled in popout window mode
-        handleBackgroundUpload={() => { }} // No-op - button disabled
-        showAddToken={false}
-        setShowAddToken={() => { }} // No-op - button disabled
-        newToken={{}} // Stub
-        setNewToken={() => { }} // Stub
-        handleAddToken={() => { }} // Stub
-        handleTokenImageUpload={() => { }} // Stub
+        // Add Token props - ENABLED in popout window
+        handleBackgroundUpload={() => { }} // No-op - background upload still disabled
+        showAddToken={showAddToken}
+        setShowAddToken={(show) => {
+          setShowAddToken(show);
+          if (show) setShowEditToken(false);
+        }}
+        showEditToken={showEditToken}
+        setShowEditToken={(show) => {
+          setShowEditToken(show);
+          if (show) setShowAddToken(false);
+        }}
+        newToken={newToken}
+        setNewToken={setNewToken}
+        handleAddToken={handleAddToken}
+        handleTokenImageUpload={handleTokenImageUpload}
         currentTheme={syncedState.currentTheme || 'default'}
         setCurrentTheme={(theme) => sendAction(createMessage(MESSAGE_TYPES.SETTINGS_UPDATE, { currentTheme: theme }))}
         reactionStates={syncedState.reactionStates || {}}
