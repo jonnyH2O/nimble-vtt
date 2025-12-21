@@ -36,6 +36,34 @@ export default function ColorPicker({ color, onChange }) {
         };
     }, []);
 
+    const [popupPosition, setPopupPosition] = useState({ top: 0, left: 0 });
+
+    useEffect(() => {
+        if (isOpen && containerRef.current) {
+            const rect = containerRef.current.getBoundingClientRect();
+            // Default to showing below and aligned to right of button (standard behavior previously)
+            // But check if it fits? For now, just replicate "bottom-right" alignment but in fixed coords
+            // Actually, let's align left edge with button left edge, or better, center?
+            // Original was "right-0" which means right edge with button right edge.
+
+            // Calculate position
+            const top = rect.bottom + 8; // 8px gap
+            const left = rect.left; // Align left, or can calculate to align right if needed.
+
+            // Adjust if logic for right alignment is preferred:
+            // left: rect.right - popupWidth (we don't know popup width easily without rendering)
+
+            // Let's stick to align left for now, or just try to be smart. 
+            // The screenshot showed it cut off on the LEFT side because it was extending left?
+            // "right-0" means right-aligned. 
+
+            setPopupPosition({
+                top,
+                left: rect.left
+            });
+        }
+    }, [isOpen]);
+
     return (
         <div className="relative" ref={containerRef}>
             <button
@@ -46,7 +74,13 @@ export default function ColorPicker({ color, onChange }) {
             />
 
             {isOpen && (
-                <div className="absolute top-full right-0 mt-2 p-2 bg-gray-800 rounded-lg shadow-xl border border-gray-700 z-50 grid grid-cols-4 gap-2 w-max">
+                <div
+                    className="fixed mt-2 p-2 bg-gray-800 rounded-lg shadow-xl border border-gray-700 z-[9999] grid grid-cols-4 gap-2 w-max"
+                    style={{
+                        top: popupPosition.top,
+                        left: popupPosition.left,
+                    }}
+                >
                     {COLORS.map((c) => (
                         <button
                             key={c}

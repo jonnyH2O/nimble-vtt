@@ -506,11 +506,9 @@ export function DMToolsSettings({
                                 <div>
                                     <label className="text-sm block mb-2">Color</label>
                                     <div className="h-[38px] flex items-center">
-                                        <input
-                                            type="color"
-                                            value={gridColor}
-                                            onChange={(e) => setGridColor(e.target.value)}
-                                            className="w-full h-full rounded cursor-pointer bg-transparent"
+                                        <ColorPicker
+                                            color={gridColor}
+                                            onChange={setGridColor}
                                         />
                                     </div>
                                 </div>
