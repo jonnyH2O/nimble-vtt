@@ -12,6 +12,7 @@ import { useDrawing } from './hooks/useDrawing';
 import { useTurnOrder } from './hooks/useTurnOrder';
 import { useDiceRoller } from './hooks/useDiceRoller';
 import { useWindowSync } from './hooks/useWindowSync';
+import { useHistory } from './hooks/useHistory';
 import { MESSAGE_TYPES, createMessage } from './utils/windowMessages';
 import { DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT, MAX_CANVAS_DIMENSION, SIDEBAR_WIDTH, HUD_Z_INDEX } from './constants';
 import { getTokenBorderColor, getTokenBgColor, getTokenIconName } from './utils/tokenUtils';
@@ -113,9 +114,96 @@ export default function NimbleCombatTracker() {
     setEraseSize,
     cursorPos,
     drawCanvasRef,
-    drawingHistory,
-    historyStep
+    drawingRef
   } = drawingManager;
+
+  // History Management
+  const {
+    history,
+    currentIndex,
+    addToHistory,
+    undo: undoHistory,
+    redo: redoHistory,
+    canUndo,
+    canRedo,
+    currentHistoryItem
+  } = useHistory({ type: 'DRAWING', data: null }); // Start with null data, will be populated on first draw/load
+
+  // Initialize history with initial blank canvas if needed, or just let the first draw capture it.
+  // Actually, better to save the blank canvas state when component mounts if we want to undo back to blank.
+  useEffect(() => {
+    if (drawCanvasRef.current && history.length === 1 && history[0].data === null) {
+      const blankCanvas = drawCanvasRef.current.toDataURL();
+      // We can't easily replace the initial state in useHistory without a setter, 
+      // but we can just treat null as "blank" in restore logic.
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const performUndo = useCallback(() => {
+    const itemToUndo = undoHistory();
+
+    /* console.log('↩️ Perform Undo:', {
+      currentIndex,
+      item: itemToUndo
+    }); */
+
+    if (!itemToUndo) return;
+
+    if (itemToUndo.type === 'TOKEN_MOVE') {
+      const { id, from } = itemToUndo;
+      // console.log('🔙 Restoring Token Position:', { id, x: from.x, y: from.y });
+      tokenManager.updateTokenPosition(id, from.x, from.y);
+    } else if (itemToUndo.type === 'DRAWING') {
+      // Find the last valid drawing state in history relative to the new index
+      // We are now at currentIndex - 1. We need to find the drawing state that applies here.
+      let found = false;
+      // Search backwards from the NEW current index (which is currentIndex - 1)
+      for (let i = currentIndex - 1; i >= 0; i--) {
+        if (history[i].type === 'DRAWING') {
+          if (history[i].data) {
+            drawingManager.loadDrawing(history[i].data);
+          } else {
+            drawingManager.clearDrawings();
+          }
+          found = true;
+          break;
+        }
+      }
+      // If no earlier drawing state is found, clear the canvas (initial state)
+      if (!found) {
+        drawingManager.clearDrawings();
+      }
+    }
+  }, [history, currentIndex, undoHistory, drawingManager, tokenManager]);
+
+  const performRedo = useCallback(() => {
+    // We are at N. Redo means going to N+1.
+    // We need to Apply Item N+1.
+    // We need to Apply Item N+1.
+    const nextItem = redoHistory();
+    /* console.log('↪️ Perform Redo:', {
+      currentIndex: currentIndex + 1, // index after redo
+      item: nextItem
+    }); */
+
+    if (!nextItem) return;
+
+    if (nextItem.type === 'TOKEN_MOVE') {
+      const { id, to } = nextItem;
+      tokenManager.updateTokenPosition(id, to.x, to.y);
+    } else if (nextItem.type === 'DRAWING') {
+      drawingManager.loadDrawing(nextItem.data);
+    }
+  }, [redoHistory, tokenManager, drawingManager]);
+
+  const findLastDrawingState = (hist, idx) => {
+    for (let i = idx; i >= 0; i--) {
+      if (hist[i].type === 'DRAWING') return hist[i];
+    }
+    return null;
+  };
+
+
 
   // Turn Order Management (custom hook)
   const turnOrderManager = useTurnOrder(tokens);
@@ -538,12 +626,40 @@ export default function NimbleCombatTracker() {
   };
 
   const handleMouseUp = () => {
+    // Check if drawing occurred (must check before handleDrawEnd potentially resets things, though React state persists in closure)
+    // Also check drawingRef directly to catch very fast drawing actions where state might lag
+    if (drawing || (drawingRef.current && drawingRef.current.length > 0)) {
+      const data = drawingManager.getDrawingData();
+      addToHistory({
+        type: 'DRAWING',
+        data: data
+      });
+    }
+
     drawingManager.handleDrawEnd();
 
     // Clear the pickup timeout to prevent delayed dragging
     if (pickupTimeoutRef.current) {
       clearTimeout(pickupTimeoutRef.current);
       pickupTimeoutRef.current = null;
+    }
+
+    // Check if token moved for History
+    // MUST check pickingUp as well, to catch fast drags that happen before pickup animation completes
+    if ((dragging || pickingUp) && ghostTokenPosition) {
+      const token = tokens.find(t => t.id === (dragging || pickingUp));
+      if (token) {
+        // Check if position actually changed
+        // Use a small epsilon for float comparison logic, though inputs are pixels
+        if (Math.abs(token.x - ghostTokenPosition.x) > 0.1 || Math.abs(token.y - ghostTokenPosition.y) > 0.1) {
+          addToHistory({
+            type: 'TOKEN_MOVE',
+            id: token.id,
+            from: { x: ghostTokenPosition.x, y: ghostTokenPosition.y },
+            to: { x: token.x, y: token.y }
+          });
+        }
+      }
     }
 
     setDragging(null);
@@ -554,6 +670,15 @@ export default function NimbleCombatTracker() {
   };
 
   const handleMouseLeave = () => {
+    // Check if drawing occurred
+    if (drawing || (drawingRef.current && drawingRef.current.length > 0)) {
+      const data = drawingManager.getDrawingData();
+      addToHistory({
+        type: 'DRAWING',
+        data: data
+      });
+    }
+
     drawingManager.handleDrawEnd();
     drawingManager.clearCursorPos();
 
@@ -561,6 +686,22 @@ export default function NimbleCombatTracker() {
     if (pickupTimeoutRef.current) {
       clearTimeout(pickupTimeoutRef.current);
       pickupTimeoutRef.current = null;
+    }
+
+    // Check if token moved for History
+    if ((dragging || pickingUp) && ghostTokenPosition) {
+      const token = tokens.find(t => t.id === (dragging || pickingUp));
+      if (token) {
+        // Check if position actually changed
+        if (Math.abs(token.x - ghostTokenPosition.x) > 0.1 || Math.abs(token.y - ghostTokenPosition.y) > 0.1) {
+          addToHistory({
+            type: 'TOKEN_MOVE',
+            id: token.id,
+            from: { x: ghostTokenPosition.x, y: ghostTokenPosition.y },
+            to: { x: token.x, y: token.y }
+          });
+        }
+      }
     }
 
     setDragging(null);
@@ -648,6 +789,14 @@ export default function NimbleCombatTracker() {
       // Restore drawings
       if (battleState.drawings) {
         drawingManager.loadDrawing(battleState.drawings);
+        // Add this loaded drawing state to history so it becomes the new baseline
+        // We delay slightly to ensure the canvas has updated if loadDrawing is async (it uses an image onload)
+        // However, standard loadDrawing in useDrawing is often assumed synchronous for dataURL, but the image load is async.
+        // We should just submit the data we HAVE (battleState.drawings) to history.
+        addToHistory({
+          type: 'DRAWING',
+          data: battleState.drawings
+        });
       }
 
       // Switch back to turn order view
@@ -765,14 +914,14 @@ export default function NimbleCombatTracker() {
       // Redo: Ctrl+Shift+Z (or Cmd+Shift+Z on Mac) - check this first
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
         e.preventDefault();
-        drawingManager.redo();
+        performRedo();
         return;
       }
 
       // Undo: Ctrl+Z (or Cmd+Z on Mac)
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
         e.preventDefault();
-        drawingManager.undo();
+        performUndo();
       }
     };
 
@@ -794,7 +943,7 @@ export default function NimbleCombatTracker() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [historyStep, drawingHistory, selectedToken, drawMode, setShowPartyOverview]);
+  }, [performUndo, performRedo, selectedToken, drawMode, setShowPartyOverview, turnOrder, tokens, tokenManager]);
 
   // Broadcast state to pop-out window
   useEffect(() => {
@@ -1155,10 +1304,10 @@ export default function NimbleCombatTracker() {
                   setDrawSize={setDrawSize}
                   eraseSize={eraseSize}
                   setEraseSize={setEraseSize}
-                  historyStep={historyStep}
-                  drawingHistory={drawingHistory}
-                  undo={drawingManager.undo}
-                  redo={drawingManager.redo}
+                  canUndo={canUndo}
+                  canRedo={canRedo}
+                  undo={performUndo}
+                  redo={performRedo}
                   clearDrawings={drawingManager.clearDrawings}
                   zoomLevel={zoomLevel}
                   setZoomLevel={setZoomLevel}
