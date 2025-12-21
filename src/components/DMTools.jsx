@@ -1,5 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { Trash2, List, Book, RotateCcw, AlertCircle, ExternalLink, Dices, Settings, Upload, Plus, Sword, X, ShieldX, Shield } from 'lucide-react';
+import { Trash2, List, Book, RotateCcw, AlertCircle, ExternalLink, Dices, Settings, Upload, Plus, Pencil, Sword, X, ShieldX, Shield } from 'lucide-react';
+import ColorPicker from './ColorPicker';
 
 
 
@@ -141,6 +142,8 @@ export default function DMTools({
   handleAppBackgroundUrlSubmit,
   showAddToken,
   setShowAddToken,
+  showEditToken,
+  setShowEditToken,
   newToken,
   setNewToken,
   handleAddToken,
@@ -156,6 +159,49 @@ export default function DMTools({
   const { updateWounds, toggleTempHP } = tokenManager || {};
   const fileInputRef = useRef(null);
   const [popoutDragIndex, setPopoutDragIndex] = React.useState(null);
+  // Local state for editing token
+  const [editTokenData, setEditTokenData] = useState(null);
+
+  // Sync editTokenData when showEditToken becomes true
+  React.useEffect(() => {
+    if (showEditToken && selectedToken && tokens) {
+      const token = tokens.find(t => t.id === selectedToken);
+      if (token) {
+        setEditTokenData({ ...token });
+      }
+    }
+  }, [showEditToken, selectedToken, tokens]);
+
+  const handleEditTokenImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setEditTokenData({ ...editTokenData, image: event.target.result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveToken = () => {
+    if (editTokenData && selectedToken && tokenManager) {
+      tokenManager.updateTokenData(selectedToken, {
+        name: editTokenData.name,
+        type: editTokenData.type,
+        armor: editTokenData.armor,
+        hasResource: editTokenData.hasResource,
+        resourceName: editTokenData.resourceName,
+        resourceColor: editTokenData.resourceColor,
+        image: editTokenData.image,
+        maxResource: editTokenData.maxResource,
+        currentResource: editTokenData.currentResource
+      });
+      if (setShowEditToken) setShowEditToken(false);
+    }
+  };
+
+  // Drag and Drop (Reordering) - using native HTML5 DnD for simplicity and performance
+  const [draggedItemIndex, setDraggedItemIndex] = useState(null);
   const [hoveredTurnButton, setHoveredTurnButton] = useState(null);
   // Refs to track token card positions for the action indicator
   const tokenCardRefs = useRef({});
@@ -367,16 +413,33 @@ export default function DMTools({
                 <div className="flex gap-2">
                   <button
                     onClick={() => {
-                      handleAction(
-                        MESSAGE_TYPES.RESET_NON_HERO_ACTIONS,
-                        {},
-                        () => tokenManager.resetNonHeroActions()
-                      );
+                      if (!isPopoutWindow && setShowAddToken) {
+                        setShowAddToken(!showAddToken);
+                        if (showEditToken) setShowEditToken(false);
+                      }
                     }}
-                    className="bg-primary hover:bg-primary-hover p-2 rounded flex items-center justify-center"
-                    title="Reset all non-hero actions"
+                    disabled={isPopoutWindow}
+                    className={`p-2 rounded flex items-center justify-center ${isPopoutWindow ? 'bg-button-muted text-text-muted cursor-not-allowed' : 'bg-secondary hover:bg-secondary-hover'
+                      }`}
+                    title="Add Token"
                   >
-                    <RotateCcw size={16} />
+                    <Plus size={16} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (selectedToken && !isPopoutWindow && setShowEditToken) {
+                        setShowEditToken(!showEditToken);
+                        if (showAddToken) setShowAddToken(false);
+                      }
+                    }}
+                    disabled={isPopoutWindow || !selectedToken}
+                    className={`p-2 rounded flex items-center justify-center ${isPopoutWindow || !selectedToken
+                      ? 'bg-button-muted text-text-muted cursor-not-allowed'
+                      : 'bg-secondary hover:bg-secondary-hover'
+                      }`}
+                    title={!selectedToken ? "Select token to edit" : "Edit Token"}
+                  >
+                    <Pencil size={16} />
                   </button>
                   <button
                     onClick={() => setDeleteMode(!deleteMode)}
@@ -388,9 +451,260 @@ export default function DMTools({
                   </button>
                 </div>
               </div>
-              <div className="text-xs text-text-muted mb-3">
-                {deleteMode ? 'Click tokens to remove them' : 'Drag to reorder'}
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-xs text-text-muted">
+                  {deleteMode ? 'Click tokens to remove them' : 'Drag to reorder'}
+                </div>
+                <button
+                  onClick={() => {
+                    handleAction(
+                      MESSAGE_TYPES.RESET_NON_HERO_ACTIONS,
+                      {},
+                      () => tokenManager.resetNonHeroActions()
+                    );
+                  }}
+                  className="bg-secondary hover:bg-secondary-hover p-1 rounded flex items-center justify-center"
+                  style={{ width: '24px', height: '24px' }}
+                  title="Reset all non-hero actions"
+                >
+                  <RotateCcw size={12} />
+                </button>
               </div>
+
+              {/* Add Token Form - Inline */}
+              {showAddToken && (
+                <div className="bg-surface-highlight border border-border rounded-lg p-4 mb-4 space-y-3">
+                  <h3 className="text-sm font-bold mb-2">Add New Token</h3>
+
+                  <div>
+                    <label className="block text-xs mb-1">Name</label>
+                    <input
+                      type="text"
+                      value={newToken.name}
+                      onChange={(e) => setNewToken({ ...newToken, name: e.target.value })}
+                      className="w-full bg-surface px-3 py-2 rounded text-sm"
+                      placeholder="Token name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs mb-1">Type</label>
+                    <select
+                      value={newToken.type}
+                      onChange={(e) => setNewToken({ ...newToken, type: e.target.value })}
+                      className="w-full bg-surface px-3 py-2 rounded text-sm"
+                    >
+                      <option value="hero">Hero</option>
+                      <option value="companion">Companion</option>
+                      <option value="enemy">Enemy</option>
+                      <option value="legendary">Legendary</option>
+                    </select>
+                  </div>
+
+                  {/* Armor Option - Only for Enemy or Legendary */}
+                  {(newToken.type === 'enemy' || newToken.type === 'legendary') && (
+                    <div>
+                      <label className="block text-xs mb-1">Armor</label>
+                      <select
+                        value={newToken.armor || 'none'}
+                        onChange={(e) => setNewToken({ ...newToken, armor: e.target.value })}
+                        className="w-full bg-surface px-3 py-2 rounded text-sm"
+                      >
+                        <option value="none">None</option>
+                        <option value="medium">Medium</option>
+                        <option value="heavy">Heavy</option>
+                      </select>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newToken.hasResource}
+                        onChange={(e) => setNewToken({ ...newToken, hasResource: e.target.checked })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-xs font-bold">Has Resource?</span>
+                    </label>
+
+                    {newToken.hasResource && (
+                      <div className="mt-2 space-y-2 pl-6">
+                        <div className="flex gap-2 items-end">
+                          <div className="flex-1">
+                            <label className="block text-xs mb-1">Resource Name</label>
+                            <input
+                              type="text"
+                              value={newToken.resourceName}
+                              onChange={(e) => setNewToken({ ...newToken, resourceName: e.target.value })}
+                              className="w-full bg-surface px-3 py-2 rounded text-sm"
+                              placeholder="e.g., Mana, Focus, Rage"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs mb-1">Color</label>
+                            <ColorPicker
+                              color={newToken.resourceColor}
+                              onChange={(color) => setNewToken({ ...newToken, resourceColor: color })}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs mb-1">Image (Optional)</label>
+                    <label className="w-full bg-primary hover:bg-primary-hover px-3 py-2 rounded cursor-pointer text-sm flex items-center justify-center gap-2">
+                      <Upload size={16} />
+                      {newToken.image ? 'Change Image' : 'Upload Image'}
+                      <input type="file" accept="image/*" onChange={handleTokenImageUpload} className="hidden" />
+                    </label>
+                    {newToken.image && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <img src={newToken.image} alt="Preview" className="w-10 h-10 rounded-full object-cover" />
+                        <span className="text-xs text-text-muted">Image uploaded</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      handleAddToken();
+                      setShowAddToken(false);
+                    }}
+                    className="w-full bg-secondary hover:bg-secondary-hover px-3 py-2 rounded text-sm font-bold mt-2"
+                  >
+                    Add Token
+                  </button>
+                </div>
+              )}
+
+              {/* Edit Token Form - Inline */}
+              {showEditToken && editTokenData && (
+                <div className="bg-surface-highlight border border-border rounded-lg p-4 mb-4 space-y-3">
+                  <h3 className="text-sm font-bold mb-2">Edit Token</h3>
+
+                  <div>
+                    <label className="block text-xs mb-1">Name</label>
+                    <input
+                      type="text"
+                      value={editTokenData.name}
+                      onChange={(e) => setEditTokenData({ ...editTokenData, name: e.target.value })}
+                      className="w-full bg-surface px-3 py-2 rounded text-sm"
+                      placeholder="Token name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs mb-1">Type</label>
+                    <select
+                      value={editTokenData.type}
+                      onChange={(e) => setEditTokenData({ ...editTokenData, type: e.target.value })}
+                      className="w-full bg-surface px-3 py-2 rounded text-sm"
+                    >
+                      <option value="hero">Hero</option>
+                      <option value="companion">Companion</option>
+                      <option value="enemy">Enemy</option>
+                      <option value="legendary">Legendary</option>
+                    </select>
+                  </div>
+
+                  {/* Armor Option - Only for Enemy or Legendary */}
+                  {(editTokenData.type === 'enemy' || editTokenData.type === 'legendary') && (
+                    <div>
+                      <label className="block text-xs mb-1">Armor</label>
+                      <select
+                        value={editTokenData.armor || 'none'}
+                        onChange={(e) => setEditTokenData({ ...editTokenData, armor: e.target.value })}
+                        className="w-full bg-surface px-3 py-2 rounded text-sm"
+                      >
+                        <option value="none">None</option>
+                        <option value="medium">Medium</option>
+                        <option value="heavy">Heavy</option>
+                      </select>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editTokenData.hasResource}
+                        onChange={(e) => setEditTokenData({ ...editTokenData, hasResource: e.target.checked })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-xs font-bold">Has Resource?</span>
+                    </label>
+
+                    {editTokenData.hasResource && (
+                      <div className="mt-2 space-y-2 pl-6">
+                        <div className="flex gap-2 items-end">
+                          <div className="flex-1">
+                            <label className="block text-xs mb-1">Resource Name</label>
+                            <input
+                              type="text"
+                              value={editTokenData.resourceName}
+                              onChange={(e) => setEditTokenData({ ...editTokenData, resourceName: e.target.value })}
+                              className="w-full bg-surface px-3 py-2 rounded text-sm"
+                              placeholder="e.g., Mana, Focus, Rage"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs mb-1">Color</label>
+                            <ColorPicker
+                              color={editTokenData.resourceColor}
+                              onChange={(color) => setEditTokenData({ ...editTokenData, resourceColor: color })}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <label className="block text-xs mb-1">Max Resource</label>
+                            <input
+                              type="number"
+                              value={editTokenData.maxResource || 0}
+                              onChange={(e) => setEditTokenData({ ...editTokenData, maxResource: parseInt(e.target.value) || 0 })}
+                              className="w-full bg-surface px-3 py-2 rounded text-sm"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <label className="block text-xs mb-1">Current Resource</label>
+                            <input
+                              type="number"
+                              value={editTokenData.currentResource || 0}
+                              onChange={(e) => setEditTokenData({ ...editTokenData, currentResource: parseInt(e.target.value) || 0 })}
+                              className="w-full bg-surface px-3 py-2 rounded text-sm"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs mb-1">Image (Optional)</label>
+                    <label className="w-full bg-primary hover:bg-primary-hover px-3 py-2 rounded cursor-pointer text-sm flex items-center justify-center gap-2">
+                      <Upload size={16} />
+                      {editTokenData.image ? 'Change Image' : 'Upload Image'}
+                      <input type="file" accept="image/*" onChange={handleEditTokenImageUpload} className="hidden" />
+                    </label>
+                    {editTokenData.image && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <img src={editTokenData.image} alt="Preview" className="w-10 h-10 rounded-full object-cover" />
+                        <span className="text-xs text-text-muted">Image uploaded</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={handleSaveToken}
+                    className="w-full bg-secondary hover:bg-secondary-hover px-3 py-2 rounded text-sm font-bold mt-2"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              )}
 
               {/* Token Cards */}
               <div className="space-y-2">

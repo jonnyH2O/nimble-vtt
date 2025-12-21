@@ -61,9 +61,8 @@ const ImageInputForm = ({ label, onUpload, onUrlSubmit }) => {
 
 export function DMToolsSettings({
     isPopoutWindow,
-    shouldShowAddToken, // Renamed to avoid confusion with internal state if needed, but keeping simple for now
     setShowAddToken,
-    showAddToken,       // Passing current boolean state
+    showAddToken,
     newToken,
     setNewToken,
     handleAddToken,
@@ -108,80 +107,13 @@ export function DMToolsSettings({
     updateTokenData
 }) {
     const fileInputRef = useRef(null);
-    const [activeSettingsForm, setActiveSettingsForm] = useState('none'); // 'none', 'wallpaper', 'map', 'token', 'editToken'
-    const [editTokenData, setEditTokenData] = useState(null);
-
-    // Sync external showAddToken prop with internal state
-    React.useEffect(() => {
-        if (showAddToken) {
-            setActiveSettingsForm('token');
-        } else if (activeSettingsForm === 'token') {
-            setActiveSettingsForm('none');
-        }
-    }, [showAddToken]);
-
-    // Handle initial edit token data population
-    React.useEffect(() => {
-        if (activeSettingsForm === 'editToken' && selectedTokenId && tokens) {
-            const token = tokens.find(t => t.id === selectedTokenId);
-            if (token) {
-                setEditTokenData({ ...token });
-            }
-        }
-    }, [activeSettingsForm, selectedTokenId, tokens]);
+    const [activeSettingsForm, setActiveSettingsForm] = useState('none'); // 'none', 'wallpaper', 'map'
 
     const handleFormToggle = (formName) => {
         if (activeSettingsForm === formName) {
             setActiveSettingsForm('none');
-            if (formName === 'token') setShowAddToken(false);
         } else {
-            // Pre-populate if switching to edit mode
-            if (formName === 'editToken') {
-                if (!selectedTokenId) return; // Should be disabled anyway
-                const token = tokens.find(t => t.id === selectedTokenId);
-                if (token) {
-                    setEditTokenData({ ...token });
-                }
-            }
             setActiveSettingsForm(formName);
-            if (formName === 'token') {
-                setShowAddToken(true);
-            } else {
-                setShowAddToken(false);
-            }
-        }
-    };
-
-    const handleEditTokenImageUpload = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                setEditTokenData({ ...editTokenData, image: event.target.result });
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const handleSaveToken = () => {
-        if (editTokenData && selectedTokenId) {
-            updateTokenData(selectedTokenId, {
-                name: editTokenData.name,
-                type: editTokenData.type,
-                armor: editTokenData.armor,
-                hasResource: editTokenData.hasResource,
-                resourceName: editTokenData.resourceName,
-                resourceColor: editTokenData.resourceColor,
-                image: editTokenData.image,
-                // Only update max/current if they changed, need to be careful not to overwrite current values if not editing them directly?
-                // Actually the form edits state directly, so we pass back what we have.
-                // However, things like health/wounds aren't in this form, so we use the spread updates.
-                // But wait, the reducer does a shallow merge of updates.
-                // So we only need to send the fields that can change in this form.
-                maxResource: editTokenData.maxResource,
-                currentResource: editTokenData.currentResource
-            });
-            setActiveSettingsForm('none');
         }
     };
 
@@ -221,36 +153,8 @@ export function DMToolsSettings({
                     </button>
                 </div>
 
-                {/* Token Buttons (Add & Edit) */}
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => !isPopoutWindow && handleFormToggle('token')}
-                        disabled={isPopoutWindow}
-                        className={`flex-1 px-3 py-2 rounded flex items-center justify-center gap-2 text-sm ${isPopoutWindow
-                            ? 'bg-button-muted text-text-muted cursor-not-allowed'
-                            : activeSettingsForm === 'token'
-                                ? 'bg-tertiary hover:bg-tertiary-hover'
-                                : 'bg-primary hover:bg-primary-hover'
-                            }`}
-                    >
-                        <Plus size={16} />
-                        {activeSettingsForm === 'token' ? 'Cancel' : 'Add Token'}
-                    </button>
-                    <button
-                        onClick={() => !isPopoutWindow && selectedTokenId && handleFormToggle('editToken')}
-                        disabled={isPopoutWindow || !selectedTokenId}
-                        className={`flex-1 px-3 py-2 rounded flex items-center justify-center gap-2 text-sm ${isPopoutWindow || !selectedTokenId
-                            ? 'bg-button-muted text-text-muted cursor-not-allowed opacity-50'
-                            : activeSettingsForm === 'editToken'
-                                ? 'bg-tertiary hover:bg-tertiary-hover'
-                                : 'bg-secondary hover:bg-secondary-hover'
-                            }`}
-                        title={!selectedTokenId ? "Select a token to edit" : "Edit Token"}
-                    >
-                        <Pencil size={16} />
-                        {activeSettingsForm === 'editToken' ? 'Cancel' : 'Edit Token'}
-                    </button>
-                </div>
+                {/* Token Buttons (Add & Edit) - Removed and moved to Turn Order tab */}
+                <div className="hidden"></div>
 
                 {/* Inline Forms */}
                 {activeSettingsForm === 'wallpaper' && (

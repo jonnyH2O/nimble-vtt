@@ -153,6 +153,7 @@ export default function NimbleCombatTracker() {
 
   // Add Token Dialog State
   const [showAddToken, setShowAddToken] = useState(false);
+  const [showEditToken, setShowEditToken] = useState(false);
   const [newToken, setNewToken] = useState({ name: '', type: 'hero', image: null, hasResource: false, resourceName: '', resourceColor: '#3b82f6', currentResource: 5, maxResource: 5, armor: 'none' });
 
   // UI Panels
@@ -1654,6 +1655,8 @@ export default function NimbleCombatTracker() {
                   handleAppBackgroundUrlSubmit={handleAppBackgroundUrlSubmit}
                   showAddToken={showAddToken}
                   setShowAddToken={setShowAddToken}
+                  showEditToken={showEditToken}
+                  setShowEditToken={setShowEditToken}
                   newToken={newToken}
                   setNewToken={setNewToken}
                   handleAddToken={handleAddToken}
