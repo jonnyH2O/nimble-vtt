@@ -1740,6 +1740,7 @@ export default function NimbleCombatTracker() {
             {showPartyOverview && (
               <PartyOverview
                 tokens={tokens.filter(t => t.type === 'hero' || t.type === 'companion')}
+                onTokenSelect={setSelectedToken}
               />
             )}
 
