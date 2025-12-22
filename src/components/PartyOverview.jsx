@@ -13,7 +13,7 @@ import Tooltip from './Tooltip';
  * @param {Object} props
  * @param {Array} props.tokens - Array of hero/companion tokens to display
  */
-export function PartyOverview({ tokens }) {
+export function PartyOverview({ tokens, onTokenSelect }) {
   const [conditionIndexes, setConditionIndexes] = useState({});
 
   // Rotate through conditions every second and reset invalid indexes
@@ -87,7 +87,8 @@ export function PartyOverview({ tokens }) {
           return (
             <Tooltip key={token.id} text={tooltipText} position="right" wrap={true} maxWidth="250px">
               <div
-                className="bg-surface border-2 border-border rounded-lg flex flex-col items-center gap-1.5"
+                onClick={() => onTokenSelect && onTokenSelect(token.id)}
+                className="bg-surface border-2 border-border rounded-lg flex flex-col items-center gap-1.5 cursor-pointer hover:border-primary transition-colors"
                 style={{
                   width: '70px',
                   padding: '8px',
@@ -96,130 +97,130 @@ export function PartyOverview({ tokens }) {
                   transformOrigin: 'left center',
                 }}
               >
-              {/* Circular Portrait */}
-              <div className="relative flex-shrink-0">
-                <div
-                  className={`rounded-full overflow-hidden border-2 ${getTokenBorderColor(token.type)}`}
-                  style={{
-                    width: '50px',
-                    height: '50px',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.4)',
-                  }}
-                >
-                  {token.image ? (
-                    <div className="relative w-full h-full">
-                      <img
-                        src={token.image}
-                        alt={token.name}
-                        className="w-full h-full object-cover"
-                      />
-                      {/* Glossy overlay effect */}
-                      <div
-                        className="absolute inset-0 pointer-events-none"
-                        style={{
-                          background: 'radial-gradient(ellipse at 40% 20%, rgba(255, 255, 255, 0.3) 0%, transparent 60%)',
-                        }}
-                      />
-                    </div>
-                  ) : (
-                    <div
-                      className="w-full h-full flex items-center justify-center text-lg font-bold"
-                      style={{ backgroundColor: 'var(--color-surface)' }}
-                    >
-                      {token.name.charAt(0)}
-                    </div>
-                  )}
-                </div>
-
-                {/* Status Conditions - Single rotating circle at top-right of portrait */}
-                {conditions.length > 0 && (() => {
-                  const currentIndex = conditionIndexes[token.id] || 0;
-                  const validIndex = currentIndex >= conditions.length ? 0 : currentIndex;
-                  const currentCondition = conditions[validIndex];
-
-                  return (
-                    <div
-                      className="absolute flex items-center justify-center rounded-full transition-opacity duration-300"
-                      style={{
-                        right: '-2px',
-                        top: '0px',
-                        width: '16px',
-                        height: '16px',
-                        backgroundColor: '#fbbf24',
-                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.4)',
-                        fontSize: '9px',
-                      }}
-                      title={conditions.join(', ')}
-                    >
-                      {CONDITION_EMOJIS[currentCondition] || '❓'}
-                    </div>
-                  );
-                })()}
-              </div>
-
-              {/* Health Bar */}
-              <div className="flex flex-col gap-0.5" style={{ width: '50px' }}>
-                <div
-                  className="w-full relative overflow-hidden rounded-full"
-                  style={{
-                    height: '6px',
-                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                  }}
-                >
+                {/* Circular Portrait */}
+                <div className="relative flex-shrink-0">
                   <div
-                    className={`h-full transition-all duration-300 ${healthColorClass}`}
+                    className={`rounded-full overflow-hidden border-2 ${getTokenBorderColor(token.type)}`}
                     style={{
-                      width: `${healthPercent}%`,
-                      borderRadius: '9999px',
-                      boxShadow: 'inset 0 1px 2px rgba(255, 255, 255, 0.3)',
+                      width: '50px',
+                      height: '50px',
+                      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.4)',
                     }}
-                  />
+                  >
+                    {token.image ? (
+                      <div className="relative w-full h-full">
+                        <img
+                          src={token.image}
+                          alt={token.name}
+                          className="w-full h-full object-cover"
+                        />
+                        {/* Glossy overlay effect */}
+                        <div
+                          className="absolute inset-0 pointer-events-none"
+                          style={{
+                            background: 'radial-gradient(ellipse at 40% 20%, rgba(255, 255, 255, 0.3) 0%, transparent 60%)',
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        className="w-full h-full flex items-center justify-center text-lg font-bold"
+                        style={{ backgroundColor: 'var(--color-surface)' }}
+                      >
+                        {token.name.charAt(0)}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Status Conditions - Single rotating circle at top-right of portrait */}
+                  {conditions.length > 0 && (() => {
+                    const currentIndex = conditionIndexes[token.id] || 0;
+                    const validIndex = currentIndex >= conditions.length ? 0 : currentIndex;
+                    const currentCondition = conditions[validIndex];
+
+                    return (
+                      <div
+                        className="absolute flex items-center justify-center rounded-full transition-opacity duration-300"
+                        style={{
+                          right: '-2px',
+                          top: '0px',
+                          width: '16px',
+                          height: '16px',
+                          backgroundColor: '#fbbf24',
+                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.4)',
+                          fontSize: '9px',
+                        }}
+                        title={conditions.join(', ')}
+                      >
+                        {CONDITION_EMOJIS[currentCondition] || '❓'}
+                      </div>
+                    );
+                  })()}
                 </div>
 
-                {/* Resource Bar (if token has resource) */}
-                {token.hasResource && (
+                {/* Health Bar */}
+                <div className="flex flex-col gap-0.5" style={{ width: '50px' }}>
                   <div
                     className="w-full relative overflow-hidden rounded-full"
                     style={{
-                      height: '5px',
+                      height: '6px',
                       backgroundColor: 'rgba(0, 0, 0, 0.6)',
                       border: '1px solid rgba(255, 255, 255, 0.3)',
                     }}
                   >
                     <div
-                      className="h-full transition-all duration-300"
+                      className={`h-full transition-all duration-300 ${healthColorClass}`}
                       style={{
-                        width: `${resourcePercent}%`,
-                        backgroundColor: token.resourceColor || '#3b82f6',
+                        width: `${healthPercent}%`,
                         borderRadius: '9999px',
                         boxShadow: 'inset 0 1px 2px rgba(255, 255, 255, 0.3)',
                       }}
                     />
                   </div>
-                )}
-              </div>
 
-              {/* Wounds - Small circles */}
-              <div className="flex gap-0.5 justify-center flex-wrap" style={{ minHeight: '8px', maxWidth: '50px' }}>
-                {Array.from({ length: token.maxWounds || 6 }, (_, i) => i + 1).map(woundNum => {
-                  const hasWound = (token.wounds || 0) >= woundNum;
-                  return (
+                  {/* Resource Bar (if token has resource) */}
+                  {token.hasResource && (
                     <div
-                      key={woundNum}
-                      className="rounded-full transition-all duration-200"
+                      className="w-full relative overflow-hidden rounded-full"
                       style={{
-                        width: '6px',
-                        height: '6px',
-                        border: '1px dotted rgba(255, 255, 255, 0.5)',
-                        backgroundColor: hasWound ? '#ef4444' : 'transparent',
-                        boxShadow: hasWound ? '0 0 2px rgba(239, 68, 68, 0.6)' : 'none',
+                        height: '5px',
+                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                        border: '1px solid rgba(255, 255, 255, 0.3)',
                       }}
-                    />
-                  );
-                })}
+                    >
+                      <div
+                        className="h-full transition-all duration-300"
+                        style={{
+                          width: `${resourcePercent}%`,
+                          backgroundColor: token.resourceColor || '#3b82f6',
+                          borderRadius: '9999px',
+                          boxShadow: 'inset 0 1px 2px rgba(255, 255, 255, 0.3)',
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Wounds - Small circles */}
+                <div className="flex gap-0.5 justify-center flex-wrap" style={{ minHeight: '8px', maxWidth: '50px' }}>
+                  {Array.from({ length: token.maxWounds || 6 }, (_, i) => i + 1).map(woundNum => {
+                    const hasWound = (token.wounds || 0) >= woundNum;
+                    return (
+                      <div
+                        key={woundNum}
+                        className="rounded-full transition-all duration-200"
+                        style={{
+                          width: '6px',
+                          height: '6px',
+                          border: '1px dotted rgba(255, 255, 255, 0.5)',
+                          backgroundColor: hasWound ? '#ef4444' : 'transparent',
+                          boxShadow: hasWound ? '0 0 2px rgba(239, 68, 68, 0.6)' : 'none',
+                        }}
+                      />
+                    );
+                  })}
+                </div>
               </div>
-            </div>
             </Tooltip>
           );
         })}

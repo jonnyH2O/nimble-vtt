@@ -17,8 +17,8 @@ import ColorPicker from './ColorPicker';
  * @param {Function} props.setDrawSize - Function to set drawing brush size
  * @param {number} props.eraseSize - Current eraser size
  * @param {Function} props.setEraseSize - Function to set eraser size
- * @param {number} props.historyStep - Current position in drawing history
- * @param {Array} props.drawingHistory - Array of drawing history states
+ * @param {boolean} props.canUndo - Whether undo is available
+ * @param {boolean} props.canRedo - Whether redo is available
  * @param {Function} props.undo - Function to undo last drawing action
  * @param {Function} props.redo - Function to redo drawing action
  * @param {Function} props.clearDrawings - Function to clear all drawings
@@ -36,8 +36,8 @@ export default function Toolbar({
   setDrawSize,
   eraseSize,
   setEraseSize,
-  historyStep,
-  drawingHistory,
+  canUndo,
+  canRedo,
   undo,
   redo,
   clearDrawings,
@@ -104,48 +104,46 @@ export default function Toolbar({
             className="w-24"
           />
           <span className="text-sm">{(drawMode === 'erase' ? eraseSize : drawSize) + 'px'}</span>
-
-          <div className="h-8 w-px bg-button-muted"></div>
-
-          {/* Undo Button */}
-          <Tooltip text="Undo" shortcut="Ctrl+Z">
-            <button
-              onClick={undo}
-              disabled={historyStep <= 0}
-              className={`px-2 py-1.5 rounded flex items-center gap-1 text-sm ${historyStep <= 0
-                ? 'bg-button-muted text-text-muted cursor-not-allowed'
-                : 'bg-tertiary hover:bg-tertiary-hover'
-                }`}
-            >
-              <Undo2 size={16} />
-            </button>
-          </Tooltip>
-
-          {/* Redo Button */}
-          <Tooltip text="Redo" shortcut="Ctrl+Shift+Z">
-            <button
-              onClick={redo}
-              disabled={historyStep >= drawingHistory.length - 1}
-              className={`px-2 py-1.5 rounded flex items-center gap-1 text-sm ${historyStep >= drawingHistory.length - 1
-                ? 'bg-button-muted text-text-muted cursor-not-allowed'
-                : 'bg-tertiary hover:bg-tertiary-hover'
-                }`}
-            >
-              <Redo2 size={16} />
-            </button>
-          </Tooltip>
-
-          {/* Clear All Button */}
-          <Tooltip text="Erase all">
-            <button
-              onClick={clearDrawings}
-              className="bg-destructive hover:bg-destructive-hover px-3 py-1.5 rounded flex items-center gap-2 text-sm"
-            >
-              <Trash2 size={16} />
-            </button>
-          </Tooltip>
         </>
       )}
+
+      {/* Undo/Redo/Clear (available in all modes) */}
+      <div className="h-8 w-px bg-button-muted"></div>
+
+      <Tooltip text="Undo" shortcut="Ctrl+Z">
+        <button
+          onClick={undo}
+          disabled={!canUndo}
+          className={`px-2 py-1.5 rounded flex items-center gap-1 text-sm ${!canUndo
+            ? 'bg-button-muted text-text-muted cursor-not-allowed'
+            : 'bg-tertiary hover:bg-tertiary-hover'
+            }`}
+        >
+          <Undo2 size={16} />
+        </button>
+      </Tooltip>
+
+      <Tooltip text="Redo" shortcut="Ctrl+Shift+Z">
+        <button
+          onClick={redo}
+          disabled={!canRedo}
+          className={`px-2 py-1.5 rounded flex items-center gap-1 text-sm ${!canRedo
+            ? 'bg-button-muted text-text-muted cursor-not-allowed'
+            : 'bg-tertiary hover:bg-tertiary-hover'
+            }`}
+        >
+          <Redo2 size={16} />
+        </button>
+      </Tooltip>
+
+      <Tooltip text="Erase all">
+        <button
+          onClick={clearDrawings}
+          className="bg-destructive hover:bg-destructive-hover px-3 py-1.5 rounded flex items-center gap-2 text-sm"
+        >
+          <Trash2 size={16} />
+        </button>
+      </Tooltip>
 
       {/* Zoom Controls (select mode only) */}
       {drawMode === 'select' && (

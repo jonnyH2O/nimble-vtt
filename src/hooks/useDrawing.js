@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
-const DRAWING_HISTORY_LIMIT = 10;
+
 
 /**
  * Custom Hook: Drawing Canvas Operations
@@ -18,57 +18,15 @@ export function useDrawing(boardRef, viewOffset, zoomLevel) {
   const [drawColor, setDrawColor] = useState('#22c55e');
   const [drawSize, setDrawSize] = useState(8);
   const [eraseSize, setEraseSize] = useState(10);
-  const [drawingHistory, setDrawingHistory] = useState([]);
-  const [historyStep, setHistoryStep] = useState(-1);
+
   const [cursorPos, setCursorPos] = useState(null);
 
   const drawCanvasRef = useRef(null);
   const drawingRef = useRef([]);
 
-  // Initialize history with blank canvas
-  useEffect(() => {
-    if (drawCanvasRef.current && drawingHistory.length === 0) {
-      const blankCanvas = drawCanvasRef.current.toDataURL();
-      setDrawingHistory([blankCanvas]);
-      setHistoryStep(0);
-    }
-  }, [drawingHistory.length]);
 
-  const saveToHistory = useCallback(() => {
-    if (!drawCanvasRef.current) return;
 
-    const canvas = drawCanvasRef.current;
-    const imageData = canvas.toDataURL();
 
-    // Remove any future history if we're not at the end
-    const newHistory = drawingHistory.slice(0, historyStep + 1);
-    newHistory.push(imageData);
-
-    // Limit history to reduce memory usage
-    if (newHistory.length > DRAWING_HISTORY_LIMIT) {
-      newHistory.shift();
-      setDrawingHistory(newHistory);
-      setHistoryStep(newHistory.length - 1);
-    } else {
-      setDrawingHistory(newHistory);
-      setHistoryStep(newHistory.length - 1);
-    }
-  }, [drawingHistory, historyStep]);
-
-  const restoreFromHistory = useCallback((step) => {
-    if (!drawCanvasRef.current || step < 0 || step >= drawingHistory.length) return;
-
-    const canvas = drawCanvasRef.current;
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-
-    img.onload = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0);
-    };
-
-    img.src = drawingHistory[step];
-  }, [drawingHistory]);
 
   const handleDrawStart = useCallback((e) => {
     if (e.target === drawCanvasRef.current && drawMode !== 'select') {
@@ -118,35 +76,17 @@ export function useDrawing(boardRef, viewOffset, zoomLevel) {
   }, [drawing, drawMode, drawColor, drawSize, eraseSize, boardRef, viewOffset, zoomLevel]);
 
   const handleDrawEnd = useCallback(() => {
-    if (drawing) {
-      saveToHistory();
-    }
     setDrawing(false);
     drawingRef.current = [];
-  }, [drawing, saveToHistory]);
+  }, [drawing]);
 
   const clearDrawings = useCallback(() => {
     const canvas = drawCanvasRef.current;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    saveToHistory();
-  }, [saveToHistory]);
+  }, []);
 
-  const undo = useCallback(() => {
-    if (historyStep > 0) {
-      const newStep = historyStep - 1;
-      setHistoryStep(newStep);
-      restoreFromHistory(newStep);
-    }
-  }, [historyStep, restoreFromHistory]);
 
-  const redo = useCallback(() => {
-    if (historyStep < drawingHistory.length - 1) {
-      const newStep = historyStep + 1;
-      setHistoryStep(newStep);
-      restoreFromHistory(newStep);
-    }
-  }, [historyStep, drawingHistory.length, restoreFromHistory]);
 
   const updateCursorPos = useCallback((e) => {
     if (boardRef.current) {
@@ -175,11 +115,10 @@ export function useDrawing(boardRef, viewOffset, zoomLevel) {
     img.onload = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0);
-      saveToHistory();
     };
 
     img.src = imageData;
-  }, [saveToHistory]);
+  }, []);
 
   return {
     // State
@@ -194,16 +133,13 @@ export function useDrawing(boardRef, viewOffset, zoomLevel) {
     setEraseSize,
     cursorPos,
     drawCanvasRef,
-    drawingHistory,
-    historyStep,
+    drawingRef,
 
     // Actions
     handleDrawStart,
     handleDrawMove,
     handleDrawEnd,
     clearDrawings,
-    undo,
-    redo,
     updateCursorPos,
     clearCursorPos,
     getDrawingData,

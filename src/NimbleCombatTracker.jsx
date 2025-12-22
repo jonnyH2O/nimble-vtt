@@ -12,6 +12,7 @@ import { useDrawing } from './hooks/useDrawing';
 import { useTurnOrder } from './hooks/useTurnOrder';
 import { useDiceRoller } from './hooks/useDiceRoller';
 import { useWindowSync } from './hooks/useWindowSync';
+import { useHistory } from './hooks/useHistory';
 import { MESSAGE_TYPES, createMessage } from './utils/windowMessages';
 import { DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT, MAX_CANVAS_DIMENSION, SIDEBAR_WIDTH, HUD_Z_INDEX } from './constants';
 import { getTokenBorderColor, getTokenBgColor, getTokenIconName } from './utils/tokenUtils';
@@ -113,9 +114,96 @@ export default function NimbleCombatTracker() {
     setEraseSize,
     cursorPos,
     drawCanvasRef,
-    drawingHistory,
-    historyStep
+    drawingRef
   } = drawingManager;
+
+  // History Management
+  const {
+    history,
+    currentIndex,
+    addToHistory,
+    undo: undoHistory,
+    redo: redoHistory,
+    canUndo,
+    canRedo,
+    currentHistoryItem
+  } = useHistory({ type: 'DRAWING', data: null }); // Start with null data, will be populated on first draw/load
+
+  // Initialize history with initial blank canvas if needed, or just let the first draw capture it.
+  // Actually, better to save the blank canvas state when component mounts if we want to undo back to blank.
+  useEffect(() => {
+    if (drawCanvasRef.current && history.length === 1 && history[0].data === null) {
+      const blankCanvas = drawCanvasRef.current.toDataURL();
+      // We can't easily replace the initial state in useHistory without a setter, 
+      // but we can just treat null as "blank" in restore logic.
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const performUndo = useCallback(() => {
+    const itemToUndo = undoHistory();
+
+    /* console.log('↩️ Perform Undo:', {
+      currentIndex,
+      item: itemToUndo
+    }); */
+
+    if (!itemToUndo) return;
+
+    if (itemToUndo.type === 'TOKEN_MOVE') {
+      const { id, from } = itemToUndo;
+      // console.log('🔙 Restoring Token Position:', { id, x: from.x, y: from.y });
+      tokenManager.updateTokenPosition(id, from.x, from.y);
+    } else if (itemToUndo.type === 'DRAWING') {
+      // Find the last valid drawing state in history relative to the new index
+      // We are now at currentIndex - 1. We need to find the drawing state that applies here.
+      let found = false;
+      // Search backwards from the NEW current index (which is currentIndex - 1)
+      for (let i = currentIndex - 1; i >= 0; i--) {
+        if (history[i].type === 'DRAWING') {
+          if (history[i].data) {
+            drawingManager.loadDrawing(history[i].data);
+          } else {
+            drawingManager.clearDrawings();
+          }
+          found = true;
+          break;
+        }
+      }
+      // If no earlier drawing state is found, clear the canvas (initial state)
+      if (!found) {
+        drawingManager.clearDrawings();
+      }
+    }
+  }, [history, currentIndex, undoHistory, drawingManager, tokenManager]);
+
+  const performRedo = useCallback(() => {
+    // We are at N. Redo means going to N+1.
+    // We need to Apply Item N+1.
+    // We need to Apply Item N+1.
+    const nextItem = redoHistory();
+    /* console.log('↪️ Perform Redo:', {
+      currentIndex: currentIndex + 1, // index after redo
+      item: nextItem
+    }); */
+
+    if (!nextItem) return;
+
+    if (nextItem.type === 'TOKEN_MOVE') {
+      const { id, to } = nextItem;
+      tokenManager.updateTokenPosition(id, to.x, to.y);
+    } else if (nextItem.type === 'DRAWING') {
+      drawingManager.loadDrawing(nextItem.data);
+    }
+  }, [redoHistory, tokenManager, drawingManager]);
+
+  const findLastDrawingState = (hist, idx) => {
+    for (let i = idx; i >= 0; i--) {
+      if (hist[i].type === 'DRAWING') return hist[i];
+    }
+    return null;
+  };
+
+
 
   // Turn Order Management (custom hook)
   const turnOrderManager = useTurnOrder(tokens);
@@ -154,16 +242,21 @@ export default function NimbleCombatTracker() {
 
   // Add Token Dialog State
   const [showAddToken, setShowAddToken] = useState(false);
+  const [showEditToken, setShowEditToken] = useState(false);
   const [newToken, setNewToken] = useState({ name: '', type: 'hero', image: null, hasResource: false, resourceName: '', resourceColor: '#3b82f6', currentResource: 5, maxResource: 5, armor: 'none' });
 
   // UI Panels
   const [expandedNotes, setExpandedNotes] = useState({});
-  const [isToolbarCollapsed, setIsToolbarCollapsed] = useState(false);
+  const [isToolbarCollapsed, setIsToolbarCollapsed] = useState(true);
   const [panningView, setPanningView] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
   const [showGrid, setShowGrid] = useState(false);
   const [gridSize, setGridSize] = useState(50);
+  const [gridColor, setGridColor] = useState('#ffffff');
+  const [gridOpacity, setGridOpacity] = useState(0.66);
+  const [gridType, setGridType] = useState('solid'); // 'solid', 'dashed', 'dotted'
+  const [gridStrokeWidth, setGridStrokeWidth] = useState(1.5);
   const [expandedConditions, setExpandedConditions] = useState({});
   const [shiftHeld, setShiftHeld] = useState(false);
   const [sidebarView, setSidebarView] = useState('turnOrder'); // 'turnOrder' or 'dictionary'
@@ -534,12 +627,40 @@ export default function NimbleCombatTracker() {
   };
 
   const handleMouseUp = () => {
+    // Check if drawing occurred (must check before handleDrawEnd potentially resets things, though React state persists in closure)
+    // Also check drawingRef directly to catch very fast drawing actions where state might lag
+    if (drawing || (drawingRef.current && drawingRef.current.length > 0)) {
+      const data = drawingManager.getDrawingData();
+      addToHistory({
+        type: 'DRAWING',
+        data: data
+      });
+    }
+
     drawingManager.handleDrawEnd();
 
     // Clear the pickup timeout to prevent delayed dragging
     if (pickupTimeoutRef.current) {
       clearTimeout(pickupTimeoutRef.current);
       pickupTimeoutRef.current = null;
+    }
+
+    // Check if token moved for History
+    // MUST check pickingUp as well, to catch fast drags that happen before pickup animation completes
+    if ((dragging || pickingUp) && ghostTokenPosition) {
+      const token = tokens.find(t => t.id === (dragging || pickingUp));
+      if (token) {
+        // Check if position actually changed
+        // Use a small epsilon for float comparison logic, though inputs are pixels
+        if (Math.abs(token.x - ghostTokenPosition.x) > 0.1 || Math.abs(token.y - ghostTokenPosition.y) > 0.1) {
+          addToHistory({
+            type: 'TOKEN_MOVE',
+            id: token.id,
+            from: { x: ghostTokenPosition.x, y: ghostTokenPosition.y },
+            to: { x: token.x, y: token.y }
+          });
+        }
+      }
     }
 
     setDragging(null);
@@ -550,6 +671,15 @@ export default function NimbleCombatTracker() {
   };
 
   const handleMouseLeave = () => {
+    // Check if drawing occurred
+    if (drawing || (drawingRef.current && drawingRef.current.length > 0)) {
+      const data = drawingManager.getDrawingData();
+      addToHistory({
+        type: 'DRAWING',
+        data: data
+      });
+    }
+
     drawingManager.handleDrawEnd();
     drawingManager.clearCursorPos();
 
@@ -557,6 +687,22 @@ export default function NimbleCombatTracker() {
     if (pickupTimeoutRef.current) {
       clearTimeout(pickupTimeoutRef.current);
       pickupTimeoutRef.current = null;
+    }
+
+    // Check if token moved for History
+    if ((dragging || pickingUp) && ghostTokenPosition) {
+      const token = tokens.find(t => t.id === (dragging || pickingUp));
+      if (token) {
+        // Check if position actually changed
+        if (Math.abs(token.x - ghostTokenPosition.x) > 0.1 || Math.abs(token.y - ghostTokenPosition.y) > 0.1) {
+          addToHistory({
+            type: 'TOKEN_MOVE',
+            id: token.id,
+            from: { x: ghostTokenPosition.x, y: ghostTokenPosition.y },
+            to: { x: token.x, y: token.y }
+          });
+        }
+      }
     }
 
     setDragging(null);
@@ -582,6 +728,10 @@ export default function NimbleCombatTracker() {
       viewOffset: viewOffset,
       gridSize: gridSize,
       showGrid: showGrid,
+      gridColor: gridColor,
+      gridOpacity: gridOpacity,
+      gridStrokeWidth: gridStrokeWidth,
+      gridType: gridType,
       darknessMode: darknessMode,
       heroLightRadius: heroLightRadius,
       companionLightRadius: companionLightRadius,
@@ -627,6 +777,10 @@ export default function NimbleCombatTracker() {
 
       if (battleState.gridSize !== undefined) setGridSize(battleState.gridSize);
       if (battleState.showGrid !== undefined) setShowGrid(battleState.showGrid);
+      if (battleState.gridColor !== undefined) setGridColor(battleState.gridColor);
+      if (battleState.gridOpacity !== undefined) setGridOpacity(battleState.gridOpacity);
+      if (battleState.gridStrokeWidth !== undefined) setGridStrokeWidth(battleState.gridStrokeWidth);
+      if (battleState.gridType !== undefined) setGridType(battleState.gridType);
       if (battleState.darknessMode !== undefined) setDarknessMode(battleState.darknessMode);
       if (battleState.heroLightRadius !== undefined) setHeroLightRadius(battleState.heroLightRadius);
       if (battleState.companionLightRadius !== undefined) setCompanionLightRadius(battleState.companionLightRadius);
@@ -636,6 +790,14 @@ export default function NimbleCombatTracker() {
       // Restore drawings
       if (battleState.drawings) {
         drawingManager.loadDrawing(battleState.drawings);
+        // Add this loaded drawing state to history so it becomes the new baseline
+        // We delay slightly to ensure the canvas has updated if loadDrawing is async (it uses an image onload)
+        // However, standard loadDrawing in useDrawing is often assumed synchronous for dataURL, but the image load is async.
+        // We should just submit the data we HAVE (battleState.drawings) to history.
+        addToHistory({
+          type: 'DRAWING',
+          data: battleState.drawings
+        });
       }
 
       // Switch back to turn order view
@@ -753,14 +915,14 @@ export default function NimbleCombatTracker() {
       // Redo: Ctrl+Shift+Z (or Cmd+Shift+Z on Mac) - check this first
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
         e.preventDefault();
-        drawingManager.redo();
+        performRedo();
         return;
       }
 
       // Undo: Ctrl+Z (or Cmd+Z on Mac)
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
         e.preventDefault();
-        drawingManager.undo();
+        performUndo();
       }
     };
 
@@ -782,7 +944,7 @@ export default function NimbleCombatTracker() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [historyStep, drawingHistory, selectedToken, drawMode, setShowPartyOverview]);
+  }, [performUndo, performRedo, selectedToken, drawMode, setShowPartyOverview, turnOrder, tokens, tokenManager]);
 
   // Broadcast state to pop-out window
   useEffect(() => {
@@ -812,6 +974,10 @@ export default function NimbleCombatTracker() {
         backgroundSize,
         showGrid,
         gridSize,
+        gridColor,
+        gridOpacity,
+        gridStrokeWidth,
+        gridType,
         darknessMode,
         heroLightRadius,
         companionLightRadius,
@@ -841,6 +1007,10 @@ export default function NimbleCombatTracker() {
     backgroundSize,
     showGrid,
     gridSize,
+    gridColor,
+    gridOpacity,
+    gridStrokeWidth,
+    gridType,
     darknessMode,
     heroLightRadius,
     companionLightRadius,
@@ -927,6 +1097,32 @@ export default function NimbleCombatTracker() {
         case MESSAGE_TYPES.REMOVE_TOKEN:
           handleRemoveToken(payload.tokenId);
           break;
+        case MESSAGE_TYPES.ADD_TOKEN: {
+          // Calculate center position similar to handleAddToken
+          let startX = 100;
+          let startY = 100;
+
+          if (boardRef.current) {
+            const boardWidth = boardRef.current.offsetWidth;
+            const topPadding = 50;
+
+            // Equation: x * zoom + viewOffset = centerScreen
+            const centerScreenX = boardWidth / 2;
+            startX = (centerScreenX - viewOffset.x) / zoomLevel - (tokenSize / 2);
+            startY = (topPadding - viewOffset.y) / zoomLevel;
+          }
+
+          const tokenId = tokenManager.addToken({
+            ...payload.tokenData,
+            x: startX,
+            y: startY
+          });
+          turnOrderManager.addToTurnOrder(tokenId);
+          break;
+        }
+        case MESSAGE_TYPES.UPDATE_TOKEN_DATA:
+          tokenManager.updateTokenData(payload.tokenId, payload.updates);
+          break;
         case MESSAGE_TYPES.START_TURN:
           tokenManager.startTurn(payload.tokenId);
           break;
@@ -950,6 +1146,10 @@ export default function NimbleCombatTracker() {
           if (payload.backgroundSize !== undefined) setBackgroundSize(payload.backgroundSize);
           if (payload.showGrid !== undefined) setShowGrid(payload.showGrid);
           if (payload.gridSize !== undefined) setGridSize(payload.gridSize);
+          if (payload.gridColor !== undefined) setGridColor(payload.gridColor);
+          if (payload.gridOpacity !== undefined) setGridOpacity(payload.gridOpacity);
+          if (payload.gridStrokeWidth !== undefined) setGridStrokeWidth(payload.gridStrokeWidth);
+          if (payload.gridType !== undefined) setGridType(payload.gridType);
           if (payload.darknessMode !== undefined) setDarknessMode(payload.darknessMode);
           if (payload.heroLightRadius !== undefined) setHeroLightRadius(payload.heroLightRadius);
           if (payload.companionLightRadius !== undefined) setCompanionLightRadius(payload.companionLightRadius);
@@ -1007,6 +1207,10 @@ export default function NimbleCombatTracker() {
     setBackgroundSize,
     setShowGrid,
     setGridSize,
+    setGridColor,
+    setGridOpacity,
+    setGridType,
+    setGridStrokeWidth,
     setDarknessMode,
     setHeroLightRadius,
     setCompanionLightRadius,
@@ -1054,6 +1258,23 @@ export default function NimbleCombatTracker() {
       : 'default'
   }), [appBackground, drawMode, panningView]);
 
+  const getStrokeDashArray = () => {
+    switch (gridType) {
+      case 'dashed': return '10, 5';
+      case 'dotted': return '2, 5';
+      default: return 'none';
+    }
+  };
+
+  const getGridColorWithOpacity = () => {
+    // Convert hex to rgb
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(gridColor);
+    const r = result ? parseInt(result[1], 16) : 255;
+    const g = result ? parseInt(result[2], 16) : 255;
+    const b = result ? parseInt(result[3], 16) : 255;
+    return `rgba(${r}, ${g}, ${b}, ${gridOpacity})`;
+  };
+
   return (
     <div className="h-screen bg-background text-text flex flex-col">
       <div className="flex-1 flex overflow-hidden">
@@ -1084,10 +1305,10 @@ export default function NimbleCombatTracker() {
                   setDrawSize={setDrawSize}
                   eraseSize={eraseSize}
                   setEraseSize={setEraseSize}
-                  historyStep={historyStep}
-                  drawingHistory={drawingHistory}
-                  undo={drawingManager.undo}
-                  redo={drawingManager.redo}
+                  canUndo={canUndo}
+                  canRedo={canRedo}
+                  undo={performUndo}
+                  redo={performRedo}
                   clearDrawings={drawingManager.clearDrawings}
                   zoomLevel={zoomLevel}
                   setZoomLevel={setZoomLevel}
@@ -1153,7 +1374,13 @@ export default function NimbleCombatTracker() {
                 <svg className="absolute inset-0 pointer-events-none" style={{ width: '100%', height: '100%' }}>
                   <defs>
                     <pattern id="grid" width={gridSize} height={gridSize} patternUnits="userSpaceOnUse">
-                      <path d={`M ${gridSize} 0 L 0 0 0 ${gridSize}`} fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                      <path
+                        d={`M ${gridSize} 0 L 0 0 0 ${gridSize}`}
+                        fill="none"
+                        stroke={getGridColorWithOpacity()}
+                        strokeWidth={gridStrokeWidth}
+                        strokeDasharray={getStrokeDashArray()}
+                      />
                     </pattern>
                   </defs>
                   <rect width="100%" height="100%" fill="url(#grid)" />
@@ -1514,6 +1741,7 @@ export default function NimbleCombatTracker() {
             {showPartyOverview && (
               <PartyOverview
                 tokens={tokens.filter(t => t.type === 'hero' || t.type === 'companion')}
+                onTokenSelect={setSelectedToken}
               />
             )}
 
@@ -1579,6 +1807,14 @@ export default function NimbleCombatTracker() {
                   setShowGrid={setShowGrid}
                   gridSize={gridSize}
                   setGridSize={setGridSize}
+                  gridColor={gridColor}
+                  setGridColor={setGridColor}
+                  gridOpacity={gridOpacity}
+                  setGridOpacity={setGridOpacity}
+                  gridType={gridType}
+                  setGridType={setGridType}
+                  gridStrokeWidth={gridStrokeWidth}
+                  setGridStrokeWidth={setGridStrokeWidth}
                   darknessMode={darknessMode}
                   setDarknessMode={setDarknessMode}
                   heroLightRadius={heroLightRadius}
@@ -1596,6 +1832,8 @@ export default function NimbleCombatTracker() {
                   handleAppBackgroundUrlSubmit={handleAppBackgroundUrlSubmit}
                   showAddToken={showAddToken}
                   setShowAddToken={setShowAddToken}
+                  showEditToken={showEditToken}
+                  setShowEditToken={setShowEditToken}
                   newToken={newToken}
                   setNewToken={setNewToken}
                   handleAddToken={handleAddToken}

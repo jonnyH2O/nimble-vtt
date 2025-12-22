@@ -11,11 +11,7 @@ function tokensReducer(state, action) {
     case 'REMOVE_TOKEN':
       return state.filter(t => t.id !== action.payload);
 
-    case 'UPDATE_TOKEN':
-      // Surgical update - only the specified token is replaced
-      return state.map(t =>
-        t.id === action.payload.id ? { ...t, ...action.payload.updates } : t
-      );
+
 
     case 'UPDATE_HEALTH': {
       const { tokenId, newHealth } = action.payload;
@@ -174,6 +170,14 @@ function tokensReducer(state, action) {
       const { tokenId } = action.payload;
       return state.map(t =>
         t.id === tokenId ? { ...t, showTempHP: !t.showTempHP } : t
+      );
+    }
+
+    case 'UPDATE_TOKEN': {
+      const { id, updates } = action.payload;
+      // Surgical update - only the specified token is replaced
+      return state.map(t =>
+        t.id === id ? { ...t, ...updates } : t
       );
     }
 
