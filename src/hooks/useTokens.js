@@ -2,6 +2,37 @@ import { useReducer, useState, useCallback } from 'react';
 
 const DEFAULT_TOKEN_POSITION = { x: 100, y: 100 };
 
+/**
+ * Migrates old single-resource token format to new multi-resource array format
+ * @param {Object} token - Token object to migrate
+ * @returns {Object} - Migrated token
+ */
+function migrateTokenResources(token) {
+  // If token already has resources array, no migration needed
+  if (token.resources && Array.isArray(token.resources)) {
+    return token;
+  }
+
+  // Migrate old single-resource format to new array format
+  const resources = [];
+  if (token.hasResource && token.resourceName) {
+    resources.push({
+      name: token.resourceName || 'Resource',
+      color: token.resourceColor || '#3b82f6',
+      current: token.currentResource || 0,
+      max: token.maxResource || 0
+    });
+  }
+
+  // Create migrated token (remove old fields)
+  const { hasResource, resourceName, resourceColor, currentResource, maxResource, ...rest } = token;
+
+  return {
+    ...rest,
+    resources
+  };
+}
+
 // Token reducer for efficient state updates
 function tokensReducer(state, action) {
   switch (action.type) {
@@ -209,6 +240,22 @@ export function useTokens(tokenSize) {
   const [selectedToken, setSelectedToken] = useState(null);
 
   const addToken = useCallback((tokenData) => {
+    // Support both old single-resource format and new multi-resource format
+    let resources = [];
+
+    // Migration: if tokenData has old format (hasResource), convert to new format
+    if (tokenData.hasResource && tokenData.resourceName) {
+      resources = [{
+        name: tokenData.resourceName || 'Resource',
+        color: tokenData.resourceColor || '#3b82f6',
+        current: tokenData.currentResource || 0,
+        max: tokenData.maxResource || 0
+      }];
+    } else if (tokenData.resources && Array.isArray(tokenData.resources)) {
+      // New format: use resources array directly
+      resources = tokenData.resources;
+    }
+
     const token = {
       id: crypto.randomUUID(),
       name: tokenData.name,
@@ -229,11 +276,7 @@ export function useTokens(tokenSize) {
       wounds: 0,
       maxWounds: 6,
       customSize: null,
-      hasResource: tokenData.hasResource || false,
-      resourceName: tokenData.resourceName || '',
-      resourceColor: tokenData.resourceColor || '#3b82f6',
-      currentResource: tokenData.currentResource || 0,
-      maxResource: tokenData.maxResource || 0,
+      resources: resources, // New: array of resource objects
       showHealthInViewport: tokenData.type === 'hero' || tokenData.type === 'companion', // Off by default for enemy/legendary
       armor: tokenData.armor || 'none' // Armor type: 'none', 'medium', or 'heavy'
     };
@@ -311,7 +354,9 @@ export function useTokens(tokenSize) {
   }, []);
 
   const setAllTokens = useCallback((newTokens) => {
-    dispatchTokens({ type: 'SET_ALL_TOKENS', payload: newTokens });
+    // Migrate all tokens to new resource format
+    const migratedTokens = newTokens.map(migrateTokenResources);
+    dispatchTokens({ type: 'SET_ALL_TOKENS', payload: migratedTokens });
   }, []);
 
   const toggleHealthInViewport = useCallback((tokenId) => {

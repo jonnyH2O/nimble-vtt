@@ -20,12 +20,16 @@ export function HUDDisplay({ selectedToken, tokens, HUD_Z_INDEX }) {
   if (!token) return null;
 
   const healthPercent = getHealthPercent(token.health, token.maxHealth);
-  const resourcePercent = getResourcePercent(token.currentResource, token.maxResource);
 
   const portraitSize = 80;
   const barHeight = 20;
   const barWidth = 300;
-  const resourceBarWidth = token.hasResource ? 250 : 0;
+
+  // Resource bar sizing based on number of resources
+  const resources = token.resources || [];
+  const hasResources = resources.length > 0;
+  const numResources = resources.length;
+  const resourceBarTotalWidth = hasResources ? barWidth : 0; // Match HP bar width
 
   return (
     <div className="absolute top-4 left-4 pointer-events-none" style={{ width: `${portraitSize + barWidth + 20}px`, zIndex: HUD_Z_INDEX }}>
@@ -121,35 +125,46 @@ export function HUDDisplay({ selectedToken, tokens, HUD_Z_INDEX }) {
             </div>
           )}
 
-          {/* Resource Bar - always show for heroes/companions, conditional for enemies/legendary */}
-          {(token.type === 'hero' || token.type === 'companion' || token.showHealthInViewport) && token.hasResource && (
-            <div className="mb-1">
-              <div
-                className="relative rounded-full overflow-hidden"
-                style={{
-                  width: `${resourceBarWidth}px`,
-                  height: `${barHeight - 4}px`,
-                  backgroundColor: 'rgba(0,0,0,0.6)',
-                  border: '2px solid rgba(255,255,255,0.3)',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.4)'
-                }}
-              >
-                {/* Resource fill with smooth transition */}
-                <div
-                  className="absolute top-0 left-0 h-full transition-all duration-300 ease-out"
-                  style={{
-                    width: `${resourcePercent}%`,
-                    backgroundColor: token.resourceColor || '#3b82f6',
-                    boxShadow: `inset 0 2px 4px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.3)`
-                  }}
-                />
-                {/* Resource Text */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-white text-xs font-bold drop-shadow-lg" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
-                    {token.currentResource} / {token.maxResource} {token.resourceName}
-                  </span>
-                </div>
-              </div>
+          {/* Resource Bars - always show for heroes/companions, conditional for enemies/legendary */}
+          {(token.type === 'hero' || token.type === 'companion' || token.showHealthInViewport) && hasResources && (
+            <div className="mb-1 flex gap-1">
+              {resources.slice(0, 3).map((resource, idx) => {
+                const resourcePercent = getResourcePercent(resource.current, resource.max);
+                // Calculate width: if 1 resource, full width; if 2-3, split evenly with gap
+                const barWidth = numResources === 1
+                  ? resourceBarTotalWidth
+                  : (resourceBarTotalWidth - (numResources - 1) * 4) / numResources;
+
+                return (
+                  <div
+                    key={idx}
+                    className="relative rounded-full overflow-hidden"
+                    style={{
+                      width: `${barWidth}px`,
+                      height: `${barHeight - 4}px`,
+                      backgroundColor: 'rgba(0,0,0,0.6)',
+                      border: '2px solid rgba(255,255,255,0.3)',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.4)'
+                    }}
+                  >
+                    {/* Resource fill with smooth transition */}
+                    <div
+                      className="absolute top-0 left-0 h-full transition-all duration-300 ease-out"
+                      style={{
+                        width: `${resourcePercent}%`,
+                        backgroundColor: resource.color || '#3b82f6',
+                        boxShadow: `inset 0 2px 4px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.3)`
+                      }}
+                    />
+                    {/* Resource Text */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-white text-xs font-bold drop-shadow-lg" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+                        {resource.current} / {resource.max} {resource.name}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
 

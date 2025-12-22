@@ -190,12 +190,8 @@ export default function DMTools({
           name: editTokenData.name,
           type: editTokenData.type,
           armor: editTokenData.armor,
-          hasResource: editTokenData.hasResource,
-          resourceName: editTokenData.resourceName,
-          resourceColor: editTokenData.resourceColor,
-          image: editTokenData.image,
-          maxResource: editTokenData.maxResource,
-          currentResource: editTokenData.currentResource
+          resources: editTokenData.resources || [],
+          image: editTokenData.image
         });
       } else if (onAction) {
         onAction(createMessage(MESSAGE_TYPES.UPDATE_TOKEN_DATA, {
@@ -204,12 +200,8 @@ export default function DMTools({
             name: editTokenData.name,
             type: editTokenData.type,
             armor: editTokenData.armor,
-            hasResource: editTokenData.hasResource,
-            resourceName: editTokenData.resourceName,
-            resourceColor: editTokenData.resourceColor,
-            image: editTokenData.image,
-            maxResource: editTokenData.maxResource,
-            currentResource: editTokenData.currentResource
+            resources: editTokenData.resources || [],
+            image: editTokenData.image
           }
         }));
       }
@@ -533,39 +525,73 @@ export default function DMTools({
                   )}
 
                   <div>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={newToken.hasResource}
-                        onChange={(e) => setNewToken({ ...newToken, hasResource: e.target.checked })}
-                        className="w-4 h-4"
-                      />
-                      <span className="text-xs font-bold">Has Resource?</span>
-                    </label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs font-bold">Resources</label>
+                      <button
+                        onClick={() => {
+                          const currentResources = newToken.resources || [];
+                          if (currentResources.length < 3) {
+                            setNewToken({
+                              ...newToken,
+                              resources: [...currentResources, { name: 'Resource', color: '#3b82f6', current: 5, max: 5 }]
+                            });
+                          }
+                        }}
+                        disabled={(newToken.resources || []).length >= 3}
+                        className={`px-2 py-1 rounded text-xs ${(newToken.resources || []).length >= 3
+                          ? 'bg-button-muted text-text-muted cursor-not-allowed'
+                          : 'bg-secondary hover:bg-secondary-hover'
+                          }`}
+                      >
+                        <Plus size={12} className="inline mr-1" />
+                        Add Resource
+                      </button>
+                    </div>
 
-                    {newToken.hasResource && (
-                      <div className="mt-2 space-y-2 pl-6">
+                    {(newToken.resources || []).map((resource, idx) => (
+                      <div key={idx} className="bg-surface rounded p-2 mb-2 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-text-muted">Resource {idx + 1}</span>
+                          <button
+                            onClick={() => {
+                              const currentResources = [...(newToken.resources || [])];
+                              currentResources.splice(idx, 1);
+                              setNewToken({ ...newToken, resources: currentResources });
+                            }}
+                            className="text-destructive hover:text-destructive-hover"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
                         <div className="flex gap-2 items-end">
                           <div className="flex-1">
-                            <label className="block text-xs mb-1">Resource Name</label>
+                            <label className="block text-xs mb-1">Name</label>
                             <input
                               type="text"
-                              value={newToken.resourceName}
-                              onChange={(e) => setNewToken({ ...newToken, resourceName: e.target.value })}
-                              className="w-full bg-surface px-3 py-2 rounded text-sm"
-                              placeholder="e.g., Mana, Focus, Rage"
+                              value={resource.name}
+                              onChange={(e) => {
+                                const currentResources = [...(newToken.resources || [])];
+                                currentResources[idx] = { ...currentResources[idx], name: e.target.value };
+                                setNewToken({ ...newToken, resources: currentResources });
+                              }}
+                              className="w-full bg-surface-highlight px-2 py-1 rounded text-sm"
+                              placeholder="e.g., Mana, Focus"
                             />
                           </div>
                           <div>
                             <label className="block text-xs mb-1">Color</label>
                             <ColorPicker
-                              color={newToken.resourceColor}
-                              onChange={(color) => setNewToken({ ...newToken, resourceColor: color })}
+                              color={resource.color}
+                              onChange={(color) => {
+                                const currentResources = [...(newToken.resources || [])];
+                                currentResources[idx] = { ...currentResources[idx], color };
+                                setNewToken({ ...newToken, resources: currentResources });
+                              }}
                             />
                           </div>
                         </div>
                       </div>
-                    )}
+                    ))}
                   </div>
 
                   <div>
@@ -642,59 +668,107 @@ export default function DMTools({
                   )}
 
                   <div>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={editTokenData.hasResource}
-                        onChange={(e) => setEditTokenData({ ...editTokenData, hasResource: e.target.checked })}
-                        className="w-4 h-4"
-                      />
-                      <span className="text-xs font-bold">Has Resource?</span>
-                    </label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs font-bold">Resources</label>
+                      <button
+                        onClick={() => {
+                          const currentResources = editTokenData.resources || [];
+                          if (currentResources.length < 3) {
+                            setEditTokenData({
+                              ...editTokenData,
+                              resources: [...currentResources, { name: 'Resource', color: '#3b82f6', current: 5, max: 5 }]
+                            });
+                          }
+                        }}
+                        disabled={(editTokenData.resources || []).length >= 3}
+                        className={`px-2 py-1 rounded text-xs ${(editTokenData.resources || []).length >= 3
+                          ? 'bg-button-muted text-text-muted cursor-not-allowed'
+                          : 'bg-secondary hover:bg-secondary-hover'
+                          }`}
+                      >
+                        <Plus size={12} className="inline mr-1" />
+                        Add Resource
+                      </button>
+                    </div>
 
-                    {editTokenData.hasResource && (
-                      <div className="mt-2 space-y-2 pl-6">
+                    {(editTokenData.resources || []).map((resource, idx) => (
+                      <div key={idx} className="bg-surface rounded p-2 mb-2 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-text-muted">Resource {idx + 1}</span>
+                          <button
+                            onClick={() => {
+                              const currentResources = [...(editTokenData.resources || [])];
+                              currentResources.splice(idx, 1);
+                              setEditTokenData({ ...editTokenData, resources: currentResources });
+                            }}
+                            className="text-destructive hover:text-destructive-hover"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
                         <div className="flex gap-2 items-end">
                           <div className="flex-1">
-                            <label className="block text-xs mb-1">Resource Name</label>
+                            <label className="block text-xs mb-1">Name</label>
                             <input
                               type="text"
-                              value={editTokenData.resourceName}
-                              onChange={(e) => setEditTokenData({ ...editTokenData, resourceName: e.target.value })}
-                              className="w-full bg-surface px-3 py-2 rounded text-sm"
-                              placeholder="e.g., Mana, Focus, Rage"
+                              value={resource.name}
+                              onChange={(e) => {
+                                const currentResources = [...(editTokenData.resources || [])];
+                                currentResources[idx] = { ...currentResources[idx], name: e.target.value };
+                                setEditTokenData({ ...editTokenData, resources: currentResources });
+                              }}
+                              className="w-full bg-surface-highlight px-2 py-1 rounded text-sm"
+                              placeholder="e.g., Mana, Focus"
                             />
                           </div>
                           <div>
                             <label className="block text-xs mb-1">Color</label>
                             <ColorPicker
-                              color={editTokenData.resourceColor}
-                              onChange={(color) => setEditTokenData({ ...editTokenData, resourceColor: color })}
+                              color={resource.color}
+                              onChange={(color) => {
+                                const currentResources = [...(editTokenData.resources || [])];
+                                currentResources[idx] = { ...currentResources[idx], color };
+                                setEditTokenData({ ...editTokenData, resources: currentResources });
+                              }}
                             />
                           </div>
                         </div>
                         <div className="flex gap-2">
                           <div className="flex-1">
-                            <label className="block text-xs mb-1">Max Resource</label>
+                            <label className="block text-xs mb-1">Current</label>
                             <input
                               type="number"
-                              value={editTokenData.maxResource || 0}
-                              onChange={(e) => setEditTokenData({ ...editTokenData, maxResource: parseInt(e.target.value) || 0 })}
-                              className="w-full bg-surface px-3 py-2 rounded text-sm"
+                              value={resource.current || 0}
+                              onChange={(e) => {
+                                const currentResources = [...(editTokenData.resources || [])];
+                                const newCurrent = Math.max(0, Math.min(parseInt(e.target.value) || 0, resource.max || 0));
+                                currentResources[idx] = { ...currentResources[idx], current: newCurrent };
+                                setEditTokenData({ ...editTokenData, resources: currentResources });
+                              }}
+                              className="w-full bg-surface-highlight px-2 py-1 rounded text-sm"
                             />
                           </div>
                           <div className="flex-1">
-                            <label className="block text-xs mb-1">Current Resource</label>
+                            <label className="block text-xs mb-1">Max</label>
                             <input
                               type="number"
-                              value={editTokenData.currentResource || 0}
-                              onChange={(e) => setEditTokenData({ ...editTokenData, currentResource: parseInt(e.target.value) || 0 })}
-                              className="w-full bg-surface px-3 py-2 rounded text-sm"
+                              value={resource.max || 0}
+                              onChange={(e) => {
+                                const currentResources = [...(editTokenData.resources || [])];
+                                const newMax = Math.max(0, parseInt(e.target.value) || 0);
+                                currentResources[idx] = {
+                                  ...currentResources[idx],
+                                  max: newMax,
+                                  current: Math.min(currentResources[idx].current || 0, newMax)
+                                };
+                                setEditTokenData({ ...editTokenData, resources: currentResources });
+                              }}
+                              className="w-full bg-surface-highlight px-2 py-1 rounded text-sm"
                             />
                           </div>
                         </div>
                       </div>
-                    )}
+                    ))}
                   </div>
 
                   <div>
@@ -1083,52 +1157,61 @@ export default function DMTools({
                               </div>
                             )}
 
-                            {/* Resource - for any token with resources */}
-                            {token.hasResource && (
+                            {/* Resources - for any token with resources */}
+                            {(token.resources || []).length > 0 && (
                               <div className="mb-3">
-                                <label className="text-xs text-text-muted block mb-2">{token.resourceName || 'Resource'}</label>
-                                <div className="flex gap-2 justify-center items-center">
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    max={token.maxResource || 0}
-                                    value={token.currentResource || 0}
-                                    onChange={(e) => {
-                                      const newCurrent = Math.max(0, Math.min(parseInt(e.target.value) || 0, token.maxResource || 0));
-                                      const updates = { currentResource: newCurrent };
-                                      handleAction(
-                                        MESSAGE_TYPES.TOKEN_RESOURCE_UPDATE,
-                                        { tokenId: item.id, updates },
-                                        () => tokenManager.updateTokenResource(item.id, updates)
-                                      );
-                                    }}
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="w-16 bg-button-muted text-center rounded px-2 py-1 text-sm"
-                                    style={{ borderColor: token.resourceColor, borderWidth: '2px' }}
-                                  />
-                                  <span className="text-xs text-text-muted">/</span>
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    value={token.maxResource || 0}
-                                    onChange={(e) => {
-                                      const newMax = Math.max(0, parseInt(e.target.value) || 0);
-                                      const currentToken = tokens.find(t => t.id === item.id);
-                                      const updates = {
-                                        maxResource: newMax,
-                                        currentResource: Math.min(currentToken?.currentResource || 0, newMax)
-                                      };
-                                      handleAction(
-                                        MESSAGE_TYPES.TOKEN_RESOURCE_UPDATE,
-                                        { tokenId: item.id, updates },
-                                        () => tokenManager.updateTokenResource(item.id, updates)
-                                      );
-                                    }}
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="w-16 bg-button-muted text-center rounded px-2 py-1 text-sm"
-                                    style={{ borderColor: token.resourceColor, borderWidth: '2px' }}
-                                  />
-                                </div>
+                                <label className="text-xs text-text-muted block mb-2">Resources</label>
+                                {(token.resources || []).map((resource, resIdx) => (
+                                  <div key={resIdx} className="flex gap-2 justify-center items-center mb-2">
+                                    <span className="text-xs text-text-muted w-16 truncate">{resource.name}</span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max={resource.max || 0}
+                                      value={resource.current || 0}
+                                      onChange={(e) => {
+                                        const newCurrent = Math.max(0, Math.min(parseInt(e.target.value) || 0, resource.max || 0));
+                                        const currentToken = tokens.find(t => t.id === item.id);
+                                        const newResources = [...(currentToken?.resources || [])];
+                                        newResources[resIdx] = { ...newResources[resIdx], current: newCurrent };
+                                        const updates = { resources: newResources };
+                                        handleAction(
+                                          MESSAGE_TYPES.TOKEN_RESOURCE_UPDATE,
+                                          { tokenId: item.id, updates },
+                                          () => tokenManager.updateTokenResource(item.id, updates)
+                                        );
+                                      }}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="w-16 bg-button-muted text-center rounded px-2 py-1 text-sm"
+                                      style={{ borderColor: resource.color, borderWidth: '2px' }}
+                                    />
+                                    <span className="text-xs text-text-muted">/</span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={resource.max || 0}
+                                      onChange={(e) => {
+                                        const newMax = Math.max(0, parseInt(e.target.value) || 0);
+                                        const currentToken = tokens.find(t => t.id === item.id);
+                                        const newResources = [...(currentToken?.resources || [])];
+                                        newResources[resIdx] = {
+                                          ...newResources[resIdx],
+                                          max: newMax,
+                                          current: Math.min(newResources[resIdx].current || 0, newMax)
+                                        };
+                                        const updates = { resources: newResources };
+                                        handleAction(
+                                          MESSAGE_TYPES.TOKEN_RESOURCE_UPDATE,
+                                          { tokenId: item.id, updates },
+                                          () => tokenManager.updateTokenResource(item.id, updates)
+                                        );
+                                      }}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="w-16 bg-button-muted text-center rounded px-2 py-1 text-sm"
+                                      style={{ borderColor: resource.color, borderWidth: '2px' }}
+                                    />
+                                  </div>
+                                ))}
                               </div>
                             )}
 

@@ -56,12 +56,12 @@ export function PartyOverview({ tokens, onTokenSelect }) {
       <div className="flex flex-col gap-2">
         {sortedTokens.map(token => {
           const healthPercent = getHealthPercent(token.health, token.maxHealth);
-          const resourcePercent = token.hasResource
-            ? getResourcePercent(token.currentResource, token.maxResource)
-            : 0;
 
           // Get health color classes
           const healthColorClass = getHealthColor(healthPercent);
+
+          // Support for multiple resources
+          const resources = token.resources || [];
 
           // Limit conditions to 6 max
           const conditions = (token.conditions || []).slice(0, 6);
@@ -74,10 +74,10 @@ export function PartyOverview({ tokens, onTokenSelect }) {
           const tooltipLines = [];
           tooltipLines.push(`${token.name}`);
           tooltipLines.push(`Health: ${token.health}/${token.maxHealth}`);
-          if (token.hasResource) {
-            const resourceName = token.resourceName || 'Resource';
-            tooltipLines.push(`${resourceName}: ${token.currentResource}/${token.maxResource}`);
-          }
+          // Add all resources to tooltip
+          resources.forEach(resource => {
+            tooltipLines.push(`${resource.name}: ${resource.current}/${resource.max}`);
+          });
           tooltipLines.push(`Wounds: ${token.wounds || 0}/${token.maxWounds || 6}`);
           if (conditions.length > 0) {
             tooltipLines.push(`Conditions: ${conditions.join(', ')}`);
@@ -168,6 +168,17 @@ export function PartyOverview({ tokens, onTokenSelect }) {
                       border: '1px solid rgba(255, 255, 255, 0.3)',
                     }}
                   >
+                    {/* Temp HP border overlay */}
+                    {token.tempHP > 0 && (
+                      <div
+                        className="absolute inset-0 rounded-full pointer-events-none"
+                        style={{
+                          border: '2px solid #06b6d4',
+                          clipPath: `inset(0 ${100 - Math.min(100, (token.tempHP / token.maxHealth) * 100)}% 0 0)`,
+                          transition: 'clip-path 0.3s ease-out'
+                        }}
+                      />
+                    )}
                     <div
                       className={`h-full transition-all duration-300 ${healthColorClass}`}
                       style={{
@@ -178,27 +189,43 @@ export function PartyOverview({ tokens, onTokenSelect }) {
                     />
                   </div>
 
-                  {/* Resource Bar (if token has resource) */}
-                  {token.hasResource && (
+                  {/* Divider between health and resources */}
+                  {resources.length > 0 && (
                     <div
-                      className="w-full relative overflow-hidden rounded-full"
                       style={{
-                        height: '5px',
-                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        width: '100%',
+                        height: '1px',
+                        backgroundColor: 'var(--color-border)',
+                        margin: '1px 0'
                       }}
-                    >
-                      <div
-                        className="h-full transition-all duration-300"
-                        style={{
-                          width: `${resourcePercent}%`,
-                          backgroundColor: token.resourceColor || '#3b82f6',
-                          borderRadius: '9999px',
-                          boxShadow: 'inset 0 1px 2px rgba(255, 255, 255, 0.3)',
-                        }}
-                      />
-                    </div>
+                    />
                   )}
+
+                  {/* Resource Bars (multiple bars stacked) */}
+                  {resources.map((resource, idx) => {
+                    const resourcePercent = getResourcePercent(resource.current, resource.max);
+                    return (
+                      <div
+                        key={idx}
+                        className="w-full relative overflow-hidden rounded-full"
+                        style={{
+                          height: '5px',
+                          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                          border: '1px solid rgba(255, 255, 255, 0.3)',
+                        }}
+                      >
+                        <div
+                          className="h-full transition-all duration-300"
+                          style={{
+                            width: `${resourcePercent}%`,
+                            backgroundColor: resource.color || '#3b82f6',
+                            borderRadius: '9999px',
+                            boxShadow: 'inset 0 1px 2px rgba(255, 255, 255, 0.3)',
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Wounds - Small circles */}
