@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { CONDITION_EMOJIS } from '../effects/conditionEffects';
 import { getHealthColor, getHealthPercent, getResourcePercent, getTokenBorderColor } from '../utils/tokenUtils';
 import Tooltip from './Tooltip';
@@ -13,11 +13,19 @@ import Tooltip from './Tooltip';
  * @param {Object} props
  * @param {Array} props.tokens - Array of hero/companion tokens to display
  */
-export function PartyOverview({ tokens, onTokenSelect }) {
+function PartyOverviewComponent({ tokens, onTokenSelect }) {
   const [conditionIndexes, setConditionIndexes] = useState({});
 
-  // Rotate through conditions every second and reset invalid indexes
+  // Memoize: check if any token has multiple conditions (for interval optimization)
+  const hasRotatingConditions = useMemo(() =>
+    tokens.some(t => t.conditions && t.conditions.length > 1),
+    [tokens]
+  );
+
+  // Rotate through conditions every second - only run if there are conditions to rotate
   useEffect(() => {
+    if (!hasRotatingConditions) return;
+
     const interval = setInterval(() => {
       setConditionIndexes(prev => {
         const next = { ...prev };
@@ -39,13 +47,16 @@ export function PartyOverview({ tokens, onTokenSelect }) {
     }, 1000);
 
     return () => clearInterval(interval);
+  }, [tokens, hasRotatingConditions]);
+
+  // Memoize: sort tokens (companions first, then heroes) to prevent re-sorting on every render
+  const sortedTokens = useMemo(() => {
+    return [...tokens].sort((a, b) => {
+      if (a.type === 'companion' && b.type !== 'companion') return -1;
+      if (a.type !== 'companion' && b.type === 'companion') return 1;
+      return 0;
+    });
   }, [tokens]);
-  // Separate and sort tokens: companions first, then heroes
-  const sortedTokens = [...tokens].sort((a, b) => {
-    if (a.type === 'companion' && b.type !== 'companion') return -1;
-    if (a.type !== 'companion' && b.type === 'companion') return 1;
-    return 0;
-  });
 
   return (
     <div
@@ -255,3 +266,6 @@ export function PartyOverview({ tokens, onTokenSelect }) {
     </div>
   );
 }
+
+// Export memoized version to prevent unnecessary re-renders
+export const PartyOverview = React.memo(PartyOverviewComponent);

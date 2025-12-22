@@ -946,49 +946,8 @@ export default function NimbleCombatTracker() {
     };
   }, [performUndo, performRedo, selectedToken, drawMode, setShowPartyOverview, turnOrder, tokens, tokenManager]);
 
-  // Broadcast state to pop-out window
-  useEffect(() => {
-    if (isPopoutMode && windowSync.channel) {
-      console.log('[MainWindow] Broadcasting STATE_UPDATE, isPopoutMode:', isPopoutMode, 'hasChannel:', !!windowSync.channel);
-      windowSync.broadcast(createMessage(MESSAGE_TYPES.STATE_UPDATE, {
-        tokens,
-        turnOrder,
-        displayTurnOrder,
-        selectedToken,
-        expandedConditions,
-        expandedNotes,
-        sidebarView,
-        tokenSize,
-        deleteMode,
-        lastActionUserId,
-        doomedConditions: CONDITION_CATEGORIES.DOOMED,
-        majorConditions: CONDITION_CATEGORIES.MAJOR,
-        minorConditions: CONDITION_CATEGORIES.MINOR,
-        // Dice state
-        diceNotation,
-        notationError,
-        showDiceInViewport,
-        rollingDice,
-        diceRolls,
-        // Settings state
-        backgroundSize,
-        showGrid,
-        gridSize,
-        gridColor,
-        gridOpacity,
-        gridStrokeWidth,
-        gridType,
-        darknessMode,
-        heroLightRadius,
-        companionLightRadius,
-        darknessIntensity,
-        showPartyOverview,
-        currentTheme,
-        reactionStates
-      }));
-    }
-  }, [
-    isPopoutMode,
+  // Memoize sync state to prevent effect from running on every state change
+  const syncState = useMemo(() => ({
     tokens,
     turnOrder,
     displayTurnOrder,
@@ -996,9 +955,44 @@ export default function NimbleCombatTracker() {
     expandedConditions,
     expandedNotes,
     sidebarView,
+    tokenSize,
     deleteMode,
     lastActionUserId,
-    windowSync,
+    doomedConditions: CONDITION_CATEGORIES.DOOMED,
+    majorConditions: CONDITION_CATEGORIES.MAJOR,
+    minorConditions: CONDITION_CATEGORIES.MINOR,
+    // Dice state
+    diceNotation,
+    notationError,
+    showDiceInViewport,
+    rollingDice,
+    diceRolls,
+    // Settings state
+    backgroundSize,
+    showGrid,
+    gridSize,
+    gridColor,
+    gridOpacity,
+    gridStrokeWidth,
+    gridType,
+    darknessMode,
+    heroLightRadius,
+    companionLightRadius,
+    darknessIntensity,
+    showPartyOverview,
+    currentTheme,
+    reactionStates
+  }), [
+    tokens,
+    turnOrder,
+    displayTurnOrder,
+    selectedToken,
+    expandedConditions,
+    expandedNotes,
+    sidebarView,
+    tokenSize,
+    deleteMode,
+    lastActionUserId,
     diceNotation,
     notationError,
     showDiceInViewport,
@@ -1016,9 +1010,17 @@ export default function NimbleCombatTracker() {
     companionLightRadius,
     darknessIntensity,
     showPartyOverview,
-    tokenSize,
     currentTheme,
+    reactionStates
   ]);
+
+  // Broadcast state to pop-out window
+  useEffect(() => {
+    if (isPopoutMode && windowSync.channel) {
+      console.log('[MainWindow] Broadcasting STATE_UPDATE, isPopoutMode:', isPopoutMode, 'hasChannel:', !!windowSync.channel);
+      windowSync.broadcast(createMessage(MESSAGE_TYPES.STATE_UPDATE, syncState));
+    }
+  }, [isPopoutMode, windowSync.channel, syncState]);
 
   // Listen for actions from pop-out window
   useEffect(() => {
@@ -1176,6 +1178,45 @@ export default function NimbleCombatTracker() {
         case MESSAGE_TYPES.IMPORT_BATTLE_DATA:
           loadBattleState(payload);
           break;
+        case MESSAGE_TYPES.ADD_SHADOW_TOKEN: {
+          // TEMPORARY: Add shadow token handler
+          const shadowCount = tokens.filter(t => t.type === 'shadow').length;
+          if (shadowCount < 3) {
+            // Find hero with lowest max health
+            const heroes = tokens.filter(t => t.type === 'hero');
+            let spawnX = 100;
+            let spawnY = 100;
+
+            if (heroes.length > 0) {
+              const weakestHero = heroes.reduce((min, hero) =>
+                hero.maxHealth < min.maxHealth ? hero : min
+              );
+              // Spawn to the right of the weakest hero
+              spawnX = weakestHero.x + (tokenSize || 64) + 10;
+              spawnY = weakestHero.y;
+            }
+
+            tokenManager.addToken({
+              name: `Shadow ${shadowCount + 1}`,
+              type: 'shadow',
+              image: null,
+              x: spawnX,
+              y: spawnY
+            });
+          }
+          break;
+        }
+        case MESSAGE_TYPES.REMOVE_SHADOW_TOKEN:
+          // TEMPORARY: Remove shadow token handler
+          if (payload.tokenId) {
+            handleRemoveToken(payload.tokenId);
+          }
+          break;
+        case MESSAGE_TYPES.WINDOW_READY:
+          // Popout window is ready - send initial state
+          console.log('[MainWindow] Received WINDOW_READY, sending STATE_UPDATE');
+          windowSync.broadcast(createMessage(MESSAGE_TYPES.STATE_UPDATE, syncState));
+          break;
         case MESSAGE_TYPES.WINDOW_CLOSING:
           setIsPopoutMode(false);
           setPopoutWindow(null);
@@ -1192,6 +1233,7 @@ export default function NimbleCombatTracker() {
     };
   }, [
     windowSync.channel,
+    syncState,
     tokenManager,
     turnOrderManager,
     setSidebarView,
@@ -1468,7 +1510,10 @@ export default function NimbleCombatTracker() {
                 const ghostToken = tokens.find(t => t.id === ghostTokenPosition.tokenId);
                 if (!ghostToken) return null;
 
-                const currentTokenSize = ghostToken.customSize || tokenSize;
+                // TEMPORARY: Match shadow token size reduction (12px smaller)
+                const currentTokenSize = ghostToken.type === 'shadow'
+                  ? Math.max(20, (ghostToken.customSize || tokenSize) - 12)
+                  : (ghostToken.customSize || tokenSize);
                 const FADE_THRESHOLD = 200; // pixels to move before ghost fades in
                 const opacity = Math.min(ghostTokenPosition.distanceMoved / FADE_THRESHOLD, 1) * 0.5; // Max opacity 0.5
 
@@ -1531,7 +1576,10 @@ export default function NimbleCombatTracker() {
               })()}
 
               {tokens.map((token) => {
-                const currentTokenSize = token.customSize || tokenSize;
+                // TEMPORARY: Shadow tokens are 12px smaller than global token size
+                const currentTokenSize = token.type === 'shadow'
+                  ? Math.max(20, (token.customSize || tokenSize) - 12)
+                  : (token.customSize || tokenSize);
 
                 // Drag effect calculations
                 const isPickingUp = pickingUp === token.id;
@@ -1549,6 +1597,7 @@ export default function NimbleCombatTracker() {
                     style={{
                       left: token.x,
                       top: token.y,
+                      opacity: token.type === 'shadow' ? 0.8 : 1, // TEMPORARY: Shadows are 80% opacity
                       cursor: drawMode === 'select'
                         ? `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(1px 1px 1px black);"><path d="M5 9l-3 3 3 3"/><path d="M9 5l3-3 3 3"/><path d="M19 9l3 3-3 3"/><path d="M15 19l-3 3-3-3"/><path d="M2 12h20"/><path d="M12 2v20"/></svg>') 12 12, move`
                         : 'inherit',
@@ -1600,7 +1649,14 @@ export default function NimbleCombatTracker() {
                               <div
                                 className={`rounded-full flex items-center justify-center w-full h-full ${getTokenBgColor(token.type)}`}
                               >
-                                {getTokenIcon(token.type)}
+                                {token.type === 'shadow' ? (
+                                  // Show number for shadow tokens
+                                  <span className="text-white font-bold" style={{ fontSize: `${currentTokenSize * 0.4}px` }}>
+                                    {tokens.filter(t => t.type === 'shadow').findIndex(t => t.id === token.id) + 1}
+                                  </span>
+                                ) : (
+                                  getTokenIcon(token.type)
+                                )}
                               </div>
                               <TokenEffectOverlay token={token} context="token" tokenSize={currentTokenSize} />
                               {token.isActiveTurn && <TurnStartRing tokenSize={currentTokenSize} tokenBorderWidth={Math.max(2, Math.round(currentTokenSize / 16))} />}
@@ -1668,7 +1724,7 @@ export default function NimbleCombatTracker() {
                         )}
 
                         {/* Action Indicators - only show in Strategy Mode (party overview enabled) */}
-                        {token.actions && token.type !== 'legendary' && showPartyOverview && (
+                        {token.actions && token.type !== 'legendary' && token.type !== 'shadow' && showPartyOverview && (
                           <div
                             className="absolute left-1/2 transform -translate-x-1/2 flex justify-center gap-1 pointer-events-none"
                             style={{

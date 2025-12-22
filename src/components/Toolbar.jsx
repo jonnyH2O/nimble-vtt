@@ -27,7 +27,7 @@ import ColorPicker from './ColorPicker';
  * @param {Object} props.viewOffset - Current view offset {x, y}
  * @param {Function} props.setViewOffset - Function to set view offset
  */
-export default function Toolbar({
+function Toolbar({
   drawMode,
   setDrawMode,
   drawColor,
@@ -167,3 +167,6 @@ export default function Toolbar({
     </div>
   );
 }
+
+// Export memoized version to prevent unnecessary re-renders
+export default React.memo(Toolbar);

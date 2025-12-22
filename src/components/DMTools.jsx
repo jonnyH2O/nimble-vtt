@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { Trash2, List, Book, RotateCcw, AlertCircle, ExternalLink, Dices, Settings, Upload, Plus, Pencil, Sword, X, ShieldX, Shield } from 'lucide-react';
 import ColorPicker from './ColorPicker';
+import TokenCard from './TokenCard';
 
 
 
@@ -12,21 +13,6 @@ import { DMToolsDictionary } from './DMToolsDictionary';
 import { DMToolsDice } from './DMToolsDice';
 import { DMToolsSettings } from './DMToolsSettings';
 import Tooltip from './Tooltip';
-
-/**
- * BloodiedVignette - Reusable component for bloodied condition visual effect
- */
-const BloodiedVignette = ({ hasCondition }) => {
-  if (!hasCondition) return null;
-  return (
-    <div
-      className="absolute inset-0 rounded-full pointer-events-none"
-      style={{
-        boxShadow: 'inset 0 0 15px 5px rgba(220, 38, 38, 0.42)',
-      }}
-    />
-  );
-};
 
 /**
  * DMTools Component
@@ -420,6 +406,50 @@ export default function DMTools({
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold">Turn Order</h2>
                 <div className="flex gap-2">
+                  {/* TEMPORARY: Add Shadow Button - Easy to remove later */}
+                  <button
+                    onClick={() => {
+                      // Count existing shadow tokens
+                      const shadowCount = tokens.filter(t => t.type === 'shadow').length;
+                      if (shadowCount >= 3) {
+                        alert('Maximum 3 shadow tokens allowed');
+                        return;
+                      }
+
+                      // Add shadow token (if tokenManager exists - not in popout)
+                      if (tokenManager) {
+                        // Find hero with lowest max health
+                        const heroes = tokens.filter(t => t.type === 'hero');
+                        let spawnX = 100;
+                        let spawnY = 100;
+
+                        if (heroes.length > 0) {
+                          const weakestHero = heroes.reduce((min, hero) =>
+                            hero.maxHealth < min.maxHealth ? hero : min
+                          );
+                          // Spawn to the right of the weakest hero
+                          spawnX = weakestHero.x + (tokenSize || 64) + 10;
+                          spawnY = weakestHero.y;
+                        }
+
+                        tokenManager.addToken({
+                          name: `Shadow ${shadowCount + 1}`,
+                          type: 'shadow',
+                          image: null,
+                          x: spawnX,
+                          y: spawnY
+                        });
+                        // Don't add to turn order - shadows are managed separately
+                      } else if (onAction) {
+                        // In popout mode, send message to main window
+                        onAction(createMessage(MESSAGE_TYPES.ADD_SHADOW_TOKEN, {}));
+                      }
+                    }}
+                    className={`p-2 rounded flex items-center justify-center bg-purple-900 hover:bg-purple-800`}
+                    title="Add Shadow (max 3)"
+                  >
+                    <Plus size={16} />
+                  </button>
                   <button
                     onClick={() => {
                       if (setShowAddToken) {
@@ -797,6 +827,38 @@ export default function DMTools({
 
               {/* Token Cards */}
               <div className="space-y-2">
+                {/* TEMPORARY: Shadow Tokens Card - Easy to remove later */}
+                {(() => {
+                  const shadowTokens = tokens.filter(t => t.type === 'shadow');
+                  if (shadowTokens.length === 0) return null;
+
+                  return (
+                    <div className="bg-purple-950 p-2 rounded border-2 border-purple-900">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-sm font-bold text-purple-300">Shadows</div>
+                        <div className="flex gap-1">
+                          {shadowTokens.map((shadow, idx) => (
+                            <button
+                              key={shadow.id}
+                              onClick={() => {
+                                if (tokenManager) {
+                                  handleRemoveToken(shadow.id);
+                                } else if (onAction) {
+                                  onAction(createMessage(MESSAGE_TYPES.REMOVE_SHADOW_TOKEN, { tokenId: shadow.id }));
+                                }
+                              }}
+                              className="w-6 h-6 bg-red-900 hover:bg-red-800 rounded text-xs flex items-center justify-center"
+                              title={`Remove Shadow ${idx + 1}`}
+                            >
+                              {idx + 1}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {displayTurnOrder && tokens && turnOrder && displayTurnOrder.map((item, index) => {
                   const token = tokens.find(t => t.id === item.id);
                   if (!token) return null;
@@ -804,668 +866,70 @@ export default function DMTools({
                   const isLegendaryEcho = item.isLegendaryEcho;
                   const isMainLegendary = item.isMainLegendary;
                   const actualIndex = turnOrder.indexOf(item.id);
+                  const conditionKey = `${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`;
 
                   return (
-                    <div key={isLegendaryEcho ? `${item.id}-echo-${index}` : isMainLegendary ? `${item.id}-main` : item.id}>
-
-                      <div
-                        ref={(el) => {
-                          if (el) {
-                            // Store refs for all cards (including echo cards for legendary actions)
-                            // For legendary echo cards, store with a composite key including the echo index
-                            if (isLegendaryEcho) {
-                              const legendaryTurnIndex = displayTurnOrder
-                                .slice(0, index)
-                                .filter(i => i.id === item.id && i.isLegendaryEcho).length;
-                              tokenCardRefs.current[`${item.id}-echo-${legendaryTurnIndex}`] = el;
-                            } else if (!isMainLegendary) {
-                              // Regular tokens (not main legendary card)
-                              tokenCardRefs.current[item.id] = el;
-                            }
+                    <TokenCard
+                      key={isLegendaryEcho ? `${item.id}-echo-${index}` : isMainLegendary ? `${item.id}-main` : item.id}
+                      token={token}
+                      itemId={item.id}
+                      index={index}
+                      actualIndex={actualIndex}
+                      isLegendaryEcho={isLegendaryEcho}
+                      isMainLegendary={isMainLegendary}
+                      isSelected={selectedToken === item.id}
+                      isExpanded={expandedConditions[conditionKey]}
+                      deleteMode={deleteMode}
+                      lastActionUserId={lastActionUserId}
+                      tokenSize={tokenSize}
+                      onSelect={setSelectedToken}
+                      onRemove={handleRemoveToken}
+                      onToggleConditions={() => {
+                        const newExpanded = {
+                          ...expandedConditions,
+                          [conditionKey]: !expandedConditions[conditionKey]
+                        };
+                        handleAction(
+                          MESSAGE_TYPES.EXPANDED_CONDITIONS_UPDATE,
+                          { expanded: newExpanded },
+                          () => setExpandedConditions(newExpanded)
+                        );
+                      }}
+                      onAction={onAction}
+                      onDragStart={activeTurnOrderManager ? () => !isLegendaryEcho && activeTurnOrderManager.handleTurnDragStart(actualIndex) : undefined}
+                      onDragOver={activeTurnOrderManager ? (e) => !isLegendaryEcho && activeTurnOrderManager.handleTurnDragOver(e, actualIndex) : undefined}
+                      onDrop={activeTurnOrderManager ? (e) => { e.preventDefault(); } : undefined}
+                      onDragEnd={activeTurnOrderManager ? activeTurnOrderManager.handleTurnDragEnd : undefined}
+                      setCardRef={(el, tokenId, isEcho, idx) => {
+                        if (el) {
+                          // Store refs for all cards (including echo cards for legendary actions)
+                          // For legendary echo cards, store with a composite key including the echo index
+                          if (isEcho) {
+                            const legendaryTurnIndex = displayTurnOrder
+                              .slice(0, idx)
+                              .filter(i => i.id === tokenId && i.isLegendaryEcho).length;
+                            tokenCardRefs.current[`${tokenId}-echo-${legendaryTurnIndex}`] = el;
+                          } else if (!isMainLegendary) {
+                            // Regular tokens (not main legendary card)
+                            tokenCardRefs.current[tokenId] = el;
                           }
-                        }}
-                        draggable={!deleteMode && !isLegendaryEcho && !expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`] && !!activeTurnOrderManager}
-                        onDragStart={activeTurnOrderManager ? () => !isLegendaryEcho && activeTurnOrderManager.handleTurnDragStart(actualIndex) : undefined}
-                        onDragOver={activeTurnOrderManager ? (e) => !isLegendaryEcho && activeTurnOrderManager.handleTurnDragOver(e, actualIndex) : undefined}
-                        onDrop={activeTurnOrderManager ? (e) => { e.preventDefault(); } : undefined}
-                        onDragEnd={activeTurnOrderManager ? activeTurnOrderManager.handleTurnDragEnd : undefined}
-                        onClick={() => {
-                          if (deleteMode && !isLegendaryEcho) {
-                            handleRemoveToken(item.id);
-                          } else if (!isLegendaryEcho) {
-                            setSelectedToken(item.id);
-                          }
-                        }}
-                        className={`bg-surface-highlight p-3 rounded ${!deleteMode && !isLegendaryEcho && !expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`] && activeTurnOrderManager ? 'select-none' : ''
-                          } ${deleteMode && !isLegendaryEcho ? 'cursor-pointer hover:bg-destructive' :
-                            !isLegendaryEcho && !expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`] && activeTurnOrderManager ? 'cursor-move' : ''
-                          } ${selectedToken === item.id && !isLegendaryEcho ? 'ring-2 ring-token-selected' : ''} ${isLegendaryEcho ? 'opacity-75 ml-4' : ''
-                          }`}
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2 flex-1">
-                            {isMainLegendary && (
-                              <div className="text-sm font-bold text-legendary-highlight w-2">L</div>
-                            )}
-                            {!isLegendaryEcho && !isMainLegendary && (
-                              <div className="text-sm font-bold text-text-muted w-2">{actualIndex + 1}</div>
-                            )}
-                            {isLegendaryEcho && (
-                              <div className="text-sm font-bold text-legendary-highlight w-2">→</div>
-                            )}
-                            {token.image ? (
-                              <div className="relative w-10 h-10">
-                                <div className={`w-10 h-10 rounded-full border-2 ${getTokenBorderColor(token.type)} relative`}>
-                                  <img
-                                    src={token.image}
-                                    alt={token.name}
-                                    className="w-full h-full rounded-full object-cover"
-                                    style={{
-                                      filter: token.conditions && token.conditions.includes('Dying') ? 'saturate(0.2)' : 'none'
-                                    }}
-                                  />
-                                  <BloodiedVignette hasCondition={token.conditions && token.conditions.includes('Bloodied')} />
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="relative w-10 h-10">
-                                <div className={`w-10 h-10 rounded-full border-2 ${getTokenBorderColor(token.type)} relative`}>
-                                  <div
-                                    className={`w-full h-full rounded-full flex items-center justify-center ${getTokenBgColor(token.type)}`}
-                                    style={{
-                                      filter: token.conditions && token.conditions.includes('Dying') ? 'saturate(0.2)' : 'none'
-                                    }}
-                                  >
-                                    {getTokenIcon(token.type)}
-                                  </div>
-                                  <BloodiedVignette hasCondition={token.conditions && token.conditions.includes('Bloodied')} />
-                                </div>
-                              </div>
-                            )}
-                            <div className="flex-1">
-                              <div className="flex items-center gap-1.5">
-                                <div className="font-bold text-sm">{token.name}</div>
-                                {/* Armor Icon */}
-                                {token.armor && token.armor !== 'none' && (
-                                  <Tooltip
-                                    text={
-                                      token.armor === 'medium'
-                                        ? 'Medium Armor: ignore all damage modifiers from stats and other effects, taking damage from the sum of the dice only.'
-                                        : 'Heavy Armor: ignore damage modifiers and take half the sum of the dice (rounding up).'
-                                    }
-                                    position="top"
-                                    wrap={true}
-                                    maxWidth="220px"
-                                  >
-                                    <div className="relative flex items-center justify-center">
-                                      <Shield size={16} className="text-text-muted" />
-                                      <span className="absolute text-[10px] font-bold" style={{ marginTop: '1px' }}>
-                                        {token.armor === 'medium' ? 'M' : 'H'}
-                                      </span>
-                                    </div>
-                                  </Tooltip>
-                                )}
-                              </div>
-                              <div className="text-xs text-text-muted capitalize">{token.type}</div>
-
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {(token.type !== 'legendary' || isMainLegendary) && (
-                              <div className="text-right">
-                                <div className="text-xs text-text-muted">HP</div>
-                                {token.showTempHP && (
-                                  <div className="flex items-center gap-1 mb-1">
-                                    <input
-                                      type="number"
-                                      value={token.tempHP || 0}
-                                      onChange={(e) => {
-                                        const tempHP = parseInt(e.target.value) || 0;
-                                        handleAction(
-                                          MESSAGE_TYPES.TEMP_HP_UPDATE,
-                                          { tokenId: item.id, tempHP },
-                                          () => tokenManager.updateTempHP(item.id, tempHP)
-                                        );
-                                      }}
-                                      onClick={(e) => e.stopPropagation()}
-                                      className="w-12 bg-cyan-600 text-center rounded px-1 py-0.5 text-sm"
-                                      style={{ backgroundColor: '#06b6d4' }}
-                                    />
-                                    <span className="text-sm">🛡️</span>
-                                  </div>
-                                )}
-                                <div className="flex items-center gap-1">
-                                  <input
-                                    type="number"
-                                    value={token.health}
-                                    onChange={(e) => {
-                                      const newHealth = parseInt(e.target.value) || 0;
-                                      handleAction(
-                                        MESSAGE_TYPES.HEALTH_UPDATE,
-                                        { tokenId: item.id, newHealth },
-                                        () => tokenManager.updateHealth(item.id, newHealth)
-                                      );
-                                    }}
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="w-12 bg-button-muted text-center rounded px-1 py-0.5 text-sm"
-                                  />
-                                  <span className="text-xs text-text-muted">/</span>
-                                  <input
-                                    type="number"
-                                    value={token.maxHealth}
-                                    onChange={(e) => {
-                                      const newMaxHealth = parseInt(e.target.value) || 1;
-                                      handleAction(
-                                        MESSAGE_TYPES.TOKEN_UPDATE,
-                                        { tokenId: item.id, newMaxHealth },
-                                        () => tokenManager.updateMaxHealth(item.id, newMaxHealth)
-                                      );
-                                    }}
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="w-12 bg-button-muted text-center rounded px-1 py-0.5 text-sm"
-                                  />
-                                </div>
-                              </div>
-                            )}
-                            {isLegendaryEcho && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  // Use the index within the display order to track which legendary turn this is
-                                  const legendaryTurnIndex = displayTurnOrder
-                                    .slice(0, index)
-                                    .filter(i => i.id === item.id && i.isLegendaryEcho).length;
-
-                                  // Track last action user when NOT in popout mode
-                                  if (!isPopoutWindow && setLastActionUserId) {
-                                    const willBeUsed = !token.actions[legendaryTurnIndex];
-                                    if (willBeUsed) {
-                                      // For legendary, store with echo index so we point to the right echo card
-                                      setLastActionUserId(`${item.id}-echo-${legendaryTurnIndex}`);
-                                    }
-                                  }
-
-                                  handleAction(
-                                    MESSAGE_TYPES.ACTION_TOGGLE,
-                                    { tokenId: item.id, actionIndex: legendaryTurnIndex },
-                                    () => tokenManager.toggleAction(item.id, legendaryTurnIndex)
-                                  );
-                                }}
-                                className={`w-12 sm:w-20 h-8 rounded transition-colors flex items-center justify-center ${token.actions[displayTurnOrder
-                                  .slice(0, index)
-                                  .filter(i => i.id === item.id && i.isLegendaryEcho).length]
-                                  ? 'bg-button-muted-hover'
-                                  : 'bg-secondary hover:bg-secondary-hover'
-                                  }`}
-                                title="Complete Legendary Action"
-                              >
-
-                                {token.actions[displayTurnOrder
-                                  .slice(0, index)
-                                  .filter(i => i.id === item.id && i.isLegendaryEcho).length]
-                                  ? <X size={14} className="mx-auto" />
-                                  : <Sword size={14} className="mx-auto" />
-                                }
-                              </button>
-
-
-                            )}
-                            {!isLegendaryEcho && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const conditionKey = `${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`;
-                                  const newExpanded = {
-                                    ...expandedConditions,
-                                    [conditionKey]: !expandedConditions[conditionKey]
-                                  };
-                                  handleAction(
-                                    MESSAGE_TYPES.EXPANDED_CONDITIONS_UPDATE,
-                                    { expanded: newExpanded },
-                                    () => setExpandedConditions(newExpanded)
-                                  );
-                                }}
-                                className={`${token.conditions && token.conditions.length > 0
-                                  ? 'text-yellow-400 hover:text-yellow-300'
-                                  : 'text-text-muted hover:text-gray-300'
-                                  }`}
-                              >
-                                <AlertCircle size={16} />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Wounds - only show when at 0 HP and for heroes/companions */}
-                        {token.health === 0 && (token.type === 'hero' || token.type === 'companion') && (
-                          <div className="mt-2 mb-2 flex items-center justify-center gap-1 px-2 flex-wrap">
-                            <span className="text-xs text-text-muted mr-1">Wounds:</span>
-                            {Array.from({ length: token.maxWounds || 6 }, (_, i) => i + 1).map(woundNum => {
-                              const maxWounds = token.maxWounds || 6;
-                              const circleSize = maxWounds <= 6 ? 5 : Math.max(4, Math.floor(24 / maxWounds));
-                              return (
-                                <button
-                                  key={woundNum}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const newWounds = token.wounds === woundNum ? woundNum - 1 : woundNum;
-                                    handleAction(
-                                      MESSAGE_TYPES.WOUNDS_UPDATE,
-                                      { tokenId: item.id, newWounds },
-                                      () => tokenManager.updateWounds(item.id, newWounds)
-                                    );
-                                  }}
-                                  className={`rounded-full border transition-all flex items-center justify-center ${(token.wounds || 0) >= woundNum
-                                    ? 'bg-destructive border-red-400'
-                                    : 'bg-surface-highlight border-text-muted hover:border-gray-400'
-                                    }`}
-                                  style={{
-                                    width: `${circleSize * 4}px`,
-                                    height: `${circleSize * 4}px`,
-                                    fontSize: `${circleSize * 3}px`
-                                  }}
-                                  title={`${woundNum} wound${woundNum > 1 ? 's' : ''}`}
-                                >
-                                  {(token.wounds || 0) >= woundNum && (
-                                    <span className="text-text leading-none">✕</span>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        {expandedConditions[`${item.id}-${isLegendaryEcho ? 'echo-' + index : 'main'}`] && (
-                          <div className="mb-2" onClick={(e) => e.stopPropagation()}>
-                            {/* Wounds - only for heroes and companions */}
-                            {(token.type === 'hero' || token.type === 'companion') && (
-                              <div className="mb-3">
-                                <div className="flex items-center justify-between mb-2">
-                                  <label className="text-xs text-text-muted">Wounds</label>
-                                  <button
-                                    onClick={() => {
-                                      handleAction(
-                                        MESSAGE_TYPES.TEMP_HP_TOGGLE,
-                                        { tokenId: item.id },
-                                        () => tokenManager.toggleTempHP(item.id)
-                                      );
-                                    }}
-                                    className={`py-1 px-2 rounded text-xs flex items-center gap-1 ${token.showTempHP
-                                      ? 'bg-tertiary hover:bg-tertiary-hover'
-                                      : 'bg-button-muted hover:bg-button-muted-hover'
-                                      }`}
-                                  >
-                                    Temp HP 🛡️
-                                  </button>
-                                </div>
-                                <div className="flex gap-1 justify-center items-center flex-wrap">
-                                  {Array.from({ length: token.maxWounds || 6 }, (_, i) => i + 1).map(woundNum => {
-                                    const maxWounds = token.maxWounds || 6;
-                                    const circleSize = maxWounds <= 6 ? 6 : Math.max(4, Math.floor(24 / maxWounds));
-                                    return (
-                                      <button
-                                        key={woundNum}
-                                        onClick={() => {
-                                          const newWounds = token.wounds === woundNum ? woundNum - 1 : woundNum;
-                                          handleAction(
-                                            MESSAGE_TYPES.WOUNDS_UPDATE,
-                                            { tokenId: item.id, newWounds },
-                                            () => updateWounds(item.id, newWounds)
-                                          );
-                                        }}
-                                        className={`rounded-full border transition-all flex items-center justify-center ${(token.wounds || 0) >= woundNum
-                                          ? 'bg-destructive border-red-400'
-                                          : 'bg-surface-highlight border-text-muted hover:border-gray-400'
-                                          }`}
-                                        style={{
-                                          width: `${circleSize * 4}px`,
-                                          height: `${circleSize * 4}px`,
-                                          fontSize: `${circleSize * 3}px`
-                                        }}
-                                        title={`${woundNum} wound${woundNum > 1 ? 's' : ''}`}
-                                      >
-                                        {(token.wounds || 0) >= woundNum && (
-                                          <span className="text-text leading-none">✕</span>
-                                        )}
-                                      </button>
-                                    );
-                                  })}
-                                  <span className="text-xs text-text-muted mx-1">=</span>
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    max="20"
-                                    value={token.maxWounds || 6}
-                                    onChange={(e) => {
-                                      const newMax = Math.max(1, Math.min(20, parseInt(e.target.value) || 6));
-                                      const currentToken = tokens.find(t => t.id === item.id);
-                                      const updates = {
-                                        maxWounds: newMax,
-                                        wounds: Math.min(currentToken?.wounds || 0, newMax)
-                                      };
-                                      handleAction(
-                                        MESSAGE_TYPES.TOKEN_RESOURCE_UPDATE,
-                                        { tokenId: item.id, updates },
-                                        () => tokenManager.updateTokenResource(item.id, updates)
-                                      );
-                                    }}
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="w-12 bg-button-muted text-center rounded px-1 py-0.5 text-xs"
-                                    title="Maximum wounds"
-                                  />
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Resources - for any token with resources */}
-                            {(token.resources || []).length > 0 && (
-                              <div className="mb-3">
-                                <label className="text-xs text-text-muted block mb-2">Resources</label>
-                                {(token.resources || []).map((resource, resIdx) => (
-                                  <div key={resIdx} className="flex gap-2 justify-center items-center mb-2">
-                                    <span className="text-xs text-text-muted w-16 truncate">{resource.name}</span>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      max={resource.max || 0}
-                                      value={resource.current || 0}
-                                      onChange={(e) => {
-                                        const newCurrent = Math.max(0, Math.min(parseInt(e.target.value) || 0, resource.max || 0));
-                                        const currentToken = tokens.find(t => t.id === item.id);
-                                        const newResources = [...(currentToken?.resources || [])];
-                                        newResources[resIdx] = { ...newResources[resIdx], current: newCurrent };
-                                        const updates = { resources: newResources };
-                                        handleAction(
-                                          MESSAGE_TYPES.TOKEN_RESOURCE_UPDATE,
-                                          { tokenId: item.id, updates },
-                                          () => tokenManager.updateTokenResource(item.id, updates)
-                                        );
-                                      }}
-                                      onClick={(e) => e.stopPropagation()}
-                                      className="w-16 bg-button-muted text-center rounded px-2 py-1 text-sm"
-                                      style={{ borderColor: resource.color, borderWidth: '2px' }}
-                                    />
-                                    <span className="text-xs text-text-muted">/</span>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      value={resource.max || 0}
-                                      onChange={(e) => {
-                                        const newMax = Math.max(0, parseInt(e.target.value) || 0);
-                                        const currentToken = tokens.find(t => t.id === item.id);
-                                        const newResources = [...(currentToken?.resources || [])];
-                                        newResources[resIdx] = {
-                                          ...newResources[resIdx],
-                                          max: newMax,
-                                          current: Math.min(newResources[resIdx].current || 0, newMax)
-                                        };
-                                        const updates = { resources: newResources };
-                                        handleAction(
-                                          MESSAGE_TYPES.TOKEN_RESOURCE_UPDATE,
-                                          { tokenId: item.id, updates },
-                                          () => tokenManager.updateTokenResource(item.id, updates)
-                                        );
-                                      }}
-                                      onClick={(e) => e.stopPropagation()}
-                                      className="w-16 bg-button-muted text-center rounded px-2 py-1 text-sm"
-                                      style={{ borderColor: resource.color, borderWidth: '2px' }}
-                                    />
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            {/* Temp HP toggle and Health Viewport toggle for non-hero/companion tokens (and main legendary) */}
-                            {((token.type !== 'legendary' || isMainLegendary) && token.type !== 'hero' && token.type !== 'companion') && (
-                              <div className="flex items-center justify-between mb-2 gap-2">
-                                {/* Show Health In Viewport toggle for enemy/legendary */}
-                                {(token.type === 'enemy' || (token.type === 'legendary' && isMainLegendary)) && (
-                                  <button
-                                    onClick={() => {
-                                      handleAction(
-                                        MESSAGE_TYPES.HEALTH_IN_VIEWPORT_TOGGLE,
-                                        { tokenId: item.id },
-                                        () => tokenManager.toggleHealthInViewport(item.id)
-                                      );
-                                    }}
-                                    className={`py-1 px-2 rounded text-xs flex items-center gap-1 ${token.showHealthInViewport
-                                      ? 'bg-secondary hover:bg-secondary-hover'
-                                      : 'bg-button-muted hover:bg-button-muted-hover'
-                                      }`}
-                                    title={token.showHealthInViewport ? 'Health visible in viewport' : 'Health hidden in viewport'}
-                                  >
-                                    Show Health 👁️
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => {
-                                    handleAction(
-                                      MESSAGE_TYPES.TEMP_HP_TOGGLE,
-                                      { tokenId: item.id },
-                                      () => toggleTempHP(item.id)
-                                    );
-                                  }}
-                                  className={`py-1 px-2 rounded text-xs flex items-center gap-1 ${token.showTempHP
-                                    ? 'bg-tertiary hover:bg-tertiary-hover'
-                                    : 'bg-button-muted hover:bg-button-muted-hover'
-                                    }`}
-                                >
-                                  Temp HP 🛡️
-                                </button>
-                              </div>
-                            )}
-
-                            <div className="flex items-center justify-between mb-2">
-                              <label className="text-xs text-text-muted">Conditions</label>
-                            </div>
-
-                            {/* Doomed Conditions */}
-                            <div className="mb-3">
-                              <div className="text-xs font-bold text-red-400 mb-1">Doomed</div>
-                              <div className="flex flex-wrap gap-1">
-                                {doomedConditions.map(condition => (
-                                  <button
-                                    key={condition}
-                                    onClick={() => {
-                                      handleAction(
-                                        MESSAGE_TYPES.CONDITION_TOGGLE,
-                                        { tokenId: item.id, condition },
-                                        () => tokenManager.toggleCondition(item.id, condition)
-                                      );
-                                    }}
-                                    className={`text-xs px-2 py-1 rounded ${token.conditions && token.conditions.includes(condition)
-                                      ? 'bg-doomed-buttons hover:bg-doomed-buttons-hover'
-                                      : 'bg-button-muted hover:bg-button-muted-hover'
-                                      }`}
-                                  >
-                                    {condition}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Major Conditions */}
-                            <div className="mb-3">
-                              <div className="text-xs font-bold text-orange-400 mb-1">Major</div>
-                              <div className="flex flex-wrap gap-1">
-                                {majorConditions.map(condition => (
-                                  <button
-                                    key={condition}
-                                    onClick={() => {
-                                      handleAction(
-                                        MESSAGE_TYPES.CONDITION_TOGGLE,
-                                        { tokenId: item.id, condition },
-                                        () => tokenManager.toggleCondition(item.id, condition)
-                                      );
-                                    }}
-                                    className={`text-xs px-2 py-1 rounded ${token.conditions && token.conditions.includes(condition)
-                                      ? 'bg-major-buttons hover:bg-major-buttons-hover'
-                                      : 'bg-button-muted hover:bg-button-muted-hover'
-                                      }`}
-                                  >
-                                    {condition}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Minor Conditions */}
-                            <div className="mb-3">
-                              <div className="text-xs font-bold text-yellow-400 mb-1">Minor</div>
-                              <div className="flex flex-wrap gap-1">
-                                {minorConditions.map(condition => (
-                                  <button
-                                    key={condition}
-                                    onClick={() => {
-                                      handleAction(
-                                        MESSAGE_TYPES.CONDITION_TOGGLE,
-                                        { tokenId: item.id, condition },
-                                        () => tokenManager.toggleCondition(item.id, condition)
-                                      );
-                                    }}
-                                    className={`text-xs px-2 py-1 rounded ${token.conditions && token.conditions.includes(condition)
-                                      ? 'bg-minor-buttons hover:bg-minor-buttons-hover'
-                                      : 'bg-button-muted hover:bg-button-muted-hover'
-                                      }`}
-                                  >
-                                    {condition}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Token Size Slider */}
-                            <div className="border-t border-border pt-3">
-                              <div className="flex items-center justify-between mb-2">
-                                <label className="text-xs font-bold text-gray-300">Token Size</label>
-                                {token.customSize !== null && (
-                                  <button
-                                    onClick={() => {
-                                      handleAction(
-                                        MESSAGE_TYPES.TOKEN_SIZE_UPDATE,
-                                        { tokenId: item.id, size: null },
-                                        () => tokenManager.updateTokenSize(item.id, null)
-                                      );
-                                    }}
-                                    className="text-xs text-blue-400 hover:text-blue-300"
-                                    title="Reset to global size"
-                                  >
-                                    Reset
-                                  </button>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="range"
-                                  min="32"
-                                  max="192"
-                                  step="4"
-                                  value={token.customSize || tokenSize}
-                                  onChange={(e) => {
-                                    const size = parseInt(e.target.value);
-                                    handleAction(
-                                      MESSAGE_TYPES.TOKEN_SIZE_UPDATE,
-                                      { tokenId: item.id, size },
-                                      () => tokenManager.updateTokenSize(item.id, size)
-                                    );
-                                  }}
-                                  className="flex-1"
-                                />
-                                <span className="text-xs w-12 text-right">
-                                  {token.customSize || tokenSize}px
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {token.actions && (
-                          <div>
-                            {token.type === 'hero' && (
-                              <div className="mb-2">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (token.isActiveTurn) {
-                                      handleAction(
-                                        MESSAGE_TYPES.END_TURN,
-                                        { tokenId: item.id },
-                                        () => tokenManager.endTurn(item.id)
-                                      );
-                                    } else {
-                                      handleAction(
-                                        MESSAGE_TYPES.START_TURN,
-                                        { tokenId: item.id },
-                                        () => tokenManager.startTurn(item.id)
-                                      );
-                                    }
-                                  }}
-                                  onMouseEnter={() => setHoveredTurnButton(item.id)}
-                                  onMouseLeave={() => setHoveredTurnButton(null)}
-                                  className={`w-full py-1.5 rounded text-xs font-bold transition-colors ${token.isActiveTurn
-                                    ? 'bg-primary hover:bg-primary-hover text-white'
-                                    : 'bg-button-muted hover:bg-button-muted-hover'
-                                    }`}
-                                >
-                                  {token.isActiveTurn ? (hoveredTurnButton === item.id ? 'End Turn' : '★ Active Turn ★') : 'Start Turn'}
-                                </button>
-                              </div>
-                            )}
-                            {!isLegendaryEcho && !isMainLegendary && (
-                              <div className="flex gap-1">
-                                {token.actions.map((used, actionIndex) => (
-                                  <button
-                                    key={actionIndex}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-
-                                      // Track last action user (excluding hero reactions) when NOT in popout mode
-                                      if (!isPopoutWindow && setLastActionUserId) {
-                                        const isHeroReaction = token.type === 'hero' && !token.isActiveTurn;
-                                        const willBeUsed = !used; // Toggling to true
-
-                                        if (willBeUsed && !isHeroReaction) {
-                                          setLastActionUserId(item.id);
-                                        }
-                                      }
-
-                                      handleAction(
-                                        MESSAGE_TYPES.ACTION_TOGGLE,
-                                        { tokenId: item.id, actionIndex },
-                                        () => tokenManager.toggleAction(item.id, actionIndex)
-                                      );
-                                    }}
-                                    className={`flex-1 h-8 rounded transition-colors ${used
-                                      ? 'bg-button-muted-hover'
-                                      : token.isActiveTurn
-                                        ? 'bg-secondary hover:bg-secondary-hover'
-                                        : token.type === 'enemy'
-                                          ? 'bg-secondary hover:bg-secondary-hover'
-                                          : 'bg-secondary hover:bg-secondary-hover'
-                                      }`}
-                                  >
-                                    {used ? (
-                                      (reactionStates[`${item.id}-${actionIndex}`] || (token.type === 'hero' && !token.isActiveTurn)) ? (
-                                        <ShieldX size={14} className="mx-auto" />
-                                      ) : (
-                                        <X size={14} className="mx-auto" />
-                                      )
-                                    ) : (
-                                      <Sword size={14} className="mx-auto" />
-                                    )}
-                                  </button>
-
-
-
-
-                                ))}
-                              </div>
-                            )}
-
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                        }
+                      }}
+                      setHoveredTurnButton={setHoveredTurnButton}
+                      hoveredTurnButton={hoveredTurnButton}
+                      doomedConditions={doomedConditions}
+                      majorConditions={majorConditions}
+                      minorConditions={minorConditions}
+                      reactionStates={reactionStates}
+                      getTokenBorderColor={getTokenBorderColor}
+                      getTokenBgColor={getTokenBgColor}
+                      getTokenIcon={getTokenIcon}
+                      tokenManager={tokenManager}
+                      displayTurnOrder={displayTurnOrder}
+                      isPopoutWindow={isPopoutWindow}
+                      setLastActionUserId={setLastActionUserId}
+                      draggable={!deleteMode && !isLegendaryEcho && !expandedConditions[conditionKey] && !!activeTurnOrderManager}
+                    />
                   );
                 })}
 

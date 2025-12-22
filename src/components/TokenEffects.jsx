@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { getTokenEffects } from '../effects/conditionEffects';
 import { SmolderingParticles } from '../effects/SmolderingParticles';
 
@@ -16,7 +16,7 @@ import { SmolderingParticles } from '../effects/SmolderingParticles';
  * @param {string} props.className - Additional CSS classes
  * @param {number} props.tokenSize - Size of the token in pixels (for scaling particle effects)
  */
-export function TokenEffects({ token, children, context = 'token', className = '', tokenSize = 80 }) {
+function TokenEffectsComponent({ token, children, context = 'token', className = '', tokenSize = 80 }) {
   const effects = getTokenEffects(token?.conditions, context);
 
 
@@ -51,6 +51,9 @@ export function TokenEffects({ token, children, context = 'token', className = '
 }
 
 
+// Export memoized version to prevent unnecessary re-renders
+export const TokenEffects = React.memo(TokenEffectsComponent);
+
 /**
  * TokenEffectOverlay Component
  *
@@ -59,7 +62,7 @@ export function TokenEffects({ token, children, context = 'token', className = '
  *
  * @param {number} tokenSize - Size of the token in pixels (for scaling particle effects)
  */
-export function TokenEffectOverlay({ token, context = 'token', tokenSize = 80 }) {
+function TokenEffectOverlayComponent({ token, context = 'token', tokenSize = 80 }) {
   const effects = getTokenEffects(token?.conditions, context);
 
   if (effects.overlays.length === 0) return null;
@@ -84,5 +87,8 @@ export function TokenEffectOverlay({ token, context = 'token', tokenSize = 80 })
     </>
   );
 }
+
+// Export memoized version to prevent unnecessary re-renders
+export const TokenEffectOverlay = React.memo(TokenEffectOverlayComponent);
 
 

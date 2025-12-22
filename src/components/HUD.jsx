@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Users, Heart, Swords, Crown } from 'lucide-react';
 import { CONDITION_EMOJIS } from '../effects/conditionEffects';
 import { getHealthColor, getHealthPercent, getResourcePercent, getTokenBorderColor, getTokenBgColor } from '../utils/tokenUtils';
@@ -13,11 +13,14 @@ import { getHealthColor, getHealthPercent, getResourcePercent, getTokenBorderCol
  * @param {Array} props.tokens - Array of all tokens
  * @param {number} props.HUD_Z_INDEX - Z-index for the HUD positioning
  */
-export function HUDDisplay({ selectedToken, tokens, HUD_Z_INDEX }) {
-  if (!selectedToken) return null;
+function HUDDisplayComponent({ selectedToken, tokens, HUD_Z_INDEX }) {
+  // Memoize token lookup to prevent unnecessary recalculations
+  const token = useMemo(() => {
+    if (!selectedToken) return null;
+    return tokens.find(t => t.id === selectedToken);
+  }, [selectedToken, tokens]);
 
-  const token = tokens.find(t => t.id === selectedToken);
-  if (!token) return null;
+  if (!selectedToken || !token) return null;
 
   const healthPercent = getHealthPercent(token.health, token.maxHealth);
 
@@ -194,6 +197,9 @@ export function HUDDisplay({ selectedToken, tokens, HUD_Z_INDEX }) {
     </div>
   );
 }
+
+// Export memoized version to prevent unnecessary re-renders
+export const HUDDisplay = React.memo(HUDDisplayComponent);
 
 /**
  * NotesPanel Component - Editable notes for selected token

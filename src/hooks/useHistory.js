@@ -16,14 +16,6 @@ export function useHistory(initialState) {
 
     // Add a new entry to history
     const addToHistory = useCallback((entry) => {
-        /*
-        console.log('📜 History Update:', {
-            type: entry.type,
-            details: entry,
-            timestamp: new Date().toISOString()
-        });
-        */
-
         setHistory(prev => {
             // Remove any future history if we're not at the end
             const newHistory = prev.slice(0, currentIndex + 1);
@@ -37,39 +29,12 @@ export function useHistory(initialState) {
         });
 
         // Update index to point to the new latest entry
-        // We can't rely on the history length here because state update is async,
-        // so we calculate what the new index will be.
-        // If we sliced (currentIndex + 1) and added 1, the new index is currentIndex + 1.
-        // But if we shifted, it might stay same or shift.
-        // simpler: rely on the fact that we're pushing to the end.
-        // Actually, safer to update index in a useEffect or just calculate it.
-        // Let's do functional update for setCurrentIndex to ensure sync?
-        // No, standard way:
-        setHistory(prev => {
-            const newHistory = prev.slice(0, currentIndex + 1);
-            newHistory.push(entry);
-            if (newHistory.length > HISTORY_LIMIT) {
-                newHistory.shift();
-            }
-            return newHistory;
-        });
-
+        // Calculate the new index based on whether we'll exceed the limit
         setCurrentIndex(prev => {
-            const nextIndex = prev + 1;
-            // If we hit limit, the index effectively stays at max-1 (since we shifted 0 out)
-            // If history length > limit, we shifted, so index becomes length-1.
-            // Wait, if we are at index 5, max 50. We add one. Index becomes 6.
-            // If we are at index 50 (length 51), we shift. Index becomes 50.
-            // Let's simplify: Set index to newHistory.length - 1 inside the setHistory logic? No, separation of concerns.
-            // We can just set it to min(prev + 1, HISTORY_LIMIT - 1) but that assumes we started at 0 correctly.
-
-            // Let's use a ref or just calculation?
-            // Actually, if we slice, the length is currentIndex + 2 (current + 1 + new).
-            // If that > limit, we shift. Index is limit - 1.
-            // Else, Index is currentIndex + 1.
-
-            const potentialLength = currentIndex + 2;
-            return potentialLength > HISTORY_LIMIT ? HISTORY_LIMIT - 1 : currentIndex + 1;
+            const potentialLength = prev + 2; // current items + new item
+            // If we exceed the limit, we shift, so index stays at limit - 1
+            // Otherwise, index advances by 1
+            return potentialLength > HISTORY_LIMIT ? HISTORY_LIMIT - 1 : prev + 1;
         });
     }, [currentIndex]);
 

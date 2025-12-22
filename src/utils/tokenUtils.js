@@ -52,6 +52,11 @@ export const TOKEN_STYLES = {
         border: 'border-legendary-highlight',
         bg: 'bg-legendary',
         icon: 'Crown'
+    },
+    shadow: {
+        border: 'border-purple-900',
+        bg: 'bg-purple-950',
+        icon: 'Users' // Not used - shadows display numbers instead
     }
 };
 
