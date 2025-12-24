@@ -1723,8 +1723,8 @@ export default function NimbleCombatTracker() {
                           </div>
                         )}
 
-                        {/* Action Indicators - only show in Strategy Mode (party overview enabled) */}
-                        {token.actions && token.type !== 'legendary' && token.type !== 'shadow' && showPartyOverview && (
+                        {/* Action Indicators - only show in Strategy Mode (party overview enabled) and when token is visible */}
+                        {token.actions && token.type !== 'legendary' && token.type !== 'shadow' && showPartyOverview && shouldShowToken && (
                           <div
                             className="absolute left-1/2 transform -translate-x-1/2 flex justify-center gap-1 pointer-events-none"
                             style={{
