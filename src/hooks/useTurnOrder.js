@@ -74,7 +74,8 @@ export function useTurnOrder(tokens) {
     setTurnOrder(newTurnOrder);
   }, []);
 
-  return {
+  // Memoize the returned object to prevent unnecessary re-renders
+  return useMemo(() => ({
     turnOrder,
     displayTurnOrder,
     draggedTurnIndex,
@@ -84,5 +85,15 @@ export function useTurnOrder(tokens) {
     handleTurnDragOver,
     handleTurnDragEnd,
     setAllTurnOrder
-  };
+  }), [
+    turnOrder,
+    displayTurnOrder,
+    draggedTurnIndex,
+    addToTurnOrder,
+    removeFromTurnOrder,
+    handleTurnDragStart,
+    handleTurnDragOver,
+    handleTurnDragEnd,
+    setAllTurnOrder
+  ]);
 }

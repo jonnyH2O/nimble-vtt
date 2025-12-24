@@ -764,18 +764,6 @@ const TokenCard = ({
   );
 };
 
-// Memoize with custom comparison to prevent unnecessary re-renders
-export default React.memo(TokenCard, (prevProps, nextProps) => {
-  // Re-render if any of these props change
-  return (
-    prevProps.token === nextProps.token &&
-    prevProps.isSelected === nextProps.isSelected &&
-    prevProps.isExpanded === nextProps.isExpanded &&
-    prevProps.deleteMode === nextProps.deleteMode &&
-    prevProps.lastActionUserId === nextProps.lastActionUserId &&
-    prevProps.tokenSize === nextProps.tokenSize &&
-    prevProps.hoveredTurnButton === nextProps.hoveredTurnButton &&
-    prevProps.reactionStates === nextProps.reactionStates &&
-    prevProps.draggable === nextProps.draggable
-  );
-});
+// Export without React.memo for now to ensure drag handlers update correctly
+// TODO: Re-add memoization with proper drag handler management
+export default TokenCard;
