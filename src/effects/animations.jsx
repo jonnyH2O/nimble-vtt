@@ -9,22 +9,22 @@ export const ANIMATIONS = {
   heartbeat: `
     @keyframes heartbeat {
       0% {
-        opacity: 0.42;
+        opacity: 0.32;
       }
       10% {
-        opacity: 0.7;
+        opacity: 0.6;
       }
       20% {
-        opacity: 0.42;
+        opacity: 0.32;
       }
       30% {
-        opacity: 0.75;
+        opacity: 0.65;
       }
       40% {
-        opacity: 0.42;
+        opacity: 0.32;
       }
       100% {
-        opacity: 0.42;
+        opacity: 0.32;
       }
     }
   `,
